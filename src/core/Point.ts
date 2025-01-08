@@ -11,7 +11,6 @@ import VectorSource from "ol/source/Vector";
 import { Cluster } from 'ol/source';
 import * as turf from 'turf';
 import GeoJSON from "ol/format/GeoJSON";
-import MyOl from "../index";
 import { OptionsType, PointData } from '../types'
 import DomPoint from "./DomPoint";
 import MapTools from "./MapTools";
@@ -34,14 +33,14 @@ export default class Point {
    *   hasImg: Boolean 是否显示图标
    * }
    */
-  addPoint(pointData: PointData[], type: string, options: OptionsType) {
+  addPoint(pointData: PointData[], options: OptionsType) {
     const pointFeatureList: any[] = [];
     pointData.forEach((item) => {
       const pointFeature = new Feature({
         // clickLocation: options.clickLocation,
         // all: JSON.stringify(item),
         rawData: item,//保存原始数据
-        type: type,
+        type: options.type,
         geometry: new olPoint([item.lgtd, item.lttd])
       })
       const style: { text?: Text, image?: Icon } = {}
@@ -74,7 +73,7 @@ export default class Point {
     })
 
     const PointVectorLayer = new VectorLayer({
-      layerName: type,
+      layerName: options.type,
       source: new VectorSource({
         features: pointFeatureList
       }),
@@ -86,7 +85,7 @@ export default class Point {
   }
 
 
-  addClusterPoint(pointData: any[], type: string = 'village', options: OptionsType) {
+  addClusterPoint(pointData: any[], options: OptionsType) {
 
     const pointFeatureList: any[] = [];
 
@@ -108,7 +107,7 @@ export default class Point {
     });
 
     const clusterLayer = new VectorLayer({
-      layerName: type,
+      layerName: options.type,
       source: clusterSource,
       style: function (feature: any) {
         const aviValue = feature.get('features')[0].get('name');
@@ -222,7 +221,7 @@ export default class Point {
   /**
    * 设置闪烁点
    * @param twinkleList 闪烁点数据 - 二维数组 [[],[]]
-   * @param className 闪烁点样式
+   * @param className 闪烁点样式,需要和id保持一致
    * @param key 闪烁点索引
    * @param callback
    */
@@ -236,7 +235,7 @@ export default class Point {
       }
     }
 
-    const el = document.getElementById('marker_warning')
+    const el = document.getElementById(className)
     for (let i = 0; i < twinkleList.length; i++) {
       const twinkleItem = twinkleList[i];
 
