@@ -1,5 +1,4 @@
 import Map from "ol/Map";
-import MyOl from "../index";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";

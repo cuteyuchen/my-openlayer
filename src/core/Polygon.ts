@@ -10,7 +10,6 @@ import { Geometry, LinearRing } from "ol/geom";
 import { fromExtent } from "ol/geom/Polygon";
 import Feature from "ol/Feature";
 import ImageStatic from "ol/source/ImageStatic";
-import MyOl from "../index";
 import { OptionsType, MapJSONData } from '../types'
 import MapTools from "./MapTools";
 
@@ -41,40 +40,12 @@ export default class Polygon {
   /**
    * 添加 地图 边框 图层
    * @param data 图层数据
-   * @param type 图层类型
    * @param options 图层配置
    */
-  addPolygonMapLayer(data: MapJSONData, type: string = 'fuyangqu', options: OptionsType) {
-    const borderLayer = new VectorLayer({
-      name: type,
-      layerName: options.type || type,
-      source: new VectorSource({
-        features: (new GeoJSON()).readFeatures(data)
-      }),
-      style: function (feature: any) {
-        feature.set('type', options.type)
-        feature.set('layerName', options.type)
-        return new Style({
-          stroke: new Stroke({
-            color: options.strokeColor || '#EBEEF5',
-            width: options.strokeWidth || 3
-          }),
-          fill: new Fill({ color: 'rgba(255, 255, 255, 0)' }),
-          text: new Text({
-            text: options.nameKey ? feature.values_[options.nameKey] : "",
-            font: options.textFont ?? '14px Calibri,sans-serif',
-            fill: new Fill({ color: options.textFillColor ?? '#FFF' }),
-            stroke: new Stroke({
-              color: options.textStrokeColor ?? '#409EFF',
-              width: options.textStrokeWidth ?? 2
-            })
-          })
-        })
-      },
-      zIndex: options.zIndex ?? 2
-    } as any)
-    borderLayer.setVisible(options.visible === undefined ? true : options.visible)
-    this.map.addLayer(borderLayer)
+  addBorderPolygonLayer(data: MapJSONData, options: OptionsType) {
+    options.type = options.type ?? 'border'
+    options.fillColor = options.fillColor ?? 'rgba(255, 255, 255, 0)'
+    this.addPolygonLayerCommon(data, options)
     if (options.mask) this.setOutLayer(data)
   }
 
