@@ -79,7 +79,8 @@ export interface OptionsType {
   opacity?: number,
   mapClip?: boolean,
   mapClipData?: MapJSONData,
-
+  mask?: boolean,
+  iconColor?: string
   [propName: string]: any
 }
 

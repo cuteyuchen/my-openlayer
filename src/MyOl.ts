@@ -44,8 +44,6 @@ export default class MyOl {
     let layers: BaseLayer[] = []
     if (Array.isArray(options.layers)) {
       layers = options.layers
-    } else {
-
     }
     this.map = new Map({
       target: id, // 地图容器
@@ -81,7 +79,6 @@ export default class MyOl {
       units: "degrees"
     })
     olProjAddProjection(cgsc2000)
-    // debugger
     // 视图配置
     const viewOptions: any = {
       projection: cgsc2000, // 坐标系
@@ -91,7 +88,6 @@ export default class MyOl {
       maxZoom: options.maxZoom || 20
     }
     if (options.extent) viewOptions.extent = options.extent
-
     return new View(viewOptions)
   }
 
@@ -106,7 +102,6 @@ export default class MyOl {
    */
   getPolygon() {
     if (!this.polygon) this.polygon = new Polygon(this.map)
-
     return this.polygon
   }
 
@@ -136,7 +131,6 @@ export default class MyOl {
    */
   getPoint() {
     if (!this.point) this.point = new Point(this.map)
-
     return this.point
   }
 
@@ -151,7 +145,6 @@ export default class MyOl {
    */
   getLine() {
     if (!this.line) this.line = new Line(this.map)
-
     return this.line
   }
 
@@ -166,7 +159,6 @@ export default class MyOl {
    */
   getTools() {
     if (!this.mapTools) this.mapTools = new MapTools(this.map)
-
     return this.mapTools
   }
 
@@ -196,64 +188,4 @@ export default class MyOl {
     MapTools.mapOnEvent(this.map, eventType, callback, clickType)
   }
 
-  /**
-   * 隐藏&展示图层
-   * @param layerName 图层名称
-   * @param show 是否显示
-   */
-  showMapLayer(layerName: string, show: boolean = true) {
-    if (!layerName) {
-      console.error("缺少图层名称")
-      return false
-    }
-    let layers = this.getTools().getLayerByLayerName(layerName)
-    if (!Array.isArray(layers)) layers = [layers]
-    // 无图层返回不继续操作
-    if (layers.length === 0) return false;
-
-    const zoom = this.map.getView().getZoom();
-    for (const layer of layers) {
-      if (layer) {
-        if (layer.getVisible() === show) return false // 相同则不处理
-        const layerName = layer.values_.layerName
-
-        let isMoreLayer = false;
-        // 若为打开，查找是否按层级显示的图层
-        if (show) {
-          for (let i = 2; i <= 5; i++) {
-            if (["reservoir_frgrd_" + i, "city_frgrd_" + i, "rain_frgrd_" + i].includes(layerName)) {
-              let minZoom = 10;
-
-              switch (i) {
-                case 2:
-                  minZoom = 10;
-                  break;
-                case 3:
-                  minZoom = 11;
-                  break;
-                case 4:
-                  minZoom = 12;
-                  break;
-                case 5:
-                  minZoom = 13;
-                  break;
-              }
-
-              isMoreLayer = true; // 有进入，单下面未进入则代表不显示与下面的continue使用
-              if (zoom && (zoom > minZoom && zoom < 20)) {
-                layer.setVisible(true)
-                break;
-              }
-            }
-          }
-        }
-
-        if (!isMoreLayer) {
-          layer.setVisible(show);
-        }
-      }
-    }
-
-    return true;
-  }
 }

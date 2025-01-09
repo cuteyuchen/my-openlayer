@@ -42,19 +42,19 @@ export default class Polygon {
    * @param data 图层数据
    * @param options 图层配置
    */
-  addBorderPolygonLayer(data: MapJSONData, options: OptionsType) {
+  addBorderPolygon(data: MapJSONData, options: OptionsType) {
     options.type = options.type ?? 'border'
     options.fillColor = options.fillColor ?? 'rgba(255, 255, 255, 0)'
-    this.addPolygonLayerCommon(data, options)
+    this.addPolygon(data, options)
     if (options.mask) this.setOutLayer(data)
   }
 
 
   // 添加分区
   //fyBasinJson中的id的key需要跟options中的nameKey一致
-  addPolygonLayerCommon(dataJSON: MapJSONData, options: OptionsType = {}) {
+  addPolygon(dataJSON: MapJSONData, options: OptionsType = {}) {
     if (options.type != null) {
-      new MapTools(this.map).removeLayer(options.type)
+      MapTools.removeLayer(this.map, options.type)
     }
     const layer = new VectorLayer({
       name: options.type,
@@ -68,13 +68,13 @@ export default class Polygon {
         return new Style({
           stroke: new Stroke({
             color: options.strokeColor ?? '#EBEEF5',
-            width: options.strokeWidth ?? 3,
+            width: options.strokeWidth ?? 2,
             lineDash: options.lineDash,
             lineDashOffset: options.lineDashOffset
           }),
           fill: new Fill({ color: options.fillColor || 'rgba(255, 255, 255, 0.3)' }),
           text: new Text({
-            text: options.nameKey ? feature.values_[options.nameKey] : "",
+            text: options.textVisible && options.nameKey ? feature.values_[options.nameKey] : "",
             font: options.textFont ?? '14px Calibri,sans-serif',
             fill: new Fill({ color: options.textFillColor ?? '#FFF' }),
             stroke: new Stroke({
@@ -110,7 +110,7 @@ export default class Polygon {
   updateFeatureColors(layerName: string, colorObj: {
     [propName: string]: string
   }, options: OptionsType) {
-    const layer = this.map.getLayers().getArray().find(layer => layer.get('name') === layerName);
+    const layer = MapTools.getLayerByLayerName(this.map, layerName)[0]
     if (layer instanceof VectorLayer) {
       const source = layer.getSource();
       const features = source.getFeatures();
@@ -122,7 +122,7 @@ export default class Polygon {
             feature.setStyle(new Style({
               stroke: new Stroke({
                 color: options.strokeColor ?? '#EBEEF5',
-                width: options.strokeWidth ?? 3
+                width: options.strokeWidth ?? 2
               }),
               fill: new Fill({ color: newColor }),
               text: new Text({
@@ -154,7 +154,8 @@ export default class Polygon {
     extent?: any,
     fillColor?: string,
     strokeWidth?: number,
-    strokeColor?: string
+    strokeColor?: string,
+    zIndex?: number
   }) {
     /** geom转坐标数组 **/
     function getCoordsGroup(geom: any) {
@@ -224,7 +225,7 @@ export default class Polygon {
     const vtLayer = new VectorLayer({
       source: vtSource,
       style: shadeStyle,
-      zIndex: 99
+      zIndex: options?.zIndex ?? 99
     })
 
     this.map.addLayer(vtLayer)
@@ -248,19 +249,20 @@ export default class Polygon {
    * @param extent 图片范围（对角线坐标） [minx, miny, maxx, maxy]
    * @param options 图层配置
    */
-  addImgLayer(layerName: string, img: string | undefined, extent: number[], options: OptionsType = { zIndex: 3 }) {
+  addImage(layerName: string, img?: string, extent?: number[], options: OptionsType = { zIndex: 3 }) {
+    let imageLayer = MapTools.getLayerByLayerName(this.map, layerName)[0]
     if (img && extent) {
       const source = new ImageStatic({
         url: img,
         imageExtent: extent
       })
-      if (this[layerName]) {
-        this[layerName].setSource(source)
+      if (imageLayer && imageLayer instanceof ImageLayer) {
+        imageLayer.setSource(source)
       } else {
-        let imageLayer = new ImageLayer()
+        imageLayer = new ImageLayer()
         imageLayer.set('name', layerName)
         imageLayer.set('layerName', layerName)
-        imageLayer.setSource(source)
+        if (imageLayer instanceof ImageLayer) imageLayer.setSource(source)
         imageLayer.setZIndex(options.zIndex ?? 3)
         imageLayer.setOpacity(options.opacity ?? 1)
         if (options.visible !== undefined) imageLayer.setVisible(options.visible)
@@ -268,17 +270,15 @@ export default class Polygon {
           imageLayer = MapTools.setMapClip(imageLayer, options.mapClipData)
         }
         this.map.addLayer(imageLayer)
-        this[layerName] = imageLayer
       }
     } else {
       this.removePolygonLayer(layerName)
     }
-
-    return this[layerName]
+    return imageLayer
   }
 
   removePolygonLayer(layerName: string) {
-    new MapTools(this.map).removeLayer(layerName)
+    MapTools.removeLayer(this.map, layerName)
     this[layerName] = null
   }
 }

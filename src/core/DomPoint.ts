@@ -19,8 +19,8 @@ export default class DomPoint {
 
   private map: Map;
   private app: any;
-  private anchor: Overlay;
-  private dom: HTMLElement;
+  private readonly anchor: Overlay;
+  private readonly dom: HTMLElement;
 
   constructor(map: Map, options: Options) {
     this.map = map;

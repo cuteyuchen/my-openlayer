@@ -11,9 +11,11 @@ import VectorSource from "ol/source/Vector";
 import { Cluster } from 'ol/source';
 import * as turf from 'turf';
 import GeoJSON from "ol/format/GeoJSON";
-import { OptionsType, PointData } from '../types'
+import { MapJSONData, OptionsType, PointData } from '../types'
 import DomPoint from "./DomPoint";
 import MapTools from "./MapTools";
+import { Options as IconOptions } from "ol/style/Icon";
+import { Options as StyleOptions } from "ol/style/Style";
 
 
 export default class Point {
@@ -43,7 +45,7 @@ export default class Point {
         type: options.type,
         geometry: new olPoint([item.lgtd, item.lttd])
       })
-      const style: { text?: Text, image?: Icon } = {}
+      const style: StyleOptions = {}
       if (options.nameKey) {
         style.text = new Text({
           text: item[options.nameKey],
@@ -59,12 +61,12 @@ export default class Point {
         })
       }
       if (options.hasImg || options.hasImg === undefined) {
-        const iconOptions: any = {
+        const iconOptions: IconOptions = {
           src: options.img,
           scale: options.scale ?? 1,
         }
-        if (options.color) {
-          iconOptions.color = options.color
+        if (options.iconColor) {
+          iconOptions.color = options.iconColor
         }
         style.image = new Icon(iconOptions)
       }
@@ -85,10 +87,8 @@ export default class Point {
   }
 
 
-  addClusterPoint(pointData: any[], options: OptionsType) {
-
+  addClusterPoint(pointData: PointData[], options: OptionsType) {
     const pointFeatureList: any[] = [];
-
     pointData.forEach(item => {
       const pointFeature = new Feature({
         geometry: new olPoint([item.lgtd, item.lttd]),
@@ -110,24 +110,33 @@ export default class Point {
       layerName: options.type,
       source: clusterSource,
       style: function (feature: any) {
-        const aviValue = feature.get('features')[0].get('name');
-        return new Style({
-          image: new Icon({
-            src: options.img,
-          }),
-          text: new Text({
-            text: aviValue,
-            font: '12px Calibri,sans-serif',
+        const name = feature.get('features')[0].get(options.nameKey);
+        const style: StyleOptions = {}
+        if (options.nameKey) {
+          style.text = new Text({
+            text: name,
+            font: options.textFont || '12px Calibri,sans-serif',
             fill: new Fill({
-              color: '#FFF'
+              color: options.textFillColor || '#FFF'
             }),
             stroke: new Stroke({
-              color: '#000',
-              width: 3
+              color: options.textStrokeColor || '#000',
+              width: options.textStrokeWidth || 3
             }),
-            offsetY: 20,
-          }),
-        });
+            offsetY: options.textOffsetY || 20,
+          })
+        }
+        if (options.hasImg || options.hasImg === undefined) {
+          const iconOptions: IconOptions = {
+            src: options.img,
+            scale: options.scale ?? 1,
+          }
+          if (options.iconColor) {
+            iconOptions.color = options.iconColor
+          }
+          style.image = new Icon(iconOptions)
+        }
+        return new Style(style)
       },
       zIndex: options.zIndex || 4,
     } as any);
@@ -135,32 +144,9 @@ export default class Point {
     this.map.addLayer(clusterLayer);
   }
 
-  /**
-   * 添加点 - 闪烁
-   *
-   */
-  addFlashWarnPoint(img: any) {
-    const flashIconLayer = new VectorLayer({
-      source: new VectorSource({
-        features: [
-          new Feature({
-            geometry: new olPoint([119.81, 29.969]),
-          })
-        ]
-      }),
-      style: new Style({
-        image: new Icon({
-          src: img,
-        })
-      }),
-      zIndex: 99
-    })
-    this.map.addLayer(flashIconLayer)
-  }
-
 
   // 在流域中心添加闪烁点位
-  setTwinkleLayerFromPolygon(twinkleList: any[], className: string, key: string, json: any) {
+  setTwinkleLayerFromPolygon(twinkleList: any[], className: string, key: string, json: MapJSONData) {
     new MapTools(this.map).removeLayer('twinklePoint')
     // 计算多边形的中心点坐标
     const calculatePolygonCenter = (polygonCoordinates: any) => {
