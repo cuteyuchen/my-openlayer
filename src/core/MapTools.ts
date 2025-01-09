@@ -10,9 +10,14 @@ import { getVectorContext } from "ol/render";
 import { Pixel } from "ol/pixel";
 import { FeatureLike } from "ol/Feature";
 import { MapBrowserEvent } from "ol/index";
+import BaseLayer from "ol/layer/Base";
+import Layer from "ol/layer/Layer";
+import ImageLayer from "ol/layer/Image";
+import ImageSource from "ol/source/Image";
+import BaseImageLayer from "ol/layer/BaseImage";
 
 export default class MapTools {
-  private map: Map;
+  private readonly map: Map;
 
   constructor(map: Map) {
     this.map = map;
@@ -23,19 +28,20 @@ export default class MapTools {
    * @param layerName 图层名称
    */
   getLayerByLayerName(layerName: string) {
-    if (!this.map) return null
+    if (!this.map) return []
+    return MapTools.getLayerByLayerName(this.map, layerName)
+  }
 
-    const targetLayer: any[] = []
-    const layers = this.map.getLayers().getArray()
+  static getLayerByLayerName(map: Map, layerName: string) {
+    const targetLayer: (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] = []
+    const layers = map.getLayers().getArray()
     Object.keys(layers).forEach(function (key: any) {
       const _layerName = layers[key]['values_'].layerName
-      // if (_layerName && _layerName.toString().includes(layerName)) {
       if (_layerName && _layerName === layerName) {
         targetLayer.push(layers[key])
       }
     })
-
-    return targetLayer.length === 1 ? targetLayer[0] : targetLayer
+    return targetLayer
   }
 
   /**
@@ -73,8 +79,50 @@ export default class MapTools {
     return baseLayer
   }
 
+  /**
+   * 移除图层
+   * @param layerName 图层名称
+   */
+
   removeLayer(layerName: string) {
-    this.map.removeLayer(this.getLayerByLayerName(layerName))
+    if (!this.map) return
+    MapTools.removeLayer(this.map, layerName)
+  }
+
+  /**
+   * 移除图层
+   * @param map 地图对象
+   * @param layerName 图层名称
+   */
+  static removeLayer(map: Map, layerName: string) {
+    const layers = MapTools.getLayerByLayerName(map, layerName)
+    layers.forEach(layer => {
+      map.removeLayer(layer)
+    })
+  }
+
+  setLayerVisible(layerName: string, visible: boolean) {
+    if (!this.map) return
+    MapTools.setLayerVisible(this.map, layerName, visible)
+  }
+
+  /**
+   * 设置图层可见性
+   * @param map
+   * @param layerName 图层名称
+   * @param visible 是否可见
+   */
+
+  static setLayerVisible = (map: Map, layerName: string, visible: boolean) => {
+    const layers = MapTools.getLayerByLayerName(map, layerName)
+    layers.forEach(layer => {
+      layer.setVisible(visible)
+    })
+  }
+
+  mapOnEvent(eventType: string, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined) {
+    if (!this.map) return
+    MapTools.mapOnEvent(this.map, eventType, callback, clickType)
   }
 
   /**

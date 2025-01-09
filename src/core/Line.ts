@@ -17,7 +17,7 @@ export default class Line {
     this.map = map
   }
 
-  addLineCommon(data: MapJSONData, options: OptionsType) {
+  addLine(data: MapJSONData, options: OptionsType) {
     const layer = new VectorLayer({
       name: options.type,
       layerName: options.type,
@@ -30,7 +30,7 @@ export default class Line {
         return new Style({
           stroke: new Stroke({
             color: options.strokeColor || 'rgba(3, 122, 255, 1)',
-            width: options.strokeWidth || 3
+            width: options.strokeWidth || 2
           }),
         })
       },
