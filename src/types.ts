@@ -55,6 +55,16 @@ export interface AnnotationLayerOptions {
   visible?: boolean
 }
 
+export interface HeatMapOptions {
+  radius?: number,
+  blur?: number,
+  gradient?: string[],
+  opacity?: number,
+  visible?: boolean,
+  zIndex?: number,
+  valueKey: string,
+}
+
 export interface OptionsType {
   type?: string,
   nameKey?: string,
@@ -81,6 +91,7 @@ export interface OptionsType {
   mapClipData?: MapJSONData,
   mask?: boolean,
   iconColor?: string
+
   [propName: string]: any
 }
 

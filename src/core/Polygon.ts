@@ -5,12 +5,12 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import { Fill, Icon, Stroke, Style, Text } from "ol/style";
-import { Tile as TileLayer, Image as ImageLayer } from "ol/layer";
-import { Geometry, LinearRing } from "ol/geom";
+import { Tile as TileLayer, Image as ImageLayer, Heatmap } from "ol/layer";
+import { Geometry, LinearRing, Point } from "ol/geom";
 import { fromExtent } from "ol/geom/Polygon";
 import Feature from "ol/Feature";
 import ImageStatic from "ol/source/ImageStatic";
-import { OptionsType, MapJSONData } from '../types'
+import { OptionsType, MapJSONData, PointData, HeatMapOptions } from '../types'
 import MapTools from "./MapTools";
 
 export default class Polygon {
@@ -42,7 +42,8 @@ export default class Polygon {
    * @param data 图层数据
    * @param options 图层配置
    */
-  addBorderPolygon(data: MapJSONData, options: OptionsType) {
+  addBorderPolygon(data: MapJSONData, options?: OptionsType) {
+    options = options ?? {}
     options.type = options.type ?? 'border'
     options.fillColor = options.fillColor ?? 'rgba(255, 255, 255, 0)'
     this.addPolygon(data, options)
@@ -52,7 +53,8 @@ export default class Polygon {
 
   // 添加分区
   //fyBasinJson中的id的key需要跟options中的nameKey一致
-  addPolygon(dataJSON: MapJSONData, options: OptionsType = {}) {
+  addPolygon(dataJSON: MapJSONData, options?: OptionsType) {
+    options = options ?? {}
     if (options.type != null) {
       MapTools.removeLayer(this.map, options.type)
     }
@@ -62,30 +64,53 @@ export default class Polygon {
       source: new VectorSource({
         features: (new GeoJSON()).readFeatures(dataJSON, options.projectionOptOptions ?? {})
       }),
-      style: function (feature: any) {
-        feature.set('type', options.type)
-        feature.set('layerName', options.type)
-        return new Style({
+      // style: function (feature: any) {
+      //   feature.set('type', options?.type)
+      //   feature.set('layerName', options?.type)
+      //   return new Style({
+      //     stroke: new Stroke({
+      //       color: options?.strokeColor ?? '#EBEEF5',
+      //       width: options?.strokeWidth ?? 2,
+      //       lineDash: options?.lineDash,
+      //       lineDashOffset: options?.lineDashOffset
+      //     }),
+      //     fill: new Fill({ color: options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
+      //     text: new Text({
+      //       text: options?.textVisible && options.nameKey ? feature.values_[options.nameKey] : "",
+      //       font: options?.textFont ?? '14px Calibri,sans-serif',
+      //       fill: new Fill({ color: options?.textFillColor ?? '#FFF' }),
+      //       stroke: new Stroke({
+      //         color: options?.textStrokeColor ?? '#409EFF',
+      //         width: options?.textStrokeWidth ?? 2
+      //       })
+      //     })
+      //   })
+      // },
+      zIndex: options.zIndex ?? 11
+    } as any)
+    const features = layer.getSource()?.getFeatures();
+    features?.forEach(feature => {
+      feature.set('type', options?.type)
+      feature.set('layerName', options?.type)
+      feature.setStyle(new Style({
+        stroke: new Stroke({
+          color: options?.strokeColor ?? '#EBEEF5',
+          width: options?.strokeWidth ?? 2,
+          lineDash: options?.lineDash,
+          lineDashOffset: options?.lineDashOffset
+        }),
+        fill: new Fill({ color: options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
+        text: new Text({
+          text: options?.textVisible && options.nameKey ? feature.get(options.nameKey) : "",
+          font: options?.textFont ?? '14px Calibri,sans-serif',
+          fill: new Fill({ color: options?.textFillColor ?? '#FFF' }),
           stroke: new Stroke({
-            color: options.strokeColor ?? '#EBEEF5',
-            width: options.strokeWidth ?? 2,
-            lineDash: options.lineDash,
-            lineDashOffset: options.lineDashOffset
-          }),
-          fill: new Fill({ color: options.fillColor || 'rgba(255, 255, 255, 0.3)' }),
-          text: new Text({
-            text: options.textVisible && options.nameKey ? feature.values_[options.nameKey] : "",
-            font: options.textFont ?? '14px Calibri,sans-serif',
-            fill: new Fill({ color: options.textFillColor ?? '#FFF' }),
-            stroke: new Stroke({
-              color: options.textStrokeColor ?? '#409EFF',
-              width: options.textStrokeWidth ?? 2
-            })
+            color: options?.textStrokeColor ?? '#409EFF',
+            width: options?.textStrokeWidth ?? 2
           })
         })
-      },
-      zIndex: options.zIndex ?? 2
-    } as any)
+      }))
+    })
     layer.setVisible(options.visible === undefined ? true : options.visible)
     this.map.addLayer(layer)
     if (options.fitView) {
@@ -100,42 +125,43 @@ export default class Polygon {
   /**
    * 根据数据数组更新某个面颜色
    * @param layerName 图层名称
-   * @param colorObj 数据
+   * @param colorObj 数据 不传或者传{}则重置所有颜色
    *   colorObj:{
    *     对应geojson文件中的索引字段[propName]: 'rgba(255, 0, 0, 0.6)', // 颜色
    *     ...
    *   }
    * @param options 配置项
    */
-  updateFeatureColors(layerName: string, colorObj: {
+  updateFeatureColors(layerName: string, colorObj?: {
     [propName: string]: string
-  }, options: OptionsType) {
+  }, options?: OptionsType) {
     const layer = MapTools.getLayerByLayerName(this.map, layerName)[0]
     if (layer instanceof VectorLayer) {
-      const source = layer.getSource();
-      const features = source.getFeatures();
+      const features = layer.getSource()?.getFeatures();
       features.forEach((feature: Feature) => {
-        if (options.nameKey) {
-          const name = feature['values_'][options.nameKey];
-          const newColor = colorObj[name];
-          if (newColor) {
-            feature.setStyle(new Style({
+        if (options?.nameKey || (!colorObj || Object.keys(colorObj).length === 0)) {
+          const name = options?.nameKey ? feature.get(options.nameKey) : ''
+          const newColor = colorObj?.[name];
+          // const oldStyle = feature.getStyle()
+          // console.log(oldStyle)
+          // if (newColor) {
+          feature.setStyle(new Style({
+            stroke: new Stroke({
+              color: options?.strokeColor ?? '#EBEEF5',
+              width: options?.strokeWidth ?? 2
+            }),
+            fill: new Fill({ color: newColor || options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
+            text: new Text({
+              text: options?.textVisible === false ? "" : name,
+              font: options?.textFont ?? '14px Calibri,sans-serif',
+              fill: new Fill({ color: options?.textFillColor || '#FFF' }),
               stroke: new Stroke({
-                color: options.strokeColor ?? '#EBEEF5',
-                width: options.strokeWidth ?? 2
-              }),
-              fill: new Fill({ color: newColor }),
-              text: new Text({
-                text: options.textVisible === false ? "" : name,
-                font: options.textFont ?? '14px Calibri,sans-serif',
-                fill: new Fill({ color: options.textFillColor || '#FFF' }),
-                stroke: new Stroke({
-                  color: options.textStrokeColor ?? '#409EFF',
-                  width: options.textStrokeWidth ?? 2
-                })
+                color: options?.textStrokeColor ?? '#409EFF',
+                width: options?.textStrokeWidth ?? 2
               })
-            }))
-          }
+            })
+          }))
+          // }
         }
       });
     }
@@ -225,7 +251,7 @@ export default class Polygon {
     const vtLayer = new VectorLayer({
       source: vtSource,
       style: shadeStyle,
-      zIndex: options?.zIndex ?? 99
+      zIndex: options?.zIndex ?? 12
     })
 
     this.map.addLayer(vtLayer)
@@ -249,7 +275,7 @@ export default class Polygon {
    * @param extent 图片范围（对角线坐标） [minx, miny, maxx, maxy]
    * @param options 图层配置
    */
-  addImage(layerName: string, img?: string, extent?: number[], options: OptionsType = { zIndex: 3 }) {
+  addImage(layerName: string, img?: string, extent?: number[], options?: OptionsType) {
     let imageLayer = MapTools.getLayerByLayerName(this.map, layerName)[0]
     if (img && extent) {
       const source = new ImageStatic({
@@ -263,11 +289,11 @@ export default class Polygon {
         imageLayer.set('name', layerName)
         imageLayer.set('layerName', layerName)
         if (imageLayer instanceof ImageLayer) imageLayer.setSource(source)
-        imageLayer.setZIndex(options.zIndex ?? 3)
-        imageLayer.setOpacity(options.opacity ?? 1)
-        if (options.visible !== undefined) imageLayer.setVisible(options.visible)
-        if (options.mapClip && options.mapClipData) {
-          imageLayer = MapTools.setMapClip(imageLayer, options.mapClipData)
+        imageLayer.setZIndex(options?.zIndex ?? 11)
+        imageLayer.setOpacity(options?.opacity ?? 1)
+        if (options?.visible !== undefined) imageLayer.setVisible(options?.visible)
+        if (options?.mapClip && options?.mapClipData) {
+          imageLayer = MapTools.setMapClip(imageLayer, options?.mapClipData)
         }
         this.map.addLayer(imageLayer)
       }
@@ -275,6 +301,30 @@ export default class Polygon {
       this.removePolygonLayer(layerName)
     }
     return imageLayer
+  }
+
+  addHeatmap(layerName: string, pointData: PointData[], options: HeatMapOptions) {
+    const heatmapLayer = new Heatmap({
+      source: new VectorSource(),
+      weight: function (fea: Feature) {
+        return fea.get('weight');
+      },
+      blur: options.blur ?? 15,
+      radius: options.radius ?? 10,
+      zIndex: options.zIndex ?? 11,
+      opacity: options.opacity ?? 1,
+    });
+    heatmapLayer.set('layerName', layerName)
+    this.map.addLayer(heatmapLayer);
+    const max = Math.max(...pointData.map(item => item[options.valueKey]))
+    pointData.forEach((item) => {
+      heatmapLayer?.getSource()!.addFeature(
+        new Feature({
+          geometry: new Point([item.lgtd, item.lttd]),
+          weight: item[options.valueKey] / max//热力值范围是【0,1】；热力值计算 = 找出数据集中的最大值，然后用值除以最大值
+        })
+      );
+    })
   }
 
   removePolygonLayer(layerName: string) {

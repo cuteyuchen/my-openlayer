@@ -79,7 +79,7 @@ export default class Point {
       source: new VectorSource({
         features: pointFeatureList
       }),
-      zIndex: options.zIndex || 4,
+      zIndex: options.zIndex || 21,
     } as any)
     PointVectorLayer.setVisible(options.visible === undefined ? true : options.visible)
     this.map.addLayer(PointVectorLayer)
@@ -138,7 +138,7 @@ export default class Point {
         }
         return new Style(style)
       },
-      zIndex: options.zIndex || 4,
+      zIndex: options.zIndex || 21,
     } as any);
     clusterLayer.setVisible(options.visible === undefined ? true : options.visible)
     this.map.addLayer(clusterLayer);
@@ -196,7 +196,7 @@ export default class Point {
           })
         })
       },
-      zIndex: 6
+      zIndex: 21
     } as any)
     this.map.addLayer(basinLayer)
     this.setTwinkleLayer(twinkleList, className, key, (twinkleItem: any) => {

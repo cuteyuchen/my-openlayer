@@ -94,7 +94,8 @@ point.addPoint([
         lttd: 29.969,
         name: '测试点位'
     }
-], 'test-point', {
+], {
+    type: 'test-point',
     nameKey: 'name',            // 名称字段
     img: 'marker.png',          // 图标路径
     hasImg: true,              // 是否显示图标
