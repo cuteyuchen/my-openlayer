@@ -34,7 +34,7 @@ export default class Line {
           }),
         })
       },
-      zIndex: options.zIndex ?? 3
+      zIndex: options.zIndex ?? 15
     } as any)
     this[options.type + 'Layer'] = layer
     this.map.addLayer(layer)
@@ -73,7 +73,7 @@ export default class Line {
             })
           })
         },
-        zIndex: options.zIndex ?? 6
+        zIndex: options.zIndex ?? 15
       } as any)
       riverLayer.setVisible(false)
       this.riverLayerList.push(riverLayer)
@@ -114,7 +114,7 @@ export default class Line {
         features: (new GeoJSON()).readFeatures(arr)
       }),
       style: (feature: any) => this.setFeatureAttr(feature),
-      zIndex: 3
+      zIndex: 15
     } as any)
     this.map.addLayer(riverLayer)
   }

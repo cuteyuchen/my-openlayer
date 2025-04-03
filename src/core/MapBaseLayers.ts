@@ -37,7 +37,7 @@ export default class MapBaseLayers {
       }
       if (this.layers && Object.keys(this.layers).length !== 0) {
         this.addMapLayer()
-        // this.switchBaseLayer(<string>Object.keys(this.layers)[0])
+        this.switchBaseLayer(<string>Object.keys(this.layers)[0])
       }
     }
   }
@@ -50,14 +50,14 @@ export default class MapBaseLayers {
     for (const key in this.layers) {
       this.layers[key]?.forEach((layer: BaseLayer) => {
         layer.setVisible(key === type)
-        console.log(layer)
+        // console.log(layer)
       })
     }
   }
 
   initLayer() {
     if (this.layers && this.options.token) {
-      const { token, zIndex = 10 } = this.options
+      const { token, zIndex = 9 } = this.options
       this.layers.vec_c = [MapBaseLayers.getTiandiTuLayer({ type: 'vec_c', token, zIndex, visible: false })]
       this.layers.img_c = [MapBaseLayers.getTiandiTuLayer({ type: 'img_c', token, zIndex, visible: false })]
       this.layers.ter_c = [MapBaseLayers.getTiandiTuLayer({ type: 'ter_c', token, zIndex, visible: false })]
