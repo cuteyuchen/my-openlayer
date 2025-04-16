@@ -102,4 +102,4 @@ export interface PointData {
   [propName: string]: any
 }
 
-
+export type MeasureHandlerType = 'Polygon' | 'LineString'
