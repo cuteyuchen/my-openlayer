@@ -30,7 +30,9 @@ export default class Line {
         return new Style({
           stroke: new Stroke({
             color: options.strokeColor || 'rgba(3, 122, 255, 1)',
-            width: options.strokeWidth || 2
+            width: options.strokeWidth || 2,
+            lineDash: options?.lineDash,
+            lineDashOffset: options?.lineDashOffset
           }),
         })
       },

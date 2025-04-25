@@ -1,7 +1,7 @@
 "use strict";
 
 import Map from "ol/Map";
-import { MapJSONData } from "../types";
+import { EventType, MapJSONData } from "../types";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
@@ -11,10 +11,8 @@ import { Pixel } from "ol/pixel";
 import { FeatureLike } from "ol/Feature";
 import { MapBrowserEvent } from "ol/index";
 import BaseLayer from "ol/layer/Base";
-import Layer from "ol/layer/Layer";
 import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
-import BaseImageLayer from "ol/layer/BaseImage";
 
 export default class MapTools {
   private readonly map: Map;
@@ -27,18 +25,24 @@ export default class MapTools {
    * 根据名称获取图层
    * @param layerName 图层名称
    */
-  getLayerByLayerName(layerName: string) {
+  getLayerByLayerName(layerName: string | string[]) {
     if (!this.map) return []
     return MapTools.getLayerByLayerName(this.map, layerName)
   }
 
-  static getLayerByLayerName(map: Map, layerName: string) {
+  static getLayerByLayerName(map: Map, layerName: string | string[]) {
     const targetLayer: (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] = []
     const layers = map.getLayers().getArray()
-    Object.keys(layers).forEach(function (key: any) {
-      const _layerName = layers[key]['values_'].layerName
-      if (_layerName && _layerName === layerName) {
-        targetLayer.push(layers[key])
+    Object.values(layers).forEach((layer: any) => {
+      const _layerName = layer.get('layerName')
+      if (typeof layerName === "string") {
+        if (_layerName && _layerName === layerName) {
+          targetLayer.push(layer)
+        }
+      } else {
+        if (_layerName && layerName.includes(_layerName)) {
+          targetLayer.push(layer)
+        }
       }
     })
     return targetLayer
@@ -84,7 +88,7 @@ export default class MapTools {
    * @param layerName 图层名称
    */
 
-  removeLayer(layerName: string) {
+  removeLayer(layerName: string | string[]) {
     if (!this.map) return
     MapTools.removeLayer(this.map, layerName)
   }
@@ -94,7 +98,7 @@ export default class MapTools {
    * @param map 地图对象
    * @param layerName 图层名称
    */
-  static removeLayer(map: Map, layerName: string) {
+  static removeLayer(map: Map, layerName: string | string[]) {
     const layers = MapTools.getLayerByLayerName(map, layerName)
     layers.forEach(layer => {
       map.removeLayer(layer)
@@ -120,7 +124,7 @@ export default class MapTools {
     })
   }
 
-  mapOnEvent(eventType: string, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined) {
+  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined) {
     if (!this.map) return
     MapTools.mapOnEvent(this.map, eventType, callback, clickType)
   }
@@ -132,7 +136,7 @@ export default class MapTools {
    * @param clickType 点击类型
    * @param callback 回调函数
    */
-  static mapOnEvent(map: Map, eventType = "def", callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined) {
+  static mapOnEvent(map: Map, eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon') {
     const clickTypeObj = {
       point: ['point'],
       line: ['line'],

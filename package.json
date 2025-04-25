@@ -1,7 +1,7 @@
 {
   "name": "my-openlayer",
   "private": false,
-  "version": "0.1.6",
+  "version": "0.1.10",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -36,5 +36,8 @@
     "vite-plugin-css-modules": "^0.0.1",
     "vite-plugin-libcss": "^1.1.1",
     "vue-tsc": "^2.0.6"
+  },
+  "peerDependencies": {
+    "ol": "^6.15.1"
   }
 }
