@@ -103,3 +103,5 @@ export interface PointData {
 }
 
 export type MeasureHandlerType = 'Polygon' | 'LineString'
+
+export type EventType = 'click' | 'moveend' | 'hover'

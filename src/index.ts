@@ -5,6 +5,7 @@ import MapTools from "./core/MapTools";
 import Polygon from "./core/Polygon";
 import MapBaseLayers from "./core/MapBaseLayers";
 import DomPoint from "./core/DomPoint";
+import MeasureHandler from "./core/MeasureHandler";
 
 export {
   Line,
@@ -12,7 +13,8 @@ export {
   MapTools,
   Polygon,
   MapBaseLayers,
-  DomPoint
+  DomPoint,
+  MeasureHandler
 }
 
 export default MyOl;

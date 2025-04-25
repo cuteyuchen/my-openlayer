@@ -14,7 +14,7 @@ import Line from "./core/Line";
 import MapBaseLayers from "./core/MapBaseLayers";
 import proj4 from "proj4";
 import MapTools from "./core/MapTools";
-import { OptionsType, MapInitType, MapLayersOptions } from './types'
+import { OptionsType, MapInitType, MapLayersOptions, EventType } from './types'
 import { defaults as defaultControls } from 'ol/control'
 import BaseLayer from "ol/layer/Base";
 // import { Pixel } from "ol/pixel";
@@ -162,7 +162,7 @@ export default class MyOl {
     return this.mapTools
   }
 
-  restPosition(duration = 3000) {
+  resetPosition(duration = 3000) {
     if (!this.options.center) return console.error('未设置中心点')
     this.locationAction(this.options.center[0], this.options.center[1], this.options.zoom, duration)
   }
@@ -184,8 +184,7 @@ export default class MyOl {
    * @param clickType 点击类型
    * @param callback 回调函数
    */
-  mapOnEvent(eventType = "def", callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined) {
+  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined) {
     MapTools.mapOnEvent(this.map, eventType, callback, clickType)
   }
-
 }
