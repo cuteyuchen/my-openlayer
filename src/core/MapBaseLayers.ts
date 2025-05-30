@@ -6,7 +6,7 @@ import Map from "ol/Map";
 import { Tile as TileLayer } from "ol/layer";
 import { get as getProjection, Projection } from "ol/proj";
 import { getTopLeft, getWidth } from "ol/extent";
-import { WMTS } from "ol/source";
+// import { WMTS } from "ol/source";
 import WMTSTileGrid from "ol/tilegrid/WMTS";
 import XYZ from "ol/source/XYZ";
 import BaseLayer from "ol/layer/Base";
@@ -126,14 +126,9 @@ export default class MapBaseLayers {
   //img_c 影像底图 ter_c 地形底图
   static getTiandiTuLayer(options: { type: TiandituType, token: string, zIndex: number, visible: boolean }) {
     return new TileLayer({
-      source: new WMTS({
-        url: `https://t{0-7}.tianditu.gov.cn/${ options.type }/wmts?tk=${ options.token }`,
-        layer: 'img',
-        style: 'default',
-        matrixSet: 'c',
-        format: 'tiles',
-        wrapX: true,
-        tileGrid: this.getTileGrid(19)
+      source: new XYZ({
+        url: `//t{0-7}.tianditu.gov.cn/DataServer?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
+        projection: 'EPSG:4326'
       }),
       zIndex: options.zIndex,
       visible: options.visible
@@ -147,7 +142,7 @@ export default class MapBaseLayers {
   static getAnnotationLayer(options: AnnotationLayerOptions) {
     return new TileLayer({
       source: new XYZ({
-        url: `http://t{0-7}.tianditu.gov.cn/DataServer?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
+        url: `//t{0-7}.tianditu.gov.cn/DataServer?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
         projection: 'EPSG:4326'
       }),
       zIndex: options.zIndex,

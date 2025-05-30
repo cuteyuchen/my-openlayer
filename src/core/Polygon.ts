@@ -44,7 +44,7 @@ export default class Polygon {
    */
   addBorderPolygon(data: MapJSONData, options?: OptionsType) {
     options = options ?? {}
-    options.type = options.type ?? 'border'
+    options.layerName = options.layerName ?? 'border'
     options.fillColor = options.fillColor ?? 'rgba(255, 255, 255, 0)'
     this.addPolygon(data, options)
     if (options.mask) this.setOutLayer(data)
@@ -55,12 +55,12 @@ export default class Polygon {
   //fyBasinJson中的id的key需要跟options中的nameKey一致
   addPolygon(dataJSON: MapJSONData, options?: OptionsType) {
     options = options ?? {}
-    if (options.type != null) {
-      MapTools.removeLayer(this.map, options.type)
+    if (options.layerName != null) {
+      MapTools.removeLayer(this.map, options.layerName)
     }
     const layer = new VectorLayer({
-      name: options.type,
-      layerName: options.type,
+      name: options.layerName,
+      layerName: options.layerName,
       source: new VectorSource({
         features: (new GeoJSON()).readFeatures(dataJSON, options.projectionOptOptions ?? {})
       }),

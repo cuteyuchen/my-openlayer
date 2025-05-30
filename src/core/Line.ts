@@ -19,8 +19,8 @@ export default class Line {
 
   addLine(data: MapJSONData, options: OptionsType) {
     const layer = new VectorLayer({
-      name: options.type,
-      layerName: options.type,
+      name: options.layerName,
+      layerName: options.layerName,
       source: new VectorSource({
         features: (new GeoJSON()).readFeatures(data)
       }),
@@ -66,8 +66,8 @@ export default class Line {
         layerName: 'river',
         source: vectorSource,
         style: function (feature: any) {
-          feature.set('type', options.type)
-          feature.set('layerName', options.type)
+          feature.set('type', options.layerName)
+          feature.set('layerName', options.layerName)
           return new Style({
             stroke: new Stroke({
               color: options.strokeColor || 'rgb(0,113,255)',
