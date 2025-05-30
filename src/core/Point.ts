@@ -42,7 +42,7 @@ export default class Point {
         // clickLocation: options.clickLocation,
         // all: JSON.stringify(item),
         rawData: item,//保存原始数据
-        type: options.type,
+        type: options.layerName,
         geometry: new olPoint([item.lgtd, item.lttd])
       })
       const style: StyleOptions = {}
@@ -75,7 +75,7 @@ export default class Point {
     })
 
     const PointVectorLayer = new VectorLayer({
-      layerName: options.type,
+      layerName: options.layerName,
       source: new VectorSource({
         features: pointFeatureList
       }),
@@ -107,7 +107,7 @@ export default class Point {
     });
 
     const clusterLayer = new VectorLayer({
-      layerName: options.type,
+      layerName: options.layerName,
       source: clusterSource,
       style: function (feature: any) {
         const name = feature.get('features')[0].get(options.nameKey);

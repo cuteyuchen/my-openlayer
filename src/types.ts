@@ -66,7 +66,7 @@ export interface HeatMapOptions {
 }
 
 export interface OptionsType {
-  type?: string,
+  layerName?: string,
   nameKey?: string,
   img?: string,
   scale?: number,
