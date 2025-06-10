@@ -36,8 +36,9 @@ export default class Line {
           }),
         })
       },
-      zIndex: options.zIndex ?? 15
+      zIndex: options.zIndex ?? 15,
     } as any)
+    layer.setVisible(options.visible === undefined ? true : options.visible)
     this[options.type + 'Layer'] = layer
     this.map.addLayer(layer)
     return layer

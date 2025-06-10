@@ -6,7 +6,7 @@ import Map from "ol/Map";
 import { Tile as TileLayer } from "ol/layer";
 import { get as getProjection, Projection } from "ol/proj";
 import { getTopLeft, getWidth } from "ol/extent";
-// import { WMTS } from "ol/source";
+import { TileWMS } from "ol/source";
 import WMTSTileGrid from "ol/tilegrid/WMTS";
 import XYZ from "ol/source/XYZ";
 import BaseLayer from "ol/layer/Base";
@@ -120,6 +120,28 @@ export default class MapBaseLayers {
       layer = MapTools.setMapClip(layer, this.options.mapClipData);
     }
     return layer;
+  }
+
+  addGeoServerLayer(url: string, layer: string, options: {
+    zIndex?: number,
+    visible?: boolean,
+  }) {
+    const wmsLayer = new TileLayer({
+      source: new TileWMS({
+        url: url,
+        params: {
+          'LAYERS': layer,
+          'TILED': true,
+          'VERSION': '1.1.1' // 或 '1.3.0'
+        },
+        serverType: 'geoserver',
+        crossOrigin: 'anonymous', // 允许跨域
+      }),
+      zIndex: options.zIndex ?? 10,
+      visible: options.visible ?? true,
+    });
+    this.map.addLayer(wmsLayer);
+    return wmsLayer;
   }
 
 
