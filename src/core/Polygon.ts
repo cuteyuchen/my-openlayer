@@ -64,35 +64,13 @@ export default class Polygon {
       source: new VectorSource({
         features: (new GeoJSON()).readFeatures(dataJSON, options.projectionOptOptions ?? {})
       }),
-      // style: function (feature: any) {
-      //   feature.set('type', options?.type)
-      //   feature.set('layerName', options?.type)
-      //   return new Style({
-      //     stroke: new Stroke({
-      //       color: options?.strokeColor ?? '#EBEEF5',
-      //       width: options?.strokeWidth ?? 2,
-      //       lineDash: options?.lineDash,
-      //       lineDashOffset: options?.lineDashOffset
-      //     }),
-      //     fill: new Fill({ color: options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
-      //     text: new Text({
-      //       text: options?.textVisible && options.nameKey ? feature.values_[options.nameKey] : "",
-      //       font: options?.textFont ?? '14px Calibri,sans-serif',
-      //       fill: new Fill({ color: options?.textFillColor ?? '#FFF' }),
-      //       stroke: new Stroke({
-      //         color: options?.textStrokeColor ?? '#409EFF',
-      //         width: options?.textStrokeWidth ?? 2
-      //       })
-      //     })
-      //   })
-      // },
       zIndex: options.zIndex ?? 11
     } as any)
     const features = layer.getSource()?.getFeatures();
     features?.forEach(feature => {
       feature.set('type', options?.type)
       feature.set('layerName', options?.type)
-      feature.setStyle(new Style({
+      const featureStyle = new Style({
         stroke: new Stroke({
           color: options?.strokeColor ?? '#EBEEF5',
           width: options?.strokeWidth ?? 2,
@@ -100,16 +78,20 @@ export default class Polygon {
           lineDashOffset: options?.lineDashOffset
         }),
         fill: new Fill({ color: options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
-        text: new Text({
-          text: options?.textVisible && options.nameKey ? feature.get(options.nameKey) : "",
+      })
+      if (options?.textVisible) {
+        const text = options?.textValue || (options.nameKey ? feature.get(options.nameKey) : "")
+        featureStyle.setText(new Text({
+          text: text,
           font: options?.textFont ?? '14px Calibri,sans-serif',
           fill: new Fill({ color: options?.textFillColor ?? '#FFF' }),
           stroke: new Stroke({
             color: options?.textStrokeColor ?? '#409EFF',
             width: options?.textStrokeWidth ?? 2
           })
-        })
-      }))
+        }))
+      }
+      feature.setStyle(featureStyle)
     })
     layer.setVisible(options.visible === undefined ? true : options.visible)
     this.map.addLayer(layer)
@@ -132,36 +114,36 @@ export default class Polygon {
    *   }
    * @param options 配置项
    */
-  updateFeatureColors(layerName: string, colorObj?: {
+  updateFeatureColor(layerName: string, colorObj?: {
     [propName: string]: string
   }, options?: OptionsType) {
     const layer = MapTools.getLayerByLayerName(this.map, layerName)[0]
     if (layer instanceof VectorLayer) {
       const features = layer.getSource()?.getFeatures();
-      features.forEach((feature: Feature) => {
+      features?.forEach((feature: Feature) => {
         if (options?.nameKey || (!colorObj || Object.keys(colorObj).length === 0)) {
           const name = options?.nameKey ? feature.get(options.nameKey) : ''
           const newColor = colorObj?.[name];
-          // const oldStyle = feature.getStyle()
-          // console.log(oldStyle)
-          // if (newColor) {
-          feature.setStyle(new Style({
+          const featureStyle = new Style({
             stroke: new Stroke({
               color: options?.strokeColor ?? '#EBEEF5',
               width: options?.strokeWidth ?? 2
             }),
             fill: new Fill({ color: newColor || options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
-            text: new Text({
-              text: options?.textVisible === false ? "" : name,
+          })
+          if (options?.textVisible) {
+            const text = options?.textValue || (options.nameKey ? feature.get(options.nameKey) : "")
+            featureStyle.setText(new Text({
+              text,
               font: options?.textFont ?? '14px Calibri,sans-serif',
               fill: new Fill({ color: options?.textFillColor || '#FFF' }),
               stroke: new Stroke({
                 color: options?.textStrokeColor ?? '#409EFF',
                 width: options?.textStrokeWidth ?? 2
               })
-            })
-          }))
-          // }
+            }))
+          }
+          feature.setStyle(featureStyle)
         }
       });
     }

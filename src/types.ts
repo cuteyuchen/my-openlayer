@@ -80,6 +80,7 @@ export interface OptionsType {
   lineDashOffset?: number,
   fillColor?: string,
   textVisible?: boolean,
+  textValue?: string,
   textFont?: string,
   textFillColor?: string,
   textStrokeColor?: string,
