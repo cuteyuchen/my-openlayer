@@ -1,28 +1,50 @@
 # my-openlayer
 
-基于 OpenLayers 的地图组件库，提供了一系列便捷的地图操作功能，支持天地图底图加载、要素绘制、图层管理等功能。
+my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地图组件库，专为 Web GIS 应用开发者设计，支持天地图底图加载、要素绘制、图层管理、事件监听等丰富功能，极大提升地图开发效率。
 
-## 功能特点
+---
+
+## 目录
+
+- [功能亮点](#功能亮点)
+- [安装](#安装)
+- [快速上手](#快速上手)
+- [详细用法](#详细用法)
+- [API 文档与示例](#api-文档与示例)
+- [类型定义](#类型定义)
+- [依赖](#依赖)
+- [贡献指南](#贡献指南)
+- [常见问题](#常见问题)
+- [许可证](#许可证)
+- [联系方式](#联系方式)
+
+---
+
+## 功能亮点
 
 - **底图管理**
-  - 支持天地图矢量图、影像图、地形图
-  - 支持底图动态切换
-  - 支持注记图层控制
-  - 支持地图裁剪
+  - 支持天地图矢量、影像、地形底图
+  - 动态切换底图与注记图层
+  - 地图裁剪与自定义范围显示
 
 - **要素操作**
-  - 点位标注（支持图标、文字）
-  - 线要素绘制（支持样式自定义）
-  - 面要素绘制
-  - DOM点位（支持Vue组件）
-  - 点位聚合展示
-  - 闪烁点位效果
+  - 点位标注（支持自定义图标、文字、聚合、闪烁）
+  - 线要素绘制（支持样式自定义、河流分级显示）
+  - 面要素绘制与分区高亮
+  - DOM 点位（支持 Vue 组件渲染）
+  - 热力图、图片图层
 
 - **地图工具**
-  - 图层管理
-  - 事件监听
-  - 坐标转换
-  - 视图控制
+  - 图层管理（获取、移除、显隐控制）
+  - 地图事件监听（点击、悬停、移动等）
+  - 坐标转换、视图控制
+  - 测量工具
+
+- **高扩展性**
+  - 支持自定义图层、样式、交互逻辑
+  - 兼容主流前端框架
+
+---
 
 ## 安装
 
@@ -30,96 +52,98 @@
 npm install my-openlayer
 ```
 
-## 使用方法
+---
 
-### 基础初始化
+## 快速上手
+
+### 1. 初始化地图
 
 ```javascript
 import MyOl from 'my-openlayer';
 
 const map = new MyOl('map-container', {
-    // 中心点坐标
-    center: [119.81, 29.969],
-    // 缩放级别
-    zoom: 10,
-    // 最小缩放级别
-    minZoom: 8,
-    // 最大缩放级别
-    maxZoom: 20,
-    // 天地图token
-    token: 'your-tianditu-token',
-    // 是否显示注记
-    annotation: true,
-    // 地图裁剪
-    mapClip: false,
-    mapClipData: undefined,
-    // 图层配置
-    layers: {
-        vec_c: [], // 矢量图层
-        img_c: [], // 影像图层
-        ter_c: []  // 地形图层
-    }
+  center: [119.81, 29.969],
+  zoom: 10,
+  minZoom: 8,
+  maxZoom: 20,
+  token: 'your-tianditu-token',
+  annotation: true,
+  mapClip: false,
+  mapClipData: undefined,
+  layers: {
+    vec_c: [],
+    img_c: [],
+    ter_c: []
+  }
 });
 ```
 
-### 底图操作
+### 2. 容器 HTML
+
+```html
+<div id="map-container" style="width: 100vw; height: 100vh;"></div>
+```
+
+---
+
+## 详细用法
+
+### 底图管理
 
 ```javascript
-// 获取底图管理实例
 const baseLayers = map.getMapBaseLayers();
 
 // 切换底图
-baseLayers.switchBaseLayer('vec_c');  // 切换到矢量图
-baseLayers.switchBaseLayer('img_c');  // 切换到影像图
-baseLayers.switchBaseLayer('ter_c');  // 切换到地形图
+baseLayers.switchBaseLayer('vec_c');
+baseLayers.switchBaseLayer('img_c');
+baseLayers.switchBaseLayer('ter_c');
 
 // 添加注记图层
 baseLayers.addAnnotationLayer({
-    type: 'cva_c',  // 注记类型
-    zIndex: 11,     // 图层层级
-    visible: true   // 是否可见
+  type: 'cva_c',
+  zIndex: 11,
+  visible: true
 });
 ```
 
 ### 点位操作
 
 ```javascript
-// 获取点位操作实例
 const point = map.getPoint();
 
 // 添加普通点位
 point.addPoint([
-    {
-        lgtd: 119.81,
-        lttd: 29.969,
-        name: '测试点位'
-    }
+  { lgtd: 119.81, lttd: 29.969, name: '测试点位' }
 ], {
-    type: 'test-point',
-    nameKey: 'name',            // 名称字段
-    img: 'marker.png',          // 图标路径
-    hasImg: true,              // 是否显示图标
-    textFont: '12px sans-serif', // 文字样式
-    textFillColor: '#FFF',      // 文字颜色
-    textStrokeColor: '#000',    // 文字描边颜色
-    textStrokeWidth: 3,         // 文字描边宽度
-    textOffsetY: 20,           // 文字Y轴偏移
-    zIndex: 4,                 // 图层层级
-    visible: true              // 是否可见
+  layerName: 'test-point',
+  nameKey: 'name',
+  img: 'marker.png',
+  hasImg: true,
+  textFont: '12px sans-serif',
+  textFillColor: '#FFF',
+  textStrokeColor: '#000',
+  textStrokeWidth: 3,
+  textOffsetY: 20,
+  zIndex: 4,
+  visible: true
 });
 
 // 添加聚合点位
-point.addClusterPoint(pointData, 'cluster-point', {
-    nameKey: 'name',
-    img: 'cluster.png',
-    zIndex: 4
+point.addClusterPoint([
+  { lgtd: 119.81, lttd: 29.969, name: 'A' },
+  { lgtd: 119.82, lttd: 29.97, name: 'B' }
+], {
+  layerName: 'cluster-point',
+  nameKey: 'name',
+  img: 'cluster.png',
+  zIndex: 4
 });
 
-// 添加Vue组件点位
+// 添加 Vue 组件点位
 const domPoints = point.setDomPointVue(
-    [{ lgtd: 119.81, lttd: 29.969 }],
-    YourVueComponent,
-    Vue
+  [{ lgtd: 119.81, lttd: 29.969 }],
+  YourVueComponent,
+  Vue
 );
 
 // 控制组件点位显隐
@@ -135,31 +159,79 @@ point.locationAction(119.81, 29.969, 15, 1000);
 ### 线要素操作
 
 ```javascript
-// 获取线要素操作实例
 const line = map.getLine();
 
 // 添加普通线要素
 line.addLineCommon(lineGeoJSON, {
-    type: 'test-line',          // 线要素类型
-    strokeColor: '#037AFF',     // 线条颜色
-    strokeWidth: 3,             // 线条宽度
-    zIndex: 3                   // 图层层级
+  layerName: 'test-line',
+  type: 'test-line',
+  strokeColor: '#037AFF',
+  strokeWidth: 3,
+  zIndex: 3
 });
 
 // 添加河流要素（支持分级显示）
 line.addRiverLayersByZoom(riverGeoJSON, {
-    type: 'river',
-    strokeColor: '#0071FF',
-    strokeWidth: 3,
-    zIndex: 6,
-    visible: true
+  layerName: 'river',
+  type: 'river',
+  strokeColor: '#0071FF',
+  strokeWidth: 3,
+  zIndex: 6,
+  visible: true
+});
+
+// 控制河流图层显隐
+line.showRiverLayer(true); // 显示
+line.showRiverLayer(false); // 隐藏
+```
+
+### 面要素操作
+
+```javascript
+const polygon = map.getPolygon();
+
+// 添加边界面
+polygon.addBorderPolygon(borderGeoJSON, {
+  layerName: 'border',
+  fillColor: 'rgba(255,255,255,0)',
+  strokeColor: '#EBEEF5',
+  strokeWidth: 2
+});
+
+// 添加分区面
+polygon.addPolygon(zoneGeoJSON, {
+  layerName: 'zone',
+  fillColor: 'rgba(1, 111, 255, 0.3)',
+  strokeColor: '#037AFF',
+  strokeWidth: 2,
+  textVisible: true,
+  nameKey: 'name',
+  textFont: '14px Calibri,sans-serif',
+  textFillColor: '#FFF',
+  textStrokeColor: '#409EFF',
+  textStrokeWidth: 2
+});
+
+// 更新面颜色
+polygon.updateFeatureColor('zone', { 'A区': 'rgba(255,0,0,0.6)' }, { nameKey: 'name' });
+
+// 添加图片图层
+polygon.addImage('imgLayer', 'img.png', [minx, miny, maxx, maxy], { zIndex: 10 });
+
+// 添加热力图
+polygon.addHeatmap('heatLayer', [
+  { lgtd: 119.81, lttd: 29.969, value: 10 },
+  { lgtd: 119.82, lttd: 29.97, value: 20 }
+], {
+  valueKey: 'value',
+  radius: 20,
+  blur: 15
 });
 ```
 
 ### 地图工具
 
 ```javascript
-// 获取工具实例
 const tools = map.getTools();
 
 // 获取图层
@@ -168,173 +240,428 @@ const layer = tools.getLayerByLayerName('layerName');
 // 移除图层
 tools.removeLayer('layerName');
 
+// 设置图层可见性
+tools.setLayerVisible('layerName', true);
+
 // 事件监听
-MapTools.mapOnEvent(map, 'click', (feature, event) => {
-    console.log('点击要素:', feature);
+map.mapOnEvent('click', (feature, event) => {
+  console.log('点击要素:', feature);
 });
 
-// 支持的事件类型
-// - click: 点击事件
-// - moveend: 地图移动结束事件
-// - hover: 鼠标悬停事件
+// 支持事件类型：click、moveend、hover
 ```
 
-## API文档
+### 测量工具
+
+```javascript
+import { MeasureHandler } from 'my-openlayer';
+const measure = new MeasureHandler(map.map); // 传入原生 ol.Map
+measure.start('Polygon'); // 开始绘制多边形测量
+// measure.start('LineString'); // 开始绘制线测量
+// 结束测量
+measure.end();
+// 清除所有测量结果
+measure.clean();
+// 销毁测量工具
+measure.destory();
+```
+
+---
+
+## API 文档与示例
 
 ### MyOl
 
-主类，用于创建和管理地图实例。
-
 #### 构造函数
 
+```typescript
+new MyOl(id: string, options: MapInitType)
 ```
-constructor(id: string, options: MapInitType)
-```
-
-参数：
-- `id`: 地图容器ID
-- `options`: 地图初始化配置
-  - `center`: 中心点坐标 [经度, 纬度]
-  - `zoom`: 缩放级别
-  - `minZoom`: 最小缩放级别
-  - `maxZoom`: 最大缩放级别
-  - `token`: 天地图token
-  - `annotation`: 是否显示注记
-  - `mapClip`: 是否启用地图裁剪
-  - `mapClipData`: 裁剪数据
-  - `layers`: 图层配置
 
 #### 方法
 
-- `getPoint()`: 获取点位操作实例
-- `getLine()`: 获取线要素操作实例
-- `getPolygon()`: 获取面要素操作实例
-- `getTools()`: 获取地图工具实例
-- `getMapBaseLayers()`: 获取底图图层管理实例
-- `restPosition(duration?: number)`: 重置地图位置
-- `locationAction(lgtd: number, lttd: number, zoom?: number, duration?: number)`: 地图定位
-- `mapOnEvent(eventType: string, callback: Function, clickType?: string)`: 地图事件监听
-- `showMapLayer(layerName: string, show: boolean)`: 控制图层显隐
+- **getPoint()**
+  > 获取点位操作实例。
+  ```javascript
+  const point = map.getPoint();
+  ```
+
+- **getLine()**
+  > 获取线要素操作实例。
+  ```javascript
+  const line = map.getLine();
+  ```
+
+- **getPolygon()**
+  > 获取面要素操作实例。
+  ```javascript
+  const polygon = map.getPolygon();
+  ```
+
+- **getTools()**
+  > 获取地图工具实例。
+  ```javascript
+  const tools = map.getTools();
+  ```
+
+- **getMapBaseLayers()**
+  > 获取底图图层管理实例。
+  ```javascript
+  const baseLayers = map.getMapBaseLayers();
+  ```
+
+- **resetPosition(duration?: number)**
+  > 重置地图位置。
+  ```javascript
+  map.resetPosition(1000); // 1秒动画重置
+  ```
+
+- **locationAction(lgtd: number, lttd: number, zoom?: number, duration?: number)**
+  > 地图定位到指定点。
+  ```javascript
+  map.locationAction(119.81, 29.969, 15, 1000);
+  ```
+
+- **mapOnEvent(eventType: string, callback: Function, clickType?: string)**
+  > 地图事件监听。
+  ```javascript
+  map.mapOnEvent('click', (feature, event) => {
+    console.log('点击要素:', feature);
+  });
+  ```
+
+---
 
 ### MapBaseLayers
 
-底图图层管理类。
+- **switchBaseLayer(type: TiandituType)**
+  > 切换底图。
+  ```javascript
+  baseLayers.switchBaseLayer('img_c');
+  ```
 
-#### 方法
+- **addAnnotationLayer(options: AnnotationLayerOptions)**
+  > 添加注记图层。
+  ```javascript
+  baseLayers.addAnnotationLayer({
+    type: 'cva_c',
+    zIndex: 11,
+    visible: true
+  });
+  ```
 
-- `switchBaseLayer(type: TiandituType)`: 切换底图
-- `addAnnotationLayer(options: AnnotationLayerOptions)`: 添加注记图层
-- `initLayer()`: 初始化图层
+- **initLayer()**
+  > 初始化底图图层。
+  ```javascript
+  baseLayers.initLayer();
+  ```
+
+---
 
 ### Point
 
-点位操作类。
+- **addPoint(pointData: PointData[], options: OptionsType)**
+  > 添加普通点位。
+  ```javascript
+  point.addPoint([
+    { lgtd: 119.81, lttd: 29.969, name: '测试点位' }
+  ], {
+    layerName: 'test-point',
+    nameKey: 'name',
+    img: 'marker.png',
+    hasImg: true
+  });
+  ```
 
-#### 方法
+- **addClusterPoint(pointData: PointData[], options: OptionsType)**
+  > 添加聚合点位。
+  ```javascript
+  point.addClusterPoint([
+    { lgtd: 119.81, lttd: 29.969, name: 'A' },
+    { lgtd: 119.82, lttd: 29.97, name: 'B' }
+  ], {
+    layerName: 'cluster-point',
+    nameKey: 'name',
+    img: 'cluster.png',
+    zIndex: 4
+  });
+  ```
 
-- `addPoint(pointData: PointData[], type: string, options: OptionsType)`: 添加点位
-- `addClusterPoint(pointData: any[], type: string, options: OptionsType)`: 添加聚合点位
-- `setDomPointVue(pointInfoList: any[], template: any, Vue: any)`: 添加Vue组件点位
-- `locationAction(lgtd: number, lttd: number, zoom?: number, duration?: number)`: 地图定位
+- **setDomPointVue(pointInfoList: any[], template: any, Vue: any)**
+  > 添加 Vue 组件点位。
+  ```javascript
+  const domPoints = point.setDomPointVue(
+    [{ lgtd: 119.81, lttd: 29.969 }],
+    YourVueComponent,
+    Vue
+  );
+  domPoints.setVisible(true);
+  domPoints.remove();
+  ```
+
+- **locationAction(lgtd: number, lttd: number, zoom?: number, duration?: number)**
+  > 地图定位。
+  ```javascript
+  point.locationAction(119.81, 29.969, 15, 1000);
+  ```
+
+---
 
 ### Line
 
-线要素操作类。
+- **addLineCommon(data: MapJSONData, options: OptionsType)**
+  > 添加普通线要素。
+  ```javascript
+  line.addLineCommon(lineGeoJSON, {
+    layerName: 'test-line',
+    type: 'test-line',
+    strokeColor: '#037AFF',
+    strokeWidth: 3
+  });
+  ```
 
-#### 方法
+- **addRiverLayersByZoom(data: MapJSONData, options: OptionsType)**
+  > 添加河流要素（分级显示）。
+  ```javascript
+  line.addRiverLayersByZoom(riverGeoJSON, {
+    layerName: 'river',
+    type: 'river',
+    strokeColor: '#0071FF',
+    strokeWidth: 3,
+    zIndex: 6,
+    visible: true
+  });
+  ```
 
-- `addLineCommon(data: MapJSONData, options: OptionsType)`: 添加普通线要素
-- `addRiverLayersByZoom(data: MapJSONData, options: OptionsType)`: 添加河流要素
-- `showRiverLayer(show: boolean)`: 控制河流图层显隐
+- **showRiverLayer(show: boolean)**
+  > 控制河流图层显隐。
+  ```javascript
+  line.showRiverLayer(true); // 显示
+  line.showRiverLayer(false); // 隐藏
+  ```
+
+---
+
+### Polygon
+
+- **addBorderPolygon(data: MapJSONData, options?: OptionsType)**
+  > 添加边界面。
+  ```javascript
+  polygon.addBorderPolygon(borderGeoJSON, {
+    layerName: 'border',
+    fillColor: 'rgba(255,255,255,0)',
+    strokeColor: '#EBEEF5',
+    strokeWidth: 2
+  });
+  ```
+
+- **addPolygon(data: MapJSONData, options?: OptionsType)**
+  > 添加分区面。
+  ```javascript
+  polygon.addPolygon(zoneGeoJSON, {
+    layerName: 'zone',
+    fillColor: 'rgba(1, 111, 255, 0.3)',
+    strokeColor: '#037AFF',
+    strokeWidth: 2,
+    textVisible: true,
+    nameKey: 'name',
+    textFont: '14px Calibri,sans-serif',
+    textFillColor: '#FFF',
+    textStrokeColor: '#409EFF',
+    textStrokeWidth: 2
+  });
+  ```
+
+- **updateFeatureColor(layerName: string, colorObj?: { [propName: string]: string }, options?: OptionsType)**
+  > 更新面颜色。
+  ```javascript
+  polygon.updateFeatureColor('zone', { 'A区': 'rgba(255,0,0,0.6)' }, { nameKey: 'name' });
+  ```
+
+- **addImage(layerName: string, img?: string, extent?: number[], options?: OptionsType)**
+  > 添加图片图层。
+  ```javascript
+  polygon.addImage('imgLayer', 'img.png', [minx, miny, maxx, maxy], { zIndex: 10 });
+  ```
+
+- **addHeatmap(layerName: string, pointData: PointData[], options: HeatMapOptions)**
+  > 添加热力图。
+  ```javascript
+  polygon.addHeatmap('heatLayer', [
+    { lgtd: 119.81, lttd: 29.969, value: 10 },
+    { lgtd: 119.82, lttd: 29.97, value: 20 }
+  ], {
+    valueKey: 'value',
+    radius: 20,
+    blur: 15
+  });
+  ```
+
+- **removePolygonLayer(layerName: string)**
+  > 移除面图层。
+  ```javascript
+  polygon.removePolygonLayer('zone');
+  ```
+
+---
 
 ### MapTools
 
-地图工具类。
+- **getLayerByLayerName(layerName: string)**
+  > 获取图层。
+  ```javascript
+  const layer = tools.getLayerByLayerName('myLayer');
+  ```
 
-#### 方法
+- **removeLayer(layerName: string)**
+  > 移除图层。
+  ```javascript
+  tools.removeLayer('myLayer');
+  ```
 
-- `getLayerByLayerName(layerName: string)`: 获取图层
-- `removeLayer(layerName: string)`: 移除图层
-- `static mapOnEvent(map: Map, eventType: string, callback: Function, clickType?: string)`: 事件监听
-- `static setMapClip(baseLayer: any, data: MapJSONData)`: 设置地图裁剪
+- **setLayerVisible(layerName: string, visible: boolean)**
+  > 设置图层可见性。
+  ```javascript
+  tools.setLayerVisible('myLayer', true);
+  ```
+
+- **mapOnEvent(eventType: string, callback: Function, clickType?: string)**
+  > 地图事件监听。
+  ```javascript
+  tools.mapOnEvent('click', (feature, event) => {
+    console.log('点击要素:', feature);
+  });
+  ```
+
+- **static setMapClip(baseLayer: any, data: MapJSONData)**
+  > 设置地图裁剪。
+  ```javascript
+  MapTools.setMapClip(baseLayer, clipGeoJSON);
+  ```
+
+---
+
+### MeasureHandler
+
+- **start(type: 'Polygon' | 'LineString')**
+  > 开始测量。
+  ```javascript
+  measure.start('Polygon');
+  measure.start('LineString');
+  ```
+
+- **end()**
+  > 结束测量。
+  ```javascript
+  measure.end();
+  ```
+
+- **clean()**
+  > 清除所有测量结果。
+  ```javascript
+  measure.clean();
+  ```
+
+- **destory()**
+  > 销毁测量工具。
+  ```javascript
+  measure.destory();
+  ```
+
+---
 
 ## 类型定义
 
+详见 [src/types.ts](src/types.ts)，主要类型如下：
+
 ```typescript
 interface MapInitType {
-    layers?: undefined;
-    zoom?: number;
-    center?: number[];
-    minZoom?: number;
-    maxZoom?: number;
-    extent?: undefined;
-    token?: string;
-    annotation?: boolean;
-    mapClip?: boolean;
-    mapClipData?: any;
-}
-
-type TiandituType = 'vec_c' | 'img_c' | 'ter_c';
-
-interface AnnotationLayerOptions {
-    type: string;
-    token: string;
-    zIndex?: number;
-    visible?: boolean;
+  layers?: BaseLayer[] | { [key: string]: BaseLayer[] },
+  zoom?: number,
+  center?: number[],
+  minZoom?: number,
+  maxZoom?: number,
+  extent?: number[],
+  mapClipData?: MapJSONData,
+  token?: string,
+  annotation?: boolean
 }
 
 interface OptionsType {
-    type?: string;
-    nameKey?: string;
-    img?: string;
-    hasImg?: boolean;
-    textFont?: string;
-    textFillColor?: string;
-    textStrokeColor?: string;
-    textStrokeWidth?: number;
-    textOffsetY?: number;
-    zIndex?: number;
-    visible?: boolean;
-    strokeColor?: string;
-    strokeWidth?: number;
+  layerName?: string,
+  nameKey?: string,
+  img?: string,
+  hasImg?: boolean,
+  zIndex?: number,
+  visible?: boolean,
+  strokeColor?: string | number[],
+  strokeWidth?: number,
+  fillColor?: string,
+  textFont?: string,
+  textFillColor?: string,
+  textStrokeColor?: string,
+  textStrokeWidth?: number,
+  textOffsetY?: number,
+  [propName: string]: any
+}
+
+interface PointData {
+  lgtd: number,
+  lttd: number,
+  [propName: string]: any
 }
 ```
 
+---
+
 ## 依赖
 
-- ol ^6.15.1
-- proj4 ^2.7.5
-- turf ^3.0.14
+- [ol](https://openlayers.org/) ^6.15.1
+- [proj4](https://github.com/proj4js/proj4js) ^2.7.5
+- [turf](https://turfjs.org/) ^3.0.14
 
+---
+
+## 贡献指南
+
+欢迎提交 Issue 或 Pull Request！
+
+1. Fork 本仓库
+2. 新建分支：`git checkout -b feature/your-feature`
+3. 提交更改：`git commit -m 'feat: 新功能描述'`
+4. 推送分支：`git push origin feature/your-feature`
+5. 提交 Pull Request
+
+---
+
+## 常见问题
+
+1. **如何获取天地图 token？**
+   - 访问 [天地图开发者平台](https://lbs.tianditu.gov.cn/) 注册账号并申请密钥(token)。
+
+2. **为什么地图无法加载？**
+   - 检查 token 是否正确
+   - 检查网络连接
+   - 确认坐标系是否正确
+
+3. **如何自定义点位样式？**
+   - 通过 `options` 参数配置样式，支持自定义图标和文字样式
+
+4. **如何在 Vue/React/Angular 中集成？**
+   - 只需在组件生命周期内初始化和销毁 MyOl 实例即可，点位 DOM 支持 Vue 组件渲染
+
+---
 
 ## 许可证
 
 [MIT](LICENSE)
 
-
-## 更新日志
-
-### 0.1.1
-- 初始版本发布
-- 支持基础地图功能
-- 支持点线面要素操作
-- 支持天地图底图
-
-## 常见问题
-
-1. **如何获取天地图token？**
-   - 访问天地图开发者平台注册账号
-   - 申请密钥(token)
-
-2. **为什么地图无法加载？**
-   - 检查token是否正确
-   - 检查网络连接
-   - 确认坐标系是否正确
-
-3. **如何自定义点位样式？**
-   - 通过options参数配置样式
-   - 支持自定义图标和文字样式
+---
 
 ## 联系方式
 
-如有问题或建议，请提交 [Issue](https://github.com/cuteyuchen/my-openlayer/issues)
+如有问题或建议，请提交 [Issue](https://github.com/cuteyuchen/my-openlayer/issues) 或邮件联系 2364184627@qq.com
+
+---
+
+> 本项目长期维护，欢迎 Star、Fork 和贡献代码！
