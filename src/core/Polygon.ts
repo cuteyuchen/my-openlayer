@@ -70,6 +70,7 @@ export default class Polygon {
     features?.forEach(feature => {
       feature.set('type', options?.type)
       feature.set('layerName', options?.type)
+      const fillColor = options?.fillColorCallBack ? options.fillColorCallBack(feature) : options?.fillColor
       const featureStyle = new Style({
         stroke: new Stroke({
           color: options?.strokeColor ?? '#EBEEF5',
@@ -77,10 +78,10 @@ export default class Polygon {
           lineDash: options?.lineDash,
           lineDashOffset: options?.lineDashOffset
         }),
-        fill: new Fill({ color: options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
+        fill: new Fill({ color: fillColor ?? 'rgba(255, 255, 255, 0.3)' }),
       })
       if (options?.textVisible) {
-        const text = options?.textValue || (options.nameKey ? feature.get(options.nameKey) : "")
+        const text = (options?.textCallBack ? options?.textCallBack(feature) : '') || (options.nameKey ? feature.get(options.nameKey) : "")
         featureStyle.setText(new Text({
           text: text,
           font: options?.textFont ?? '14px Calibri,sans-serif',
@@ -132,7 +133,7 @@ export default class Polygon {
             fill: new Fill({ color: newColor || options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
           })
           if (options?.textVisible) {
-            const text = options?.textValue || (options.nameKey ? feature.get(options.nameKey) : "")
+            const text = (options?.textCallBack ? options?.textCallBack(feature) : '') || (options.nameKey ? feature.get(options.nameKey) : "")
             featureStyle.setText(new Text({
               text,
               font: options?.textFont ?? '14px Calibri,sans-serif',
