@@ -1,5 +1,6 @@
 "use strict";
 
+// OpenLayers 核心导入
 import { register as olProj4Register } from 'ol/proj/proj4'
 import {
   Projection as olProjProjection,
@@ -8,183 +9,536 @@ import {
 } from 'ol/proj'
 import View from "ol/View";
 import Map from "ol/Map";
+import { defaults as defaultControls } from 'ol/control'
+import BaseLayer from "ol/layer/Base";
+import proj4 from "proj4";
+
+// 内部模块导入
 import Polygon from "./core/Polygon";
 import Point from "./core/Point";
 import Line from "./core/Line";
 import MapBaseLayers from "./core/MapBaseLayers";
-import proj4 from "proj4";
 import MapTools from "./core/MapTools";
-import { MapInitType, MapLayersOptions, EventType } from './types'
-import { defaults as defaultControls } from 'ol/control'
-import BaseLayer from "ol/layer/Base";
-// import { Pixel } from "ol/pixel";
-// import { FeatureLike } from "ol/Feature";
-// import { MapBrowserEvent } from "ol";
+import { ErrorHandler, MyOpenLayersError, ErrorType } from './utils/ErrorHandler';
+import { EventManager } from './core/EventManager';
+import { ConfigManager } from './core/ConfigManager';
 
+// 类型定义导入
+import { MapInitType, MapLayersOptions, EventType } from './types'
+
+/**
+ * MyOl 地图核心类
+ * 提供完整的地图操作功能，包括点、线、面要素管理，底图切换，工具操作等
+ */
 export default class MyOl {
-  map!: Map;
-  private baseLayers!: MapBaseLayers;
-  private polygon!: Polygon;
-  private mapTools!: MapTools;
-  private point!: Point;
-  private line!: Line;
+  // 核心地图实例
+  public readonly map: Map;
+  
+  // 功能模块实例（懒加载）
+  private _baseLayers?: MapBaseLayers;
+  private _polygon?: Polygon;
+  private _mapTools?: MapTools;
+  private _point?: Point;
+  private _line?: Line;
+  
+  // 管理器实例
+  private readonly errorHandler: ErrorHandler;
+  private readonly eventManager: EventManager;
+  private readonly configManager: ConfigManager;
+  
+  // 配置选项
   private readonly options: MapInitType;
-  static DefaultOptions: MapInitType = {
+  
+  // 默认配置
+  static readonly DefaultOptions: MapInitType = {
     layers: undefined,
     zoom: 10,
     center: [119.81, 29.969],
     minZoom: 8,
     maxZoom: 20,
     extent: undefined
-  }
+  };
+  
+  // 坐标系配置
+  private static readonly PROJECTIONS = {
+    CGCS2000: "EPSG:4490",
+    CGCS2000_3_DEGREE: "EPSG:4549"
+  } as const;
 
-  constructor(id: string, options: MapInitType) {
-    options.center = options.center || MyOl.DefaultOptions.center
-    this.options = { ...MyOl.DefaultOptions, ...options }
-    let layers: BaseLayer[] = []
-    if (Array.isArray(options.layers)) {
-      layers = options.layers
+  /**
+   * 构造函数
+   * @param id 地图容器 DOM 元素 ID
+   * @param options 地图初始化配置
+   */
+  constructor(id: string, options?: Partial<MapInitType>) {
+    // 初始化错误处理器（必须最先初始化）
+    this.errorHandler = ErrorHandler.getInstance();
+    
+    try {
+      // 初始化配置管理器
+      this.configManager = new ConfigManager();
+      
+      // 合并配置（处理 undefined 情况）
+      this.options = ConfigManager.mergeOptions(MyOl.DefaultOptions, options || {});
+      
+      // 参数验证
+      this.validateConstructorParams(id, this.options);
+      
+      // 初始化坐标系
+      MyOl.initializeProjections();
+      
+      // 准备图层
+      const layers: BaseLayer[] = Array.isArray(this.options.layers) ? this.options.layers : [];
+      
+      // 创建地图实例
+      this.map = new Map({
+        target: id,
+        view: MyOl.createView(this.options),
+        layers: layers,
+        controls: this.createControls()
+      });
+      
+      // 初始化事件管理器（需要地图实例）
+      this.eventManager = new EventManager(this.map);
+      
+      // 初始化事件监听
+      this.initializeEventListeners();
+      
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          `地图初始化失败: ${error instanceof Error ? error.message : '未知错误'}`,
+          ErrorType.MAP_ERROR,
+          { id, options }
+        )
+      );
+      throw error;
     }
-    this.map = new Map({
-      target: id, // 地图容器
-      view: MyOl.getView(this.options), // 视图
-      layers: layers,
-      controls: defaultControls({
-        zoom: false,
-        rotate: false,
-        attribution: false
-      }).extend([])
-    })
   }
 
   /**
-   * 获取视图
-   * @param options 视图配置
-   * @param options.center 中心点
-   * @param options.zoom 缩放级别
-   * @param options.minZoom 最小缩放级别
-   * @param options.maxZoom 最大缩放级别
-   * @param options.extent 视图范围
-   * @returns View
+   * 验证构造函数参数
+   * @private
    */
-  static getView(options: MapInitType = MyOl.DefaultOptions) {
-    proj4.defs("EPSG:4490", "+proj=longlat +ellps=GRS80 +no_defs");
-    proj4.defs("EPSG:4549", "+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs");
-    olProj4Register(proj4)
-
+  private validateConstructorParams(id: string, options: MapInitType): void {
+    if (!id || typeof id !== 'string') {
+      throw new Error('地图容器 ID 必须是非空字符串');
+    }
+    
+    if (!options || typeof options !== 'object') {
+      throw new Error('地图配置选项不能为空');
+    }
+    
+    // 检查 DOM 元素是否存在
+    const element = document.getElementById(id);
+    if (!element) {
+      throw new Error(`找不到 ID 为 '${id}' 的 DOM 元素`);
+    }
+  }
+  
+  /**
+   * 初始化坐标系
+   * @private
+   */
+  private static initializeProjections(): void {
+    // 定义 CGCS2000 坐标系
+    proj4.defs(MyOl.PROJECTIONS.CGCS2000, "+proj=longlat +ellps=GRS80 +no_defs");
+    proj4.defs(MyOl.PROJECTIONS.CGCS2000_3_DEGREE, "+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs");
+    
+    // 注册到 OpenLayers
+    olProj4Register(proj4);
+    
+    // 添加 CGCS2000 投影
     const cgsc2000 = new olProjProjection({
-      code: "EPSG:4490",
+      code: MyOl.PROJECTIONS.CGCS2000,
       extent: [-180, -90, 180, 90],
       worldExtent: [-180, -90, 180, 90],
       units: "degrees"
-    })
-    olProjAddProjection(cgsc2000)
-    // 视图配置
-    const viewOptions: any = {
-      projection: cgsc2000, // 坐标系
-      center: olProjFromLonLat(<number[]>options.center, cgsc2000), // 中心点
-      zoom: options.zoom || 10, // 缩放级别
-      minZoom: options.minZoom || 8,
-      maxZoom: options.maxZoom || 20
+    });
+    olProjAddProjection(cgsc2000);
+  }
+  
+  /**
+   * 创建地图控件
+   * @private
+   */
+  private createControls() {
+    return defaultControls({
+      zoom: false,
+      rotate: false,
+      attribution: false
+    }).extend([]);
+  }
+  
+  /**
+   * 初始化事件监听
+   * @private
+   */
+  private initializeEventListeners(): void {
+    // 地图加载完成事件
+    this.map.once('rendercomplete', () => {
+      console.debug('地图初始化完成', { map: this.map });
+    });
+    
+    // 地图错误事件
+    this.map.on('error', (error) => {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          '地图渲染错误',
+          ErrorType.MAP_ERROR,
+          { error }
+        )
+      );
+    });
+  }
+  
+  /**
+   * 创建地图视图
+   * @param options 视图配置
+   * @returns View 地图视图实例
+   */
+  static createView(options: MapInitType = MyOl.DefaultOptions): View {
+    try {
+      const projection = new olProjProjection({
+        code: MyOl.PROJECTIONS.CGCS2000,
+        extent: [-180, -90, 180, 90],
+        worldExtent: [-180, -90, 180, 90],
+        units: "degrees"
+      });
+      
+      const viewOptions = {
+        projection,
+        center: olProjFromLonLat(options.center as number[], projection),
+        zoom: options.zoom ?? MyOl.DefaultOptions.zoom!,
+        minZoom: options.minZoom ?? MyOl.DefaultOptions.minZoom!,
+        maxZoom: options.maxZoom ?? MyOl.DefaultOptions.maxZoom!,
+        ...(options.extent && { extent: options.extent })
+      };
+      
+      return new View(viewOptions);
+    } catch (error) {
+      throw new MyOpenLayersError(
+        `视图创建失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.MAP_ERROR,
+        { options }
+      );
     }
-    if (options.extent) viewOptions.extent = options.extent
-    return new View(viewOptions)
+  }
+  
+  /**
+   * 获取视图（向后兼容）
+   * @deprecated 请使用 createView 方法
+   */
+  static getView(options: MapInitType = MyOl.DefaultOptions): View {
+    console.warn('getView 方法已废弃，请使用 createView 方法');
+    return MyOl.createView(options);
   }
 
 
-  //  ╔══════════╗
-  //  ║  地图 面  ║
-  //  ╚══════════╝
+  // ==========================================
+  // 功能模块获取方法（懒加载模式）
+  // ==========================================
 
   /**
-   * 获取 地图 面 操作
-   * @returns Polygon
+   * 获取面要素操作模块
+   * @returns Polygon 面要素操作实例
    */
-  getPolygon() {
-    if (!this.polygon) this.polygon = new Polygon(this.map)
-    return this.polygon
-  }
-
-  getMapBaseLayers() {
-    if (Array.isArray(this.options.layers)) {
-      console.warn('已设置默认底图，MapBaseLayers中的switchBaseLayer方法将失效')
+  getPolygon(): Polygon {
+    try {
+      if (!this._polygon) {
+        this._polygon = new Polygon(this.map);
+        console.debug('面要素模块已加载');
+      }
+      return this._polygon;
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          '面要素模块初始化失败',
+          ErrorType.COMPONENT_ERROR,
+          { error }
+        )
+      );
+      throw error;
     }
-    const options: MapLayersOptions = {
-      layers: this.options.layers,
-      annotation: this.options.annotation,
-      zIndex: 1,
-      mapClip: !!this.options.mapClipData,
-      mapClipData: this.options.mapClipData,
-      token: this.options.token || ''
+  }
+
+  /**
+   * 获取底图图层管理模块
+   * @returns MapBaseLayers 底图管理实例
+   */
+  getMapBaseLayers(): MapBaseLayers {
+    try {
+      if (!this._baseLayers) {
+        // 检查是否设置了自定义底图
+        if (Array.isArray(this.options.layers)) {
+          console.warn('已设置默认底图，MapBaseLayers 中的 switchBaseLayer 方法将失效');
+        }
+        
+        const layerOptions: MapLayersOptions = {
+          layers: this.options.layers,
+          annotation: this.options.annotation,
+          zIndex: 1,
+          mapClip: !!this.options.mapClipData,
+          mapClipData: this.options.mapClipData,
+          token: this.options.token || ''
+        };
+        
+        this._baseLayers = new MapBaseLayers(this.map, layerOptions);
+        console.debug('基础图层模块已加载');
+      }
+      return this._baseLayers;
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          '基础图层模块初始化失败',
+          ErrorType.COMPONENT_ERROR,
+          { error }
+        )
+      );
+      throw error;
     }
-    if (!this.baseLayers) this.baseLayers = new MapBaseLayers(this.map, options)
-    return this.baseLayers
   }
 
-  //  ╔══════════╗
-  //  ║  地图 点  ║
-  //  ╚══════════╝
-
   /**
-   * 获取 地图 点 操作
-   * @returns Point
+   * 获取点要素操作模块
+   * @returns Point 点要素操作实例
    */
-  getPoint() {
-    if (!this.point) this.point = new Point(this.map)
-    return this.point
+  getPoint(): Point {
+    try {
+      if (!this._point) {
+        this._point = new Point(this.map);
+        console.debug('点要素模块已加载');
+      }
+      return this._point;
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          '点要素模块初始化失败',
+          ErrorType.COMPONENT_ERROR,
+          { error }
+        )
+      );
+      throw error;
+    }
   }
 
-
-  //  ╔══════════╗
-  //  ║  地图 线  ║
-  //  ╚══════════╝
-
   /**
-   * 获取 地图 线 操作
-   * @returns Line
+   * 获取线要素操作模块
+   * @returns Line 线要素操作实例
    */
-  getLine() {
-    if (!this.line) this.line = new Line(this.map)
-    return this.line
+  getLine(): Line {
+    try {
+      if (!this._line) {
+        this._line = new Line(this.map);
+        console.debug('线要素模块已加载');
+      }
+      return this._line;
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          '线要素模块初始化失败',
+          ErrorType.COMPONENT_ERROR,
+          { error }
+        )
+      );
+      throw error;
+    }
   }
 
-
-  //  ╔════════════╗
-  //  ║  地图 工具  ║
-  //  ╚════════════╝
-
   /**
-   * 获取 地图 工具 操作
-   * @returns MapTools
+   * 获取地图工具模块
+   * @returns MapTools 地图工具实例
    */
-  getTools() {
-    if (!this.mapTools) this.mapTools = new MapTools(this.map)
-    return this.mapTools
+  getTools(): MapTools {
+    try {
+      if (!this._mapTools) {
+        this._mapTools = new MapTools(this.map);
+        console.debug('工具模块已加载');
+      }
+      return this._mapTools;
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          '工具模块初始化失败',
+          ErrorType.COMPONENT_ERROR,
+          { error }
+        )
+      );
+      throw error;
+    }
   }
 
-  resetPosition(duration = 3000) {
-    if (!this.options.center) return console.error('未设置中心点')
-    this.locationAction(this.options.center[0], this.options.center[1], this.options.zoom, duration)
+  // ==========================================
+  // 地图操作方法
+  // ==========================================
+
+  /**
+   * 重置地图位置到初始中心点
+   * @param duration 动画持续时间（毫秒）
+   */
+  resetPosition(duration: number = 3000): void {
+    try {
+      if (!this.options.center) {
+        throw new Error('未设置中心点，无法重置位置');
+      }
+      
+      const [longitude, latitude] = this.options.center;
+      this.locationAction(longitude, latitude, this.options.zoom, duration);
+      
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          `重置地图位置失败: ${error instanceof Error ? error.message : '未知错误'}`,
+          ErrorType.MAP_ERROR,
+          { center: this.options.center, duration }
+        )
+      );
+    }
   }
 
   /**
-   * 地图定位
-   * @param lgtd 经度
-   * @param lttd 纬度
+   * 地图定位到指定坐标
+   * @param longitude 经度
+   * @param latitude 纬度
    * @param zoom 缩放级别
-   * @param duration 动画时间
+   * @param duration 动画持续时间（毫秒）
    */
-  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000) {
-    this.getPoint().locationAction(lgtd, lttd, zoom, duration)
+  locationAction(longitude: number, latitude: number, zoom: number = 20, duration: number = 3000): void {
+    try {
+      // 参数验证
+      if (typeof longitude !== 'number' || typeof latitude !== 'number') {
+        throw new Error('经纬度必须是数字类型');
+      }
+      
+      if (longitude < -180 || longitude > 180) {
+        throw new Error('经度值必须在 -180 到 180 之间');
+      }
+      
+      if (latitude < -90 || latitude > 90) {
+        throw new Error('纬度值必须在 -90 到 90 之间');
+      }
+      
+      this.getPoint().locationAction(longitude, latitude, zoom, duration);
+      
+      // 记录定位操作
+      console.debug('地图定位完成', {
+        longitude,
+        latitude,
+        zoom,
+        duration
+      });
+      
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          `地图定位失败: ${error instanceof Error ? error.message : '未知错误'}`,
+          ErrorType.MAP_ERROR,
+          { longitude, latitude, zoom, duration }
+        )
+      );
+      throw error;
+    }
   }
 
   /**
-   * 地图监听事件
+   * 监听地图事件
    * @param eventType 事件类型
-   * @param clickType 点击类型
    * @param callback 回调函数
+   * @param clickType 点击类型（可选）
    */
-  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined) {
-    MapTools.mapOnEvent(this.map, eventType, callback, clickType)
+  mapOnEvent(
+    eventType: EventType,
+    callback: (feature?: any, e?: any) => void,
+    clickType?: 'point' | 'line' | 'polygon'
+  ): void {
+    try {
+      if (typeof callback !== 'function') {
+        throw new Error('回调函数必须是函数类型');
+      }
+      
+      MapTools.mapOnEvent(this.map, eventType, callback, clickType);
+      
+      // 记录事件监听
+      console.debug('地图事件监听已添加', {
+        eventType,
+        clickType
+      });
+      
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          `添加地图事件监听失败: ${error instanceof Error ? error.message : '未知错误'}`,
+          ErrorType.MAP_ERROR,
+          { eventType, clickType }
+        )
+      );
+      throw error;
+    }
+  }
+
+  // ==========================================
+  // 管理器访问方法
+  // ==========================================
+
+  /**
+   * 获取错误处理器实例
+   * @returns ErrorHandler 错误处理器
+   */
+  getErrorHandler(): ErrorHandler {
+    return this.errorHandler;
+  }
+
+  /**
+   * 获取事件管理器实例
+   * @returns EventManager 事件管理器
+   */
+  getEventManager(): EventManager {
+    return this.eventManager;
+  }
+
+  /**
+   * 获取配置管理器实例
+   * @returns ConfigManager 配置管理器
+   */
+  getConfigManager(): ConfigManager {
+    return this.configManager;
+  }
+
+  /**
+   * 获取当前地图配置
+   * @returns MapInitType 地图配置
+   */
+  getMapOptions(): Readonly<MapInitType> {
+    return Object.freeze({ ...this.options });
+  }
+
+  /**
+   * 销毁地图实例和相关资源
+   */
+  destroy(): void {
+    try {
+      // 清理事件监听
+      this.eventManager.clear();
+      
+      // 销毁功能模块
+      this._point = undefined;
+      this._line = undefined;
+      this._polygon = undefined;
+      this._mapTools = undefined;
+      this._baseLayers = undefined;
+      
+      // 销毁地图
+      this.map.setTarget(undefined);
+      
+      console.debug('地图实例已销毁', { map: this.map });
+      
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError(
+          `销毁地图失败: ${error instanceof Error ? error.message : '未知错误'}`,
+          ErrorType.MAP_ERROR
+        )
+      );
+    }
   }
 }
