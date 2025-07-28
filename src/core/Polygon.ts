@@ -115,9 +115,7 @@ export default class Polygon {
    *   }
    * @param options 配置项
    */
-  updateFeatureColor(layerName: string, colorObj?: {
-    [propName: string]: string
-  }, options?: OptionsType) {
+  updateFeatureColor(layerName: string, colorObj?: { [propName: string]: string }, options?: OptionsType) {
     const layer = MapTools.getLayerByLayerName(this.map, layerName)[0]
     if (layer instanceof VectorLayer) {
       const features = layer.getSource()?.getFeatures();
@@ -253,24 +251,38 @@ export default class Polygon {
 
   /**
    * 添加图片图层
-   * @param layerName 图层名称
-   * @param img 图片地址
-   * @param extent 图片范围（对角线坐标） [minx, miny, maxx, maxy]
+   * @param imageData 图片数据 { img: 图片地址, extent: 图片范围（对角线坐标） [minx, miny, maxx, maxy] }
    * @param options 图层配置
    */
-  addImage(layerName: string, img?: string, extent?: number[], options?: OptionsType) {
-    let imageLayer = MapTools.getLayerByLayerName(this.map, layerName)[0]
-    if (img && extent) {
+  addImage(imageData?: { img: string, extent: number[] }, options?: OptionsType) {
+    let imageLayer: any
+    if (imageData?.img && imageData?.extent) {
       const source = new ImageStatic({
-        url: img,
-        imageExtent: extent
+        url: imageData.img,
+        imageExtent: imageData.extent
       })
-      if (imageLayer && imageLayer instanceof ImageLayer) {
-        imageLayer.setSource(source)
+      
+      // 如果有layerName，则更新现有图层或创建新图层
+      if (options?.layerName) {
+        imageLayer = MapTools.getLayerByLayerName(this.map, options.layerName)[0]
+        if (imageLayer && imageLayer instanceof ImageLayer) {
+          imageLayer.setSource(source)
+        } else {
+          imageLayer = new ImageLayer()
+          imageLayer.set('name', options.layerName)
+          imageLayer.set('layerName', options.layerName)
+          if (imageLayer instanceof ImageLayer) imageLayer.setSource(source)
+          imageLayer.setZIndex(options?.zIndex ?? 11)
+          imageLayer.setOpacity(options?.opacity ?? 1)
+          if (options?.visible !== undefined) imageLayer.setVisible(options?.visible)
+          if (options?.mapClip && options?.mapClipData) {
+            imageLayer = MapTools.setMapClip(imageLayer, options?.mapClipData)
+          }
+          this.map.addLayer(imageLayer)
+        }
       } else {
+        // 没有layerName，直接创建新图层
         imageLayer = new ImageLayer()
-        imageLayer.set('name', layerName)
-        imageLayer.set('layerName', layerName)
         if (imageLayer instanceof ImageLayer) imageLayer.setSource(source)
         imageLayer.setZIndex(options?.zIndex ?? 11)
         imageLayer.setOpacity(options?.opacity ?? 1)
@@ -280,34 +292,53 @@ export default class Polygon {
         }
         this.map.addLayer(imageLayer)
       }
-    } else {
-      this.removePolygonLayer(layerName)
+    } else if (options?.layerName) {
+      this.removePolygonLayer(options.layerName)
     }
     return imageLayer
   }
 
-  addHeatmap(layerName: string, pointData: PointData[], options: HeatMapOptions) {
+  /**
+   * 添加热力图图层
+   * @param pointData 点数据数组
+   * @param options 热力图配置
+   */
+  addHeatmap(pointData: PointData[], options?: HeatMapOptions) {
+    // 只有在指定layerName时才移除已存在的同名图层
+    if (options?.layerName) {
+      MapTools.removeLayer(this.map, options.layerName)
+    }
+    
     const heatmapLayer = new Heatmap({
       source: new VectorSource(),
       weight: function (fea: Feature) {
         return fea.get('weight');
       },
-      blur: options.blur ?? 15,
-      radius: options.radius ?? 10,
-      zIndex: options.zIndex ?? 11,
-      opacity: options.opacity ?? 1,
+      blur: options?.blur ?? 15,
+      radius: options?.radius ?? 10,
+      zIndex: options?.zIndex ?? 11,
+      opacity: options?.opacity ?? 1,
     });
-    heatmapLayer.set('layerName', layerName)
+    
+    // 只有在指定layerName时才设置layerName
+    if (options?.layerName) {
+      heatmapLayer.set('layerName', options.layerName)
+    }
+    
     this.map.addLayer(heatmapLayer);
-    const max = Math.max(...pointData.map(item => item[options.valueKey]))
+    
+    const valueKey = options?.valueKey || 'value'
+    const max = Math.max(...pointData.map(item => item[valueKey]))
     pointData.forEach((item) => {
       heatmapLayer?.getSource()!.addFeature(
         new Feature({
           geometry: new Point([item.lgtd, item.lttd]),
-          weight: item[options.valueKey] / max//热力值范围是【0,1】；热力值计算 = 找出数据集中的最大值，然后用值除以最大值
+          weight: item[valueKey] / max//热力值范围是【0,1】；热力值计算 = 找出数据集中的最大值，然后用值除以最大值
         })
       );
     })
+    
+    return heatmapLayer
   }
 
   removePolygonLayer(layerName: string) {

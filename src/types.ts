@@ -56,13 +56,14 @@ export interface AnnotationLayerOptions {
 }
 
 export interface HeatMapOptions {
+  layerName?: string,
   radius?: number,
   blur?: number,
   gradient?: string[],
   opacity?: number,
   visible?: boolean,
   zIndex?: number,
-  valueKey: string,
+  valueKey?: string,
 }
 
 export interface OptionsType {
