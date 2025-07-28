@@ -17,19 +17,17 @@ export type { MapEventType, EventCallback, MapEventData } from './core/EventMana
 // 错误处理
 export { ErrorHandler, MyOpenLayersError, ErrorType } from './utils/ErrorHandler'
 
-// 类型定义
-export {
-  // 基础接口
-  BaseOptions,
-  StyleOptions,
-  TextOptions,
-  // 专用选项接口
-  PointOptions,
-  LineOptions,
-  PolygonOptions,
-  // 兼容性类型
-  OptionsType,
-  // 其他接口
+// 类型定义 - 基础接口
+export type { BaseOptions, StyleOptions, TextOptions } from './types'
+
+// 类型定义 - 专用选项接口
+export type { PointOptions, LineOptions, PolygonOptions } from './types'
+
+// 类型定义 - 兼容性类型
+export type { OptionsType } from './types'
+
+// 类型定义 - 其他接口
+export type {
   MapInitType,
   MapLayersOptions,
   HeatMapOptions,
