@@ -77,14 +77,7 @@ export class EventManager {
    * @param options 选项
    * @returns 事件监听器ID
    */
-  on(
-    type: MapEventType,
-    callback: EventCallback,
-    options?: {
-      once?: boolean;
-      filter?: (event: MapEventData) => boolean;
-    }
-  ): string {
+  on(type: MapEventType, callback: EventCallback, options?: { once?: boolean; filter?: (event: MapEventData) => boolean; }): string {
     ErrorHandler.validate(
       typeof callback === 'function',
       'Event callback must be a function',

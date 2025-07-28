@@ -252,6 +252,45 @@ export type MeasureHandlerType = 'LineString' | 'Polygon';
 export type EventType = 'click' | 'hover' | 'moveend';
 
 /**
+ * Vue实例接口
+ */
+export interface VueInstance {
+  mount(element: Element | string): VueInstance;
+  unmount?(): void;
+  $destroy?(): void;
+  [key: string]: any;
+}
+
+/**
+ * Vue应用接口
+ */
+export interface VueApp {
+  mount(element: Element | string): VueInstance;
+  unmount(): void;
+  [key: string]: any;
+}
+
+/**
+ * Vue 2.x 实例接口
+ */
+export interface VueLegacyInstance {
+  $mount(element?: Element | string): VueLegacyInstance;
+  $destroy(): void;
+  [key: string]: any;
+}
+
+/**
+ * DOM点位状态枚举
+ */
+export enum DomPointState {
+  CREATED = 'created',
+  MOUNTED = 'mounted',
+  VISIBLE = 'visible',
+  HIDDEN = 'hidden',
+  DESTROYED = 'destroyed'
+}
+
+/**
  * DOM点位选项接口
  */
 export interface DomPointOptions {
@@ -260,4 +299,12 @@ export interface DomPointOptions {
   lgtd: number;
   lttd: number;
   props?: any;
+  longitude?: number;
+  latitude?: number;
+  styleType?: 'default' | 'custom';
+  positioning?: 'bottom-left' | 'bottom-center' | 'bottom-right' | 'center-left' | 'center-center' | 'center-right' | 'top-left' | 'top-center' | 'top-right';
+  stopEvent?: boolean;
+  visible?: boolean;
+  className?: string;
+  zIndex?: number;
 }

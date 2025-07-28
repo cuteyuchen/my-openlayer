@@ -183,11 +183,7 @@ export default class MyOl {
     // 地图错误事件
     this.map.on('error', (error) => {
       this.errorHandler.handleError(
-        new MyOpenLayersError(
-          '地图渲染错误',
-          ErrorType.MAP_ERROR,
-          { error }
-        )
+        new MyOpenLayersError( '地图渲染错误',  ErrorType.MAP_ERROR, { error } )
       );
     });
   }
@@ -357,13 +353,7 @@ export default class MyOl {
       }
       return this._mapTools;
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          '工具模块初始化失败',
-          ErrorType.COMPONENT_ERROR,
-          { error }
-        )
-      );
+      this.errorHandler.handleError(new MyOpenLayersError(  '工具模块初始化失败',  ErrorType.COMPONENT_ERROR,  { error }  ) );
       throw error;
     }
   }
@@ -446,11 +436,7 @@ export default class MyOl {
    * @param callback 回调函数
    * @param clickType 点击类型（可选）
    */
-  mapOnEvent(
-    eventType: EventType,
-    callback: (feature?: any, e?: any) => void,
-    clickType?: 'point' | 'line' | 'polygon'
-  ): void {
+  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon'): void {
     try {
       if (typeof callback !== 'function') {
         throw new Error('回调函数必须是函数类型');

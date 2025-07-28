@@ -39,6 +39,8 @@ export default class MapTools {
     }
   }
 
+
+
   /**
    * 根据名称获取图层
    * @param layerName 图层名称
@@ -136,11 +138,20 @@ export default class MapTools {
     if (!this.map) {
       throw new Error('Map instance is not available');
     }
-    MapTools.removeLayer(this.map, layerName);
+    
+    try {
+      const layers = this.getLayerByLayerName(layerName);
+      layers.forEach(layer => {
+        this.map.removeLayer(layer);
+      });
+    } catch (error) {
+      console.error('Error removing layers:', error);
+      throw new Error('Failed to remove layers from map');
+    }
   }
 
   /**
-   * 移除图层
+   * 移除图层（静态方法，兼容性保留）
    * @param map 地图对象
    * @param layerName 图层名称
    * @throws 当参数无效时抛出错误
@@ -171,7 +182,16 @@ export default class MapTools {
     if (!this.map) {
       throw new Error('Map instance is not available');
     }
-    MapTools.setLayerVisible(this.map, layerName, visible);
+    
+    try {
+      const layers = this.getLayerByLayerName(layerName);
+      layers.forEach(layer => {
+        layer.setVisible(visible);
+      });
+    } catch (error) {
+      console.error('Error setting layer visibility:', error);
+      throw new Error('Failed to set layer visibility');
+    }
   }
 
   /**
@@ -213,15 +233,7 @@ export default class MapTools {
    * @returns 事件监听器ID
    * @throws 当参数无效时抛出错误
    */
-  mapOnEvent(
-    eventType: EventType, 
-    callback: (feature?: any, e?: any) => void, 
-    options?: {
-      clickType?: 'point' | 'line' | 'polygon';
-      once?: boolean;
-      filter?: (event: MapEventData) => boolean;
-    }
-  ): string {
+  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, options?: { clickType?: 'point' | 'line' | 'polygon'; once?: boolean; filter?: (event: MapEventData) => boolean; }): string {
     try {
       ErrorHandler.validateMap(this.map);
       
@@ -253,12 +265,7 @@ export default class MapTools {
    * @throws 当参数无效时抛出错误
    * @deprecated 推荐使用实例方法 mapOnEvent
    */
-  static mapOnEvent(
-    map: Map, 
-    eventType: EventType, 
-    callback: (feature?: any, e?: any) => void, 
-    clickType?: 'point' | 'line' | 'polygon'
-  ): void {
+  static mapOnEvent(map: Map, eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon'): void {
     const errorHandler = ErrorHandler.getInstance();
     
     try {
@@ -285,19 +292,13 @@ export default class MapTools {
     }
   }
 
+
+
   /**
-   * 使用 EventManager 注册事件
+   * 兼容性方法：使用传统方式注册事件
    * @private
    */
-  private registerEventWithManager(
-    eventType: EventType,
-    callback: (feature?: any, e?: any) => void,
-    options?: {
-      clickType?: 'point' | 'line' | 'polygon';
-      once?: boolean;
-      filter?: (event: MapEventData) => boolean;
-    }
-  ): string {
+  private registerEventWithManager(eventType: EventType, callback: (feature?: any, e?: any) => void, options?: { clickType?: 'point' | 'line' | 'polygon'; once?: boolean; filter?: (event: MapEventData) => boolean; }): string {
     const mapEventType = this.convertToMapEventType(eventType);
     
     const eventCallback: EventCallback = (event: MapEventData) => {
@@ -401,28 +402,6 @@ export default class MapTools {
   }
 
   /**
-   * 获取事件监听器信息
-   * @returns 监听器信息数组
-   */
-  getEventListenersInfo(): Array<{
-    id: string;
-    type: MapEventType;
-    hasFilter: boolean;
-    isOnce: boolean;
-  }> {
-    try {
-      return this.eventManager.getListenersInfo();
-    } catch (error) {
-      this.errorHandler.createAndHandleError(
-        `Failed to get event listeners info: ${error}`,
-        ErrorType.COMPONENT_ERROR,
-        { error }
-      );
-      return [];
-    }
-  }
-
-  /**
    * 获取 EventManager 实例
    * @returns EventManager 实例
    */
@@ -431,18 +410,10 @@ export default class MapTools {
   }
 
   /**
-   * 销毁资源
+   * 获取地图实例
+   * @returns 地图实例
    */
-  destroy(): void {
-    try {
-      this.eventManager.clear();
-      console.debug('MapTools destroyed successfully');
-    } catch (error) {
-      this.errorHandler.createAndHandleError(
-        `Failed to destroy MapTools: ${error}`,
-        ErrorType.COMPONENT_ERROR,
-        { error }
-      );
-    }
+  getMap(): Map {
+    return this.map;
   }
 }

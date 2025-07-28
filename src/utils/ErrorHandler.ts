@@ -25,9 +25,12 @@ export class MyOpenLayersError extends Error {
     this.timestamp = new Date();
     this.context = context;
 
-    // 确保错误堆栈正确显示
-    if ((Error as any).captureStackTrace) {
+    // 确保错误堆栈正确显示（兼容Node.js和浏览器环境）
+    if (typeof (Error as any).captureStackTrace === 'function') {
       (Error as any).captureStackTrace(this, MyOpenLayersError);
+    } else {
+      // 在不支持captureStackTrace的环境中，手动设置stack
+      this.stack = (new Error()).stack;
     }
   }
 }
@@ -231,12 +234,7 @@ export class ErrorHandler {
    * @param errorType 错误类型
    * @param context 错误上下文
    */
-  static safeExecute<T>(
-    fn: () => T,
-    errorMessage: string,
-    errorType: ErrorType = ErrorType.COMPONENT_ERROR,
-    context?: any
-  ): T {
+  static safeExecute<T>(fn: () => T, errorMessage: string, errorType: ErrorType = ErrorType.COMPONENT_ERROR, context?: any): T {
     try {
       return fn();
     } catch (error) {

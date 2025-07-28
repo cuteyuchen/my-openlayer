@@ -1,5 +1,7 @@
 /**
- * 地图底图图层
+ * 地图底图图层管理类
+ * 提供天地图底图、注记图层、GeoServer图层等功能
+ * 支持图层切换、裁剪等高级功能
  */
 
 import Map from "ol/Map";
@@ -11,182 +13,658 @@ import WMTSTileGrid from "ol/tilegrid/WMTS";
 import XYZ from "ol/source/XYZ";
 import BaseLayer from "ol/layer/Base";
 import MapTools from "./MapTools";
+import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
 import { MapLayersOptions, TiandituType, AnnotationLayerOptions, MapLayers } from "../types";
 
+/**
+ * 天地图服务器配置
+ */
+const TIANDITU_CONFIG = {
+  BASE_URL: '//t{0-7}.tianditu.gov.cn/DataServer',
+  PROJECTION: 'EPSG:4326',
+  DEFAULT_ZINDEX: 9,
+  ANNOTATION_ZINDEX_OFFSET: 1
+} as const;
 
+/**
+ * GeoServer图层选项接口
+ */
+interface GeoServerLayerOptions {
+  /** 图层层级 */
+  zIndex?: number;
+  /** 图层可见性 */
+  visible?: boolean;
+  /** WMS版本 */
+  version?: '1.1.1' | '1.3.0';
+  /** 服务器类型 */
+  serverType?: string;
+  /** 跨域设置 */
+  crossOrigin?: string;
+  /** WMS参数 */
+  params?: Record<string, any>;
+}
+
+/**
+ * 天地图图层选项接口
+ */
+interface TiandituLayerOptions {
+  /** 图层类型 */
+  type: TiandituType;
+  /** 天地图token */
+  token: string;
+  /** 图层层级 */
+  zIndex: number;
+  /** 图层可见性 */
+  visible: boolean;
+}
+
+
+/**
+ * 地图底图图层管理类
+ */
 export default class MapBaseLayers {
-  private map!: Map;
-  private readonly options: MapLayersOptions = {
-    zIndex: 0,
-    annotation: false,
-    mapClip: false,
-    mapClipData: undefined,
-  };
-  private readonly layers: MapLayers = {}
+  private readonly map: Map;
+  private readonly options: MapLayersOptions;
+  private layers: MapLayers = {};
+  private readonly errorHandler: ErrorHandler;
+  private currentBaseLayerType: string | null = null;
 
+  /**
+   * 构造函数
+   * @param map OpenLayers地图实例
+   * @param options 图层配置选项
+   */
   constructor(map: Map, options: MapLayersOptions) {
-    this.map = map;
-    this.options = { ...this.options, ...options };
-    //如果没有配置底图，则默认使用天地图底图
+    this.errorHandler = ErrorHandler.getInstance();
+    
+    try {
+      // 参数验证
+      this.validateConstructorParams(map, options);
+      
+      this.map = map;
+      this.options = this.mergeDefaultOptions(options);
+      
+      // 初始化图层
+      this.initializeLayers();
+      
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to initialize MapBaseLayers: ${error}`,
+        ErrorType.MAP_ERROR,
+        { map, options, error }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 验证构造函数参数
+   * @param map 地图实例
+   * @param options 配置选项
+   * @private
+   */
+  private validateConstructorParams(map: Map, options: MapLayersOptions): void {
+    ErrorHandler.validateMap(map);
+    
+    if (!options || typeof options !== 'object') {
+      throw new Error('Valid options object is required');
+    }
+  }
+
+  /**
+   * 合并默认配置选项
+   * @param options 用户配置选项
+   * @returns 合并后的配置选项
+   * @private
+   */
+  private mergeDefaultOptions(options: MapLayersOptions): MapLayersOptions {
+    const defaultOptions: MapLayersOptions = {
+      zIndex: TIANDITU_CONFIG.DEFAULT_ZINDEX,
+      annotation: false,
+      mapClip: false,
+      mapClipData: undefined,
+    };
+    
+    return { ...defaultOptions, ...options };
+  }
+
+  /**
+   * 初始化图层
+   * @private
+   */
+  private initializeLayers(): void {
+    // 如果没有配置底图，则默认使用天地图底图
     if (!Array.isArray(this.options.layers)) {
-      this.layers = this.options.layers || {}
+      this.layers = this.options.layers || {};
+      
       if (!this.options.token) {
-        throw new Error('请配置token后才能使用天地图底图')
-      } else {
-        this.initLayer()
+        throw new Error('请配置token后才能使用天地图底图');
       }
-      if (this.layers && Object.keys(this.layers).length !== 0) {
-        this.addMapLayer()
-        this.switchBaseLayer(<string>Object.keys(this.layers)[0])
+      
+      this.initTiandituLayers();
+      
+      if (this.layers && Object.keys(this.layers).length > 0) {
+        this.addMapLayer();
+        const firstLayerType = Object.keys(this.layers)[0];
+        this.switchBaseLayer(firstLayerType as TiandituType);
       }
     }
   }
 
-  switchBaseLayer(type: TiandituType) {
-    if (Array.isArray(this.options.layers)) {
-      console.error('需要按照键值对的方式配置底图才可使用切换底图功能')
-      return
+  /**
+   * 初始化天地图图层
+   * @private
+   */
+  private initTiandituLayers(): void {
+    if (!this.options.token) {
+      throw new Error('Token is required for Tianditu layers');
     }
-    for (const key in this.layers) {
-      this.layers[key]?.forEach((layer: BaseLayer) => {
-        layer.setVisible(key === type)
-        // console.log(layer)
-      })
-    }
-  }
 
-  initLayer() {
-    if (this.layers && this.options.token) {
-      const { token, zIndex = 9 } = this.options
-      this.layers.vec_c = [MapBaseLayers.getTiandiTuLayer({ type: 'vec_c', token, zIndex, visible: false })]
-      this.layers.img_c = [MapBaseLayers.getTiandiTuLayer({ type: 'img_c', token, zIndex, visible: false })]
-      this.layers.ter_c = [MapBaseLayers.getTiandiTuLayer({ type: 'ter_c', token, zIndex, visible: false })]
+    const { token, zIndex = TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
+    
+    try {
+      // 创建基础图层
+      this.layers.vec_c = [this.createTiandituLayer({ type: 'vec_c', token, zIndex, visible: false })];
+      this.layers.img_c = [this.createTiandituLayer({ type: 'img_c', token, zIndex, visible: false })];
+      this.layers.ter_c = [this.createTiandituLayer({ type: 'ter_c', token, zIndex, visible: false })];
+      
+      // 添加注记图层
       if (this.options.annotation) {
-        this.layers.vec_c.push(MapBaseLayers.getAnnotationLayer({
-          type: 'cva_c',
-          token,
-          zIndex: zIndex + 1,
-          visible: false
-        }))
-        this.layers.img_c.push(MapBaseLayers.getAnnotationLayer({
-          type: 'cia_c',
-          token,
-          zIndex: zIndex + 1,
-          visible: false
-        }))
-        this.layers.ter_c.push(MapBaseLayers.getAnnotationLayer({
-          type: 'cta_c',
-          token,
-          zIndex: zIndex + 1,
-          visible: false
-        }))
+        this.addAnnotationLayers(token, zIndex);
       }
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to initialize Tianditu layers: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { token, zIndex, error }
+      );
+      throw error;
     }
   }
 
-  //添加注记图层
-  addAnnotationLayer(options: Omit<AnnotationLayerOptions, 'token'>) {
-    MapBaseLayers.addAnnotationLayer(this.map, {
-      ...options,
-      token: this.options.token || ''
-    })
+  /**
+   * 添加注记图层
+   * @param token 天地图token
+   * @param baseZIndex 基础层级
+   * @private
+   */
+  private addAnnotationLayers(token: string, baseZIndex: number): void {
+    const annotationZIndex = baseZIndex + TIANDITU_CONFIG.ANNOTATION_ZINDEX_OFFSET;
+    
+    this.layers.vec_c?.push(this.createAnnotationLayer({
+      type: 'cva_c',
+      token,
+      zIndex: annotationZIndex,
+      visible: false
+    }));
+    
+    this.layers.img_c?.push(this.createAnnotationLayer({
+      type: 'cia_c',
+      token,
+      zIndex: annotationZIndex,
+      visible: false
+    }));
+    
+    this.layers.ter_c?.push(this.createAnnotationLayer({
+      type: 'cta_c',
+      token,
+      zIndex: annotationZIndex,
+      visible: false
+    }));
   }
 
-  //添加注记图层
-  static addAnnotationLayer(map: Map, options: AnnotationLayerOptions) {
-    const layer = MapBaseLayers.getAnnotationLayer({
-      type: options.type,
-      token: options.token,
-      zIndex: options.zIndex ?? 10,
-      visible: options.visible ?? true
-    })
-    map.addLayer(layer)
-    return layer
-  }
+  /**
+   * 切换底图图层
+   * @param type 图层类型
+   */
+  switchBaseLayer(type: TiandituType): void {
+    try {
+      if (Array.isArray(this.options.layers)) {
+        this.errorHandler.createAndHandleError(
+          '需要按照键值对的方式配置底图才可使用切换底图功能',
+          ErrorType.LAYER_ERROR,
+          { layersType: 'array', requestedType: type }
+        );
+        return;
+      }
 
-  addMapLayer() {
-    if (this.layers) {
+      if (!this.layers[type]) {
+        this.errorHandler.createAndHandleError(
+          `图层类型 '${type}' 不存在`,
+          ErrorType.LAYER_ERROR,
+          { availableTypes: Object.keys(this.layers), requestedType: type }
+        );
+        return;
+      }
+
+      // 隐藏所有图层
       for (const key in this.layers) {
         this.layers[key]?.forEach((layer: BaseLayer) => {
-          layer = this.createLayer(layer)
-          this.map.addLayer(layer)
-        })
+          layer.setVisible(false);
+        });
       }
+
+      // 显示指定类型的图层
+      this.layers[type]?.forEach((layer: BaseLayer) => {
+        layer.setVisible(true);
+      });
+
+      this.currentBaseLayerType = type;
+      
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to switch base layer to '${type}': ${error}`,
+        ErrorType.LAYER_ERROR,
+        { type, error }
+      );
     }
   }
 
-  createLayer(layer: any) {
-    if (this.options.mapClip && this.options.mapClipData) {
-      layer = MapTools.setMapClip(layer, this.options.mapClipData);
+  /**
+   * 获取当前底图类型
+   * @returns 当前底图类型
+   */
+  getCurrentBaseLayerType(): string | null {
+    return this.currentBaseLayerType;
+  }
+
+  /**
+   * 获取可用的图层类型列表
+   * @returns 图层类型数组
+   */
+  getAvailableLayerTypes(): string[] {
+    return Object.keys(this.layers);
+  }
+
+  /**
+   * 检查指定图层类型是否存在
+   * @param type 图层类型
+   * @returns 是否存在
+   */
+  hasLayerType(type: string): boolean {
+    return type in this.layers && this.layers[type] !== undefined;
+  }
+
+  /**
+   * 添加注记图层（实例方法）
+   * @param options 注记图层选项（不包含token）
+   * @returns 创建的图层
+   */
+  addAnnotationLayer(options: Omit<AnnotationLayerOptions, 'token'>): TileLayer<XYZ> {
+    try {
+      if (!this.options.token) {
+        throw new Error('Token is required for annotation layer');
+      }
+
+      return MapBaseLayers.addAnnotationLayer(this.map, {
+        ...options,
+        token: this.options.token
+      });
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to add annotation layer: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { options, error }
+      );
+      throw error;
     }
-    return layer;
   }
 
-  addGeoServerLayer(url: string, layer: string, options: {
-    zIndex?: number,
-    visible?: boolean,
-  }) {
-    const wmsLayer = new TileLayer({
-      source: new TileWMS({
-        url: url,
-        params: {
-          'LAYERS': layer,
-          'TILED': true,
-          'VERSION': '1.1.1' // 或 '1.3.0'
-        },
-        serverType: 'geoserver',
-        crossOrigin: 'anonymous', // 允许跨域
-      }),
-      zIndex: options.zIndex ?? 10,
-      visible: options.visible ?? true,
-    });
-    this.map.addLayer(wmsLayer);
-    return wmsLayer;
+  /**
+   * 添加注记图层（静态方法）
+   * @param map 地图实例
+   * @param options 注记图层选项
+   * @returns 创建的图层
+   */
+  static addAnnotationLayer(map: Map, options: AnnotationLayerOptions): TileLayer<XYZ> {
+    try {
+      ErrorHandler.validateMap(map);
+      
+      if (!options.token) {
+        throw new Error('Token is required for annotation layer');
+      }
+
+      const layer = MapBaseLayers.createAnnotationLayer({
+        type: options.type,
+        token: options.token,
+        zIndex: options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX,
+        visible: options.visible ?? true
+      });
+      
+      map.addLayer(layer);
+      return layer;
+    } catch (error) {
+      const errorHandler = ErrorHandler.getInstance();
+      errorHandler.createAndHandleError(
+        `Failed to add annotation layer: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { options, error }
+      );
+      throw error;
+    }
   }
 
+  /**
+   * 将所有图层添加到地图
+   * @private
+   */
+  private addMapLayer(): void {
+    try {
+      if (!this.layers || Object.keys(this.layers).length === 0) {
+        return;
+      }
 
-  //img_c 影像底图 ter_c 地形底图
-  static getTiandiTuLayer(options: { type: TiandituType, token: string, zIndex: number, visible: boolean }) {
-    return new TileLayer({
-      source: new XYZ({
-        url: `//t{0-7}.tianditu.gov.cn/DataServer?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
-        projection: 'EPSG:4326'
-      }),
-      zIndex: options.zIndex,
-      visible: options.visible
-    })
+      for (const key in this.layers) {
+        this.layers[key]?.forEach((layer: BaseLayer) => {
+          const processedLayer = this.processLayer(layer);
+          this.map.addLayer(processedLayer);
+        });
+      }
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to add map layers: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { layersCount: Object.keys(this.layers).length, error }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 处理图层（应用裁剪等）
+   * @param layer 原始图层
+   * @returns 处理后的图层
+   * @private
+   */
+  private processLayer(layer: BaseLayer): BaseLayer {
+    try {
+      let processedLayer = layer;
+      
+      if (this.options.mapClip && this.options.mapClipData) {
+        processedLayer = MapTools.setMapClip(layer, this.options.mapClipData);
+      }
+      
+      return processedLayer;
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to process layer: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { hasMapClip: !!this.options.mapClip, hasMapClipData: !!this.options.mapClipData, error }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 添加GeoServer图层
+   * @param url GeoServer服务URL
+   * @param layerName 图层名称
+   * @param options 图层选项
+   * @returns 创建的WMS图层
+   */
+  addGeoServerLayer(url: string, layerName: string, options: GeoServerLayerOptions = {}): TileLayer<TileWMS> {
+    try {
+      if (!url || typeof url !== 'string') {
+        throw new Error('Valid URL is required for GeoServer layer');
+      }
+      
+      if (!layerName || typeof layerName !== 'string') {
+        throw new Error('Valid layer name is required for GeoServer layer');
+      }
+
+      const wmsLayer = new TileLayer({
+        source: new TileWMS({
+          url: url,
+          params: {
+            'LAYERS': layerName,
+            'TILED': true,
+            'VERSION': options.version || '1.1.1',
+            ...options.params
+          },
+          serverType: 'geoserver',
+          crossOrigin: options.crossOrigin || 'anonymous',
+        }),
+        zIndex: options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX,
+        visible: options.visible ?? true,
+      });
+      
+      this.map.addLayer(wmsLayer);
+      return wmsLayer;
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to add GeoServer layer: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { url, layerName, options, error }
+      );
+      throw error;
+    }
   }
 
 
   /**
-   * 地图注记
+   * 创建天地图图层（实例方法）
+   * @param options 天地图图层选项
+   * @returns 创建的图层
+   * @private
    */
-  static getAnnotationLayer(options: AnnotationLayerOptions) {
-    return new TileLayer({
-      source: new XYZ({
-        url: `//t{0-7}.tianditu.gov.cn/DataServer?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
-        projection: 'EPSG:4326'
-      }),
-      zIndex: options.zIndex,
-      visible: options.visible
-    })
+  private createTiandituLayer(options: TiandituLayerOptions): TileLayer<XYZ> {
+    return MapBaseLayers.getTiandiTuLayer(options);
   }
 
-  static getTileGrid(length: number) {
-    const projection: Projection = <Projection>getProjection('EPSG:4326');
-    const projectionExtent = projection?.getExtent();
-    const size = getWidth(projectionExtent) / 256;
-    const resolutions = new Array(length);
-    const matrixIds = new Array(length);
-    for (let i = 0; i < length; i += 1) {
-      const pow = Math.pow(2, i);
-      resolutions[i] = size / pow;
-      matrixIds[i] = i;
+  /**
+   * 创建注记图层（实例方法）
+   * @param options 注记图层选项
+   * @returns 创建的图层
+   * @private
+   */
+  private createAnnotationLayer(options: AnnotationLayerOptions): TileLayer<XYZ> {
+    return MapBaseLayers.createAnnotationLayer(options);
+  }
+
+  /**
+   * 创建天地图底图图层（静态方法）
+   * @param options 天地图图层选项
+   * @returns 创建的图层
+   */
+  static getTiandiTuLayer(options: TiandituLayerOptions): TileLayer<XYZ> {
+    try {
+      if (!options.token) {
+        throw new Error('Token is required for Tianditu layer');
+      }
+      
+      if (!options.type) {
+        throw new Error('Layer type is required for Tianditu layer');
+      }
+
+      return new TileLayer({
+        source: new XYZ({
+          url: `//t{0-7}.tianditu.gov.cn/DataServer?T=${options.type}&tk=${options.token}&x={x}&y={y}&l={z}`,
+          projection: 'EPSG:4326'
+        }),
+        zIndex: options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX,
+        visible: options.visible ?? false
+      });
+    } catch (error) {
+      const errorHandler = ErrorHandler.getInstance();
+      errorHandler.createAndHandleError(
+        `Failed to create Tianditu layer: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { options, error }
+      );
+      throw error;
     }
-    return new WMTSTileGrid({
-      origin: getTopLeft(projectionExtent),
-      resolutions,
-      matrixIds
-    })
+  }
+
+  /**
+   * 创建天地图注记图层（静态方法）
+   * @param options 注记图层选项
+   * @returns 创建的图层
+   */
+  static createAnnotationLayer(options: AnnotationLayerOptions): TileLayer<XYZ> {
+    try {
+      if (!options.token) {
+        throw new Error('Token is required for annotation layer');
+      }
+      
+      if (!options.type) {
+        throw new Error('Annotation type is required for annotation layer');
+      }
+
+      return new TileLayer({
+        source: new XYZ({
+          url: `//t{0-7}.tianditu.gov.cn/DataServer?T=${options.type}&tk=${options.token}&x={x}&y={y}&l={z}`,
+          projection: 'EPSG:4326'
+        }),
+        zIndex: options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX,
+        visible: options.visible ?? false
+      });
+    } catch (error) {
+      const errorHandler = ErrorHandler.getInstance();
+      errorHandler.createAndHandleError(
+        `Failed to create annotation layer: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { options, error }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 获取天地图注记图层（向后兼容的静态方法）
+   * @param options 注记图层选项
+   * @returns 创建的图层
+   * @deprecated 使用 createAnnotationLayer 替代
+   */
+  static getAnnotationLayer(options: AnnotationLayerOptions): TileLayer<XYZ> {
+    return MapBaseLayers.createAnnotationLayer(options);
+  }
+
+  /**
+   * 创建WMTS瓦片网格
+   * @param length 层级数量
+   * @returns WMTS瓦片网格
+   */
+  static getTileGrid(length: number): WMTSTileGrid {
+    try {
+      if (!length || length <= 0) {
+        throw new Error('Valid length is required for tile grid');
+      }
+
+      const projection: Projection = getProjection('EPSG:4326') as Projection;
+      if (!projection) {
+        throw new Error('Failed to get EPSG:4326 projection');
+      }
+
+      const projectionExtent = projection.getExtent();
+      const size = getWidth(projectionExtent) / 256;
+      const resolutions = new Array(length);
+      const matrixIds = new Array(length);
+      
+      for (let i = 0; i < length; i += 1) {
+        const pow = Math.pow(2, i);
+        resolutions[i] = size / pow;
+        matrixIds[i] = i;
+      }
+      
+      return new WMTSTileGrid({
+        origin: getTopLeft(projectionExtent),
+        resolutions,
+        matrixIds
+      });
+    } catch (error) {
+      const errorHandler = ErrorHandler.getInstance();
+      errorHandler.createAndHandleError(
+        `Failed to create tile grid: ${error}`,
+        ErrorType.MAP_ERROR,
+        { length, error }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 移除指定类型的图层
+   * @param type 图层类型
+   */
+  removeLayersByType(type: string): void {
+    try {
+      if (!this.layers[type]) {
+        return;
+      }
+
+      this.layers[type].forEach((layer: BaseLayer) => {
+        this.map.removeLayer(layer);
+      });
+      
+      delete this.layers[type];
+      
+      if (this.currentBaseLayerType === type) {
+        this.currentBaseLayerType = null;
+      }
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to remove layers of type '${type}': ${error}`,
+        ErrorType.LAYER_ERROR,
+        { type, error }
+      );
+    }
+  }
+
+  /**
+   * 清除所有图层
+   */
+  clearAllLayers(): void {
+    try {
+      for (const key in this.layers) {
+        this.layers[key]?.forEach((layer: BaseLayer) => {
+          this.map.removeLayer(layer);
+        });
+      }
+      
+      this.layers = {};
+      this.currentBaseLayerType = null;
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to clear all layers: ${error}`,
+        ErrorType.LAYER_ERROR,
+        { error }
+      );
+    }
+  }
+
+  /**
+   * 获取图层数量统计
+   * @returns 图层统计信息
+   */
+  getLayerStats(): { totalTypes: number; totalLayers: number; layersByType: Record<string, number> } {
+    const layersByType: Record<string, number> = {};
+    let totalLayers = 0;
+
+    for (const key in this.layers) {
+      const count = this.layers[key]?.length || 0;
+      layersByType[key] = count;
+      totalLayers += count;
+    }
+
+    return {
+      totalTypes: Object.keys(this.layers).length,
+      totalLayers,
+      layersByType
+    };
+  }
+
+  /**
+   * 销毁实例，清理资源
+   */
+  destroy(): void {
+    try {
+      this.clearAllLayers();
+    } catch (error) {
+      this.errorHandler.createAndHandleError(
+        `Failed to destroy MapBaseLayers: ${error}`,
+        ErrorType.MAP_ERROR,
+        { error }
+      );
+    }
   }
 }
