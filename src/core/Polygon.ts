@@ -10,12 +10,25 @@ import { Geometry, LinearRing, Point } from "ol/geom";
 import { fromExtent } from "ol/geom/Polygon";
 import Feature from "ol/Feature";
 import ImageStatic from "ol/source/ImageStatic";
-import { OptionsType, MapJSONData, PointData, HeatMapOptions } from '../types'
+import { 
+  PolygonOptions, 
+  MapJSONData, 
+  PointData, 
+  HeatMapOptions, 
+  ImageLayerData, 
+  MaskLayerOptions, 
+  ColorMap,
+  FeatureColorUpdateOptions 
+} from '../types'
 import MapTools from "./MapTools";
 
+/**
+ * Polygon 类用于处理地图上的面要素操作
+ * 包括添加多边形、边框、图片图层、热力图等功能
+ */
 export default class Polygon {
-  map: Map;
-  private colorMap: any = {
+  private map: Map;
+  private colorMap: ColorMap = {
     '0': 'rgba(255, 0, 0, 0.6)',
     '1': 'rgba(245, 154, 35, 0.6)',
     '2': 'rgba(255, 238, 0, 0.6)',
@@ -24,128 +37,274 @@ export default class Polygon {
 
   [key: string]: any;
 
+  /**
+   * 构造函数
+   * @param map OpenLayers 地图实例
+   */
   constructor(map: Map) {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
     this.map = map;
   }
 
   /**
    * 获取等级颜色
-   * @param lev
+   * @param lev 等级值，支持字符串或数字
+   * @returns 对应等级的颜色值，如果等级不存在则返回默认颜色
    */
   getLevColor(lev: string | number): string {
-    return this.colorMap[lev.toString()];
+    const key = lev.toString();
+    return this.colorMap[key] || 'rgba(128, 128, 128, 0.6)';
   }
 
 
   /**
-   * 添加 地图 边框 图层
-   * @param data 图层数据
-   * @param options 图层配置
+   * 添加地图边框图层
+   * @param data 图层数据，必须是有效的 GeoJSON 格式
+   * @param options 图层配置选项
+   * @returns 创建的图层实例
+   * @throws 当数据格式无效时抛出错误
    */
-  addBorderPolygon(data: MapJSONData, options?: OptionsType) {
-    options = options ?? {}
-    options.layerName = options.layerName ?? 'border'
-    options.fillColor = options.fillColor ?? 'rgba(255, 255, 255, 0)'
-    this.addPolygon(data, options)
-    if (options.mask) this.setOutLayer(data)
+  addBorderPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource> {
+    if (!data || !data.features || !Array.isArray(data.features)) {
+      throw new Error('Invalid GeoJSON data: features array is required');
+    }
+
+    const mergedOptions: PolygonOptions = {
+      layerName: 'border',
+      fillColor: 'rgba(255, 255, 255, 0)',
+      ...options
+    };
+
+    const layer = this.addPolygon(data, mergedOptions);
+    
+    if (mergedOptions.mask) {
+      this.setOutLayer(data);
+    }
+    
+    return layer;
   }
 
 
-  // 添加分区
-  //fyBasinJson中的id的key需要跟options中的nameKey一致
-  addPolygon(dataJSON: MapJSONData, options?: OptionsType) {
-    options = options ?? {}
-    if (options.layerName != null) {
-      MapTools.removeLayer(this.map, options.layerName)
+  /**
+   * 添加多边形图层
+   * @param dataJSON GeoJSON 数据
+   * @param options 图层配置选项
+   * @returns 创建的矢量图层
+   * @throws 当数据格式无效时抛出错误
+   */
+  addPolygon(dataJSON: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource> {
+    if (!dataJSON || !dataJSON.features || !Array.isArray(dataJSON.features)) {
+      throw new Error('Invalid GeoJSON data: features array is required');
     }
+
+    const mergedOptions: PolygonOptions = {
+      zIndex: 11,
+      visible: true,
+      strokeColor: '#EBEEF5',
+      strokeWidth: 2,
+      fillColor: 'rgba(255, 255, 255, 0.3)',
+      textFont: '14px Calibri,sans-serif',
+      textFillColor: '#FFF',
+      textStrokeColor: '#409EFF',
+      textStrokeWidth: 2,
+      ...options
+    };
+
+    // 如果指定了图层名称，先移除同名图层
+    if (mergedOptions.layerName) {
+      new MapTools(this.map).removeLayer(mergedOptions.layerName);
+    }
+
+    let features: Feature[];
+    try {
+      features = new GeoJSON().readFeatures(dataJSON, mergedOptions.projectionOptOptions ?? {});
+    } catch (error) {
+      throw new Error(`Failed to parse GeoJSON data: ${error}`);
+    }
+
     const layer = new VectorLayer({
-      name: options.layerName,
-      layerName: options.layerName,
-      source: new VectorSource({
-        features: (new GeoJSON()).readFeatures(dataJSON, options.projectionOptOptions ?? {})
-      }),
-      zIndex: options.zIndex ?? 11
-    } as any)
-    const features = layer.getSource()?.getFeatures();
-    features?.forEach(feature => {
-      feature.set('type', options?.type)
-      feature.set('layerName', options?.type)
-      const fillColor = options?.fillColorCallBack ? options.fillColorCallBack(feature) : options?.fillColor
+      properties: {
+        name: mergedOptions.layerName,
+        layerName: mergedOptions.layerName
+      },
+      source: new VectorSource({ features }),
+      zIndex: mergedOptions.zIndex
+    });
+
+    // 设置要素样式
+    this.setFeatureStyles(features, mergedOptions);
+    
+    layer.setVisible(mergedOptions.visible!);
+    this.map.addLayer(layer);
+
+    // 如果需要适应视图
+    if (mergedOptions.fitView) {
+      this.fitViewToLayer(layer);
+    }
+
+    return layer;
+  }
+
+  /**
+   * 设置要素样式
+   * @param features 要素数组
+   * @param options 样式配置选项
+   */
+  private setFeatureStyles(features: Feature[], options: PolygonOptions): void {
+    features.forEach(feature => {
+      feature.set('type', options.type || options.layerName);
+      feature.set('layerName', options.type || options.layerName);
+      
+      const fillColor = options.fillColorCallBack 
+        ? options.fillColorCallBack(feature) 
+        : options.fillColor;
+
       const featureStyle = new Style({
         stroke: new Stroke({
-          color: options?.strokeColor ?? '#EBEEF5',
-          width: options?.strokeWidth ?? 2,
-          lineDash: options?.lineDash,
-          lineDashOffset: options?.lineDashOffset
+          color: options.strokeColor!,
+          width: options.strokeWidth!,
+          lineDash: options.lineDash,
+          lineDashOffset: options.lineDashOffset
         }),
-        fill: new Fill({ color: fillColor ?? 'rgba(255, 255, 255, 0.3)' }),
-      })
-      if (options?.textVisible) {
-        const text = (options?.textCallBack ? options?.textCallBack(feature) : '') || (options.nameKey ? feature.get(options.nameKey) : "")
-        featureStyle.setText(new Text({
-          text: text,
-          font: options?.textFont ?? '14px Calibri,sans-serif',
-          fill: new Fill({ color: options?.textFillColor ?? '#FFF' }),
-          stroke: new Stroke({
-            color: options?.textStrokeColor ?? '#409EFF',
-            width: options?.textStrokeWidth ?? 2
-          })
-        }))
+        fill: new Fill({ color: fillColor! })
+      });
+
+      // 添加文本样式
+      if (options.textVisible) {
+        const text = this.getFeatureText(feature, options);
+        if (text) {
+          featureStyle.setText(new Text({
+            text,
+            font: options.textFont!,
+            fill: new Fill({ color: options.textFillColor! }),
+            stroke: new Stroke({
+              color: options.textStrokeColor!,
+              width: options.textStrokeWidth!
+            })
+          }));
+        }
       }
-      feature.setStyle(featureStyle)
-    })
-    layer.setVisible(options.visible === undefined ? true : options.visible)
-    this.map.addLayer(layer)
-    if (options.fitView) {
-      // 获取面的范围
-      const extent = layer.getSource()?.getExtent();
-      // 适应这个范围
-      if (extent) this.map.getView().fit(extent, { duration: 500 });
+
+      feature.setStyle(featureStyle);
+    });
+  }
+
+  /**
+   * 获取要素文本
+   * @param feature 要素对象
+   * @param options 配置选项
+   * @returns 文本内容
+   */
+  private getFeatureText(feature: Feature, options: PolygonOptions): string {
+    if (options.textCallBack) {
+      return options.textCallBack(feature) || '';
     }
-    return layer
+    if (options.nameKey) {
+      return feature.get(options.nameKey) || '';
+    }
+    return '';
+  }
+
+  /**
+   * 适应图层视图
+   * @param layer 图层对象
+   */
+  private fitViewToLayer(layer: VectorLayer<VectorSource>): void {
+    const extent = layer.getSource()?.getExtent();
+    if (extent) {
+      this.map.getView().fit(extent, { duration: 500 });
+    }
   }
 
   /**
    * 根据数据数组更新某个面颜色
    * @param layerName 图层名称
-   * @param colorObj 数据 不传或者传{}则重置所有颜色
-   *   colorObj:{
-   *     对应geojson文件中的索引字段[propName]: 'rgba(255, 0, 0, 0.6)', // 颜色
-   *     ...
-   *   }
+   * @param colorObj 颜色映射对象，键为要素属性值，值为颜色字符串
    * @param options 配置项
+   * @throws 当图层不存在时抛出错误
    */
-  updateFeatureColor(layerName: string, colorObj?: { [propName: string]: string }, options?: OptionsType) {
-    const layer = MapTools.getLayerByLayerName(this.map, layerName)[0]
-    if (layer instanceof VectorLayer) {
-      const features = layer.getSource()?.getFeatures();
-      features?.forEach((feature: Feature) => {
-        if (options?.nameKey || (!colorObj || Object.keys(colorObj).length === 0)) {
-          const name = options?.nameKey ? feature.get(options.nameKey) : ''
-          const newColor = colorObj?.[name];
-          const featureStyle = new Style({
-            stroke: new Stroke({
-              color: options?.strokeColor ?? '#EBEEF5',
-              width: options?.strokeWidth ?? 2
-            }),
-            fill: new Fill({ color: newColor || options?.fillColor || 'rgba(255, 255, 255, 0.3)' }),
-          })
-          if (options?.textVisible) {
-            const text = (options?.textCallBack ? options?.textCallBack(feature) : '') || (options.nameKey ? feature.get(options.nameKey) : "")
-            featureStyle.setText(new Text({
-              text,
-              font: options?.textFont ?? '14px Calibri,sans-serif',
-              fill: new Fill({ color: options?.textFillColor || '#FFF' }),
-              stroke: new Stroke({
-                color: options?.textStrokeColor ?? '#409EFF',
-                width: options?.textStrokeWidth ?? 2
-              })
-            }))
-          }
-          feature.setStyle(featureStyle)
-        }
-      });
+  updateFeatureColor(
+    layerName: string, 
+    colorObj?: { [propName: string]: string }, 
+    options?: FeatureColorUpdateOptions
+  ): void {
+    if (!layerName) {
+      throw new Error('Layer name is required');
     }
+
+    const layers = MapTools.getLayerByLayerName(this.map, layerName);
+    if (layers.length === 0) {
+      throw new Error(`Layer with name '${layerName}' not found`);
+    }
+
+    const layer = layers[0];
+    if (!(layer instanceof VectorLayer)) {
+      throw new Error(`Layer '${layerName}' is not a vector layer`);
+    }
+
+    const mergedOptions: FeatureColorUpdateOptions = {
+      strokeColor: '#EBEEF5',
+      strokeWidth: 2,
+      fillColor: 'rgba(255, 255, 255, 0.3)',
+      textFont: '14px Calibri,sans-serif',
+      textFillColor: '#FFF',
+      textStrokeColor: '#409EFF',
+      textStrokeWidth: 2,
+      ...options
+    };
+
+    const features = layer.getSource()?.getFeatures();
+    if (!features) {
+      console.warn(`No features found in layer '${layerName}'`);
+      return;
+    }
+
+    features.forEach((feature: Feature) => {
+      this.updateSingleFeatureColor(feature, colorObj, mergedOptions);
+    });
+  }
+
+  /**
+   * 更新单个要素的颜色
+   * @param feature 要素对象
+   * @param colorObj 颜色映射对象
+   * @param options 配置选项
+   */
+  private updateSingleFeatureColor(
+    feature: Feature, 
+    colorObj?: { [propName: string]: string }, 
+    options?: FeatureColorUpdateOptions
+  ): void {
+    const name = options?.nameKey ? feature.get(options.nameKey) : '';
+    const newColor = colorObj?.[name] || options?.fillColor;
+
+    const featureStyle = new Style({
+      stroke: new Stroke({
+        color: options?.strokeColor!,
+        width: options?.strokeWidth!
+      }),
+      fill: new Fill({ color: newColor! })
+    });
+
+    // 添加文本样式
+    if (options?.textVisible) {
+      const text = this.getFeatureText(feature, options);
+      if (text) {
+        featureStyle.setText(new Text({
+          text,
+          font: options.textFont!,
+          fill: new Fill({ color: options.textFillColor! }),
+          stroke: new Stroke({
+            color: options.textStrokeColor!,
+            width: options.textStrokeWidth!
+          })
+        }));
+      }
+    }
+
+    feature.setStyle(featureStyle);
   }
 
 
@@ -251,51 +410,57 @@ export default class Polygon {
 
   /**
    * 添加图片图层
-   * @param imageData 图片数据 { img: 图片地址, extent: 图片范围（对角线坐标） [minx, miny, maxx, maxy] }
-   * @param options 图层配置
+   * @param imageData 图片数据，包含url和extent
+   * @param options 配置项
+   * @returns 创建的图片图层
+   * @throws 当数据格式无效时抛出错误
    */
-  addImage(imageData?: { img: string, extent: number[] }, options?: OptionsType) {
-    let imageLayer: any
-    if (imageData?.img && imageData?.extent) {
-      const source = new ImageStatic({
-        url: imageData.img,
-        imageExtent: imageData.extent
-      })
-      
-      // 如果有layerName，则更新现有图层或创建新图层
-      if (options?.layerName) {
-        imageLayer = MapTools.getLayerByLayerName(this.map, options.layerName)[0]
-        if (imageLayer && imageLayer instanceof ImageLayer) {
-          imageLayer.setSource(source)
-        } else {
-          imageLayer = new ImageLayer()
-          imageLayer.set('name', options.layerName)
-          imageLayer.set('layerName', options.layerName)
-          if (imageLayer instanceof ImageLayer) imageLayer.setSource(source)
-          imageLayer.setZIndex(options?.zIndex ?? 11)
-          imageLayer.setOpacity(options?.opacity ?? 1)
-          if (options?.visible !== undefined) imageLayer.setVisible(options?.visible)
-          if (options?.mapClip && options?.mapClipData) {
-            imageLayer = MapTools.setMapClip(imageLayer, options?.mapClipData)
-          }
-          this.map.addLayer(imageLayer)
-        }
-      } else {
-        // 没有layerName，直接创建新图层
-        imageLayer = new ImageLayer()
-        if (imageLayer instanceof ImageLayer) imageLayer.setSource(source)
-        imageLayer.setZIndex(options?.zIndex ?? 11)
-        imageLayer.setOpacity(options?.opacity ?? 1)
-        if (options?.visible !== undefined) imageLayer.setVisible(options?.visible)
-        if (options?.mapClip && options?.mapClipData) {
-          imageLayer = MapTools.setMapClip(imageLayer, options?.mapClipData)
-        }
-        this.map.addLayer(imageLayer)
-      }
-    } else if (options?.layerName) {
-      this.removePolygonLayer(options.layerName)
+  addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<any> {
+    if (!imageData || !imageData.img || !imageData.extent) {
+      throw new Error('Invalid image data: img and extent are required');
     }
-    return imageLayer
+
+    if (!Array.isArray(imageData.extent) || imageData.extent.length !== 4) {
+      throw new Error('Invalid extent: must be an array of 4 numbers [minX, minY, maxX, maxY]');
+    }
+
+    const mergedOptions: PolygonOptions = {
+      opacity: 1,
+      visible: true,
+      zIndex: 11,
+      layerName: 'imageLayer',
+      ...options
+    };
+
+    // 如果指定了图层名称，先移除同名图层
+    if (mergedOptions.layerName) {
+      MapTools.removeLayer(this.map, mergedOptions.layerName);
+    }
+
+    const source = new ImageStatic({
+      url: imageData.img,
+      imageExtent: imageData.extent
+    });
+
+    const imageLayer = new ImageLayer({
+      source,
+      opacity: mergedOptions.opacity!,
+      visible: mergedOptions.visible!
+    });
+
+    imageLayer.set('name', mergedOptions.layerName);
+    imageLayer.set('layerName', mergedOptions.layerName);
+    imageLayer.setZIndex(mergedOptions.zIndex!);
+
+    // 应用地图裁剪
+    if (mergedOptions.mapClip && mergedOptions.mapClipData) {
+      const clippedLayer = MapTools.setMapClip(imageLayer, mergedOptions.mapClipData);
+      this.map.addLayer(clippedLayer);
+      return clippedLayer;
+    }
+
+    this.map.addLayer(imageLayer);
+    return imageLayer;
   }
 
   /**
@@ -306,7 +471,7 @@ export default class Polygon {
   addHeatmap(pointData: PointData[], options?: HeatMapOptions) {
     // 只有在指定layerName时才移除已存在的同名图层
     if (options?.layerName) {
-      MapTools.removeLayer(this.map, options.layerName)
+      new MapTools(this.map).removeLayer(options.layerName)
     }
     
     const heatmapLayer = new Heatmap({
@@ -341,8 +506,60 @@ export default class Polygon {
     return heatmapLayer
   }
 
+  /**
+   * 添加遮罩图层
+   * @param data GeoJSON格式的遮罩数据
+   * @param options 配置项
+   * @returns 创建的遮罩图层
+   * @throws 当数据格式无效时抛出错误
+   */
+  addMaskLayer(data: any, options?: MaskLayerOptions): VectorLayer<VectorSource> {
+    if (!data) {
+      throw new Error('Mask data is required');
+    }
+
+    const mergedOptions: MaskLayerOptions = {
+      fillColor: 'rgba(0, 0, 0, 0.5)',
+      opacity: 1,
+      visible: true,
+      layerName: 'maskLayer',
+      ...options
+    };
+
+    let features: Feature[];
+    try {
+      features = new GeoJSON().readFeatures(data);
+    } catch (error) {
+      throw new Error(`Invalid GeoJSON data: ${error}`);
+    }
+
+    if (!features || features.length === 0) {
+      console.warn('No features found in mask data');
+    }
+
+    const maskLayer = new VectorLayer({
+      source: new VectorSource({ features }),
+      style: new Style({
+        fill: new Fill({
+          color: mergedOptions.fillColor!
+        }),
+        stroke: mergedOptions.strokeColor ? new Stroke({
+          color: mergedOptions.strokeColor,
+          width: mergedOptions.strokeWidth || 1
+        }) : undefined
+      }),
+      opacity: mergedOptions.opacity!,
+      visible: mergedOptions.visible!
+    });
+
+    maskLayer.set('layerName', mergedOptions.layerName);
+    this.map.addLayer(maskLayer);
+    
+    return maskLayer;
+  }
+
   removePolygonLayer(layerName: string) {
-    MapTools.removeLayer(this.map, layerName)
+    new MapTools(this.map).removeLayer(layerName)
     this[layerName] = null
   }
 }

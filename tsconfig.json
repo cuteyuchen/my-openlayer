@@ -7,6 +7,7 @@
     "strict": true,
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",
+    "skipLibCheck": true,
     "paths": {
       "ol/*": [
         "node_modules/ol/*"

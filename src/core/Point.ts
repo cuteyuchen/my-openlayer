@@ -5,14 +5,13 @@ import Overlay from 'ol/Overlay'
 import Feature from "ol/Feature";
 import { Point as olPoint } from "ol/geom";
 import { Text, Style, Fill, Stroke, Icon } from "ol/style";
-// import {Style, Icon, Text} from "ol/style";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Cluster } from 'ol/source';
-import * as turf from 'turf';
+import * as turf from '@turf/turf';
 import GeoJSON from "ol/format/GeoJSON";
-import { MapJSONData, OptionsType, PointData } from '../types'
-import DomPoint from "./DomPoint";
+import { MapJSONData, PointOptions, ClusterOptions, PointData } from '../types'
+import DomPoint from './DomPoint';
 import MapTools from "./MapTools";
 import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
@@ -35,13 +34,21 @@ export default class Point {
    *   hasImg: Boolean 是否显示图标
    * }
    */
-  addPoint(pointData: PointData[], options: OptionsType) {
-    const pointFeatureList: any[] = [];
+  addPoint(pointData: PointData[], options: PointOptions): VectorLayer<VectorSource> | null {
+    if (!pointData || pointData.length === 0) {
+      console.warn('Point data is empty or undefined');
+      return null;
+    }
+    
+    const pointFeatureList: Feature[] = [];
     pointData.forEach((item) => {
+      if (!item.lgtd || !item.lttd) {
+        console.warn('Invalid coordinates for point:', item);
+        return;
+      }
+      
       const pointFeature = new Feature({
-        // clickLocation: options.clickLocation,
-        // all: JSON.stringify(item),
-        rawData: item,//保存原始数据
+        rawData: item,
         type: options.layerName,
         geometry: new olPoint([item.lgtd, item.lttd])
       })
@@ -87,9 +94,19 @@ export default class Point {
   }
 
 
-  addClusterPoint(pointData: PointData[], options: OptionsType) {
-    const pointFeatureList: any[] = [];
+  addClusterPoint(pointData: PointData[], options: ClusterOptions): VectorLayer<VectorSource> | null {
+    if (!pointData || pointData.length === 0) {
+      console.warn('Point data is empty or undefined');
+      return null;
+    }
+    
+    const pointFeatureList: Feature[] = [];
     pointData.forEach(item => {
+      if (!item.lgtd || !item.lttd) {
+        console.warn('Invalid coordinates for cluster point:', item);
+        return;
+      }
+      
       const pointFeature = new Feature({
         geometry: new olPoint([item.lgtd, item.lttd]),
         name: options.nameKey ? item[options.nameKey] : '',
@@ -142,6 +159,7 @@ export default class Point {
     } as any);
     clusterLayer.setVisible(options.visible === undefined ? true : options.visible)
     this.map.addLayer(clusterLayer);
+    return clusterLayer;
   }
 
 
@@ -257,64 +275,110 @@ export default class Point {
    * @param zoom 缩放级别
    * @param duration 动画时长
    */
-  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000) {
-    if (!(lgtd && lttd)) {
-      console.error('[地图定位]', '经纬度不能为空')
-      return false
+  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean {
+    if (!lgtd || !lttd || isNaN(lgtd) || isNaN(lttd)) {
+      console.error('[地图定位]', '经纬度不能为空或无效');
+      return false;
     }
-    this.map.getView().animate({ center: [lgtd, lttd], zoom, duration })
+    
+    try {
+      this.map.getView().animate({ center: [lgtd, lttd], zoom, duration });
+      return true;
+    } catch (error) {
+      console.error('[地图定位]', '定位失败:', error);
+      return false;
+    }
   }
 
   /**
    * 设置dom元素为点位
    */
-  setDomPoint(id: string, lgtd: number, lttd: number): void {
-    const el = document.getElementById(id)
-    if (el) {
+  setDomPoint(id: string, lgtd: number, lttd: number): boolean {
+    if (!id || !lgtd || !lttd || isNaN(lgtd) || isNaN(lttd)) {
+      console.error('Invalid parameters for setDomPoint');
+      return false;
+    }
+    
+    const el = document.getElementById(id);
+    if (!el) {
+      console.error(`Element with id '${id}' not found`);
+      return false;
+    }
+    
+    try {
       const anchor = new Overlay({
         id: id,
         element: el,
         positioning: 'center-center',
         stopEvent: false
-        // autoPan: true,
-        // autoPanAnimation: {
-        //   duration: 250
-        // },
-      })
-      anchor.setPosition([lgtd, lttd])
-      this.map.addOverlay(anchor)
+      });
+      anchor.setPosition([lgtd, lttd]);
+      this.map.addOverlay(anchor);
+      return true;
+    } catch (error) {
+      console.error('Failed to set DOM point:', error);
+      return false;
     }
   }
 
+  /**
+   * 设置vue组件为点位
+   * @param pointInfoList 点位信息列表
+   * @param template vue组件模板
+   * @param Vue Vue实例
+   * @returns 返回控制对象，包含显示、隐藏、移除方法
+   * @throws 当参数无效时抛出错误
+   */
   setDomPointVue(pointInfoList: any[], template: any, Vue: any): {
     setVisible: (visible: boolean) => void,
     remove: () => void
   } {
-    const layer = pointInfoList.map((pointInfo: any) => {
-      return new DomPoint(this.map, {
-        Vue,
-        Template: template,
-        lgtd: pointInfo.lgtd,
-        lttd: pointInfo.lttd,
-        props: {
-          stationInfo: {
-            type: Object,
-            default: pointInfo
-          }
-        },
+    if (!pointInfoList || !Array.isArray(pointInfoList) || pointInfoList.length === 0) {
+      throw new Error('Valid point info list is required');
+    }
+    
+    if (!template) {
+      throw new Error('Vue template is required');
+    }
+    
+    if (!Vue) {
+      throw new Error('Vue instance is required');
+    }
+    
+    try {
+      const layer = pointInfoList.map((pointInfo: any) => {
+        if (!pointInfo.lgtd || !pointInfo.lttd || isNaN(pointInfo.lgtd) || isNaN(pointInfo.lttd)) {
+          throw new Error('Valid longitude and latitude are required for each point');
+        }
+        
+        return new DomPoint(this.map, {
+          Vue,
+          Template: template,
+          lgtd: pointInfo.lgtd,
+          lttd: pointInfo.lttd,
+          props: {
+            stationInfo: {
+              type: Object,
+              default: pointInfo
+            }
+          },
+        })
       })
-    })
-    return {
-      setVisible: (visible: boolean) => {
-        layer.forEach((item: DomPoint) => {
-          item.setVisible(visible)
-        })
-      },
-      remove: () => {
-        layer.forEach((item: any) => {
-          item.remove()
-        })
+      
+      return {
+        setVisible: (visible: boolean) => {
+          layer.forEach((item: DomPoint) => {
+            item.setVisible(visible)
+          })
+        },
+        remove: () => {
+          layer.forEach((item: DomPoint) => {
+            item.remove()
+          })
+        }
       }
+    } catch (error) {
+      throw new Error(`Failed to create DOM points: ${error}`);
     }
   }
 }

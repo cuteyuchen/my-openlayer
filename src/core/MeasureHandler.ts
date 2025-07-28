@@ -9,25 +9,38 @@ import { unByKey } from 'ol/Observable.js';
 import Map from "ol/Map";
 import { MeasureHandlerType } from "../types";
 
+import { Feature } from 'ol';
+
 /**
- * @classdesc MeausreHandler
+ * 测量工具处理类
+ * 提供距离和面积测量功能
  */
 export default class MeasureHandler {
   private readonly source: VectorSource;
   private readonly vector: VectorLayer<VectorSource>;
-  private sketch: any;
+  private sketch: Feature | null;
   private helpTooltipElement: HTMLElement | null;
   private helpTooltip: Overlay | null;
-  private _map: Map | null = null;
+  private readonly _map: Map;
   private measureTooltipElement: HTMLDivElement | null;
-  private measureTooltip: Overlay| null;
-  private continuePolygonMsg: string;
-  private continueLineMsg: string;
-  private _tipsCollection: any[];
+  private measureTooltip: Overlay | null;
+  private readonly continuePolygonMsg: string;
+  private readonly continueLineMsg: string;
+  private _tipsCollection: Overlay[];
   private _mouseListener: (evt: any) => void;
   private _draw: Draw | null = null;
 
+  /**
+   * 构造函数
+   * @param map OpenLayers地图实例
+   * @throws 当地图实例无效时抛出错误
+   */
   constructor(map: Map) {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+    
+    this._map = map;
     this.source = new VectorSource();
     this.vector = new VectorLayer({
       source: this.source,
@@ -52,7 +65,6 @@ export default class MeasureHandler {
       }),
       zIndex: 999,
     });
-    this._map = map;
 
     /**
      * Currently drawn feature.
@@ -178,17 +190,28 @@ export default class MeasureHandler {
 
 
   /**
-   *
-   * @param {String} type the values such as  'Polygon','LineString'
+   * 开始测量
+   * @param type 测量类型
+   * @throws 当测量类型无效时抛出错误
    */
-  start(type: MeasureHandlerType) {
+  start(type: MeasureHandlerType): void {
+    if (!type || (type !== 'LineString' && type !== 'Polygon')) {
+      throw new Error('Invalid measure type. Must be "LineString" or "Polygon"');
+    }
+    
     if (!this._map) {
       throw new Error("MeasureHandler has not been register to the map");
     }
-    this.createMeasureTooltip();
-    this.createHelpTooltip();
-    if (this._draw) {
-      this._map.removeInteraction(this._draw);
+    
+    try {
+      this.createMeasureTooltip();
+      this.createHelpTooltip();
+      if (this._draw) {
+        this._map.removeInteraction(this._draw);
+      }
+    } catch (error) {
+      console.error('Error starting measurement:', error);
+      throw new Error('Failed to start measurement');
     }
     this._draw = new Draw({
       source: this.source,
@@ -227,21 +250,24 @@ export default class MeasureHandler {
       /** @type {import("ol/coordinate.js").Coordinate|undefined} */
       let tooltipCoord = evt?.coordinate;
 
-      listener = this.sketch.getGeometry().on('change', (evt:any) => {
-        const geom = evt.target;
-        let output;
-        if (geom instanceof Polygon) {
-          output = this.formatArea(geom);
-          tooltipCoord = geom.getInteriorPoint().getCoordinates();
-        } else if (geom instanceof LineString) {
-          output = this.formatLength(geom);
-          tooltipCoord = geom.getLastCoordinate();
+      const geometry = this.sketch?.getGeometry();
+        if (geometry) {
+          listener = geometry.on('change', (evt:any) => {
+            const geom = evt.target;
+            let output;
+            if (geom instanceof Polygon) {
+              output = this.formatArea(geom);
+              tooltipCoord = geom.getInteriorPoint().getCoordinates();
+            } else if (geom instanceof LineString) {
+              output = this.formatLength(geom);
+              tooltipCoord = geom.getLastCoordinate();
+            }
+            if (this.measureTooltipElement) {
+              this.measureTooltipElement.innerHTML = output as string;
+            }
+            this.measureTooltip?.setPosition(tooltipCoord);
+          });
         }
-        if (this.measureTooltipElement) {
-          this.measureTooltipElement.innerHTML = output as string;
-        }
-        this.measureTooltip?.setPosition(tooltipCoord);
-      });
     });
 
     this._draw.on('drawend', () => {

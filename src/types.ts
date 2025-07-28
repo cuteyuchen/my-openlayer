@@ -66,45 +66,198 @@ export interface HeatMapOptions {
   valueKey?: string,
 }
 
-export interface OptionsType {
-  layerName?: string,
-  nameKey?: string,
-  img?: string,
-  scale?: number,
-  hasImg?: boolean,
-  zIndex?: number,
-  visible?: boolean,
-  projectionOptOptions?: any,
-  strokeColor?: string | number[],
-  strokeWidth?: number,
-  lineDash?: number[],
-  lineDashOffset?: number,
-  fillColor?: string,
-  fillColorCallBack?: (feature: any) => string,
-  textVisible?: boolean,
-  textCallBack?: (feature: any) => string,
-  textFont?: string,
-  textFillColor?: string,
-  textStrokeColor?: string,
-  textStrokeWidth?: number,
-  textOffsetY?: number,
-  fitView?: boolean,
-  opacity?: number,
-  mapClip?: boolean,
-  mapClipData?: MapJSONData,
-  mask?: boolean,
-  iconColor?: string
-
-  [propName: string]: any
+/**
+ * 基础选项接口 - 所有图层的公共配置
+ */
+export interface BaseOptions {
+  /** 图层名称 */
+  layerName?: string;
+  /** 图层层级 */
+  zIndex?: number;
+  /** 图层可见性 */
+  visible?: boolean;
+  /** 图层透明度 */
+  opacity?: number;
+  /** 是否适应视图 */
+  fitView?: boolean;
+  /** 地图裁剪 */
+  mapClip?: boolean;
+  /** 地图裁剪数据 */
+  mapClipData?: MapJSONData;
+  /** 投影选项 */
+  projectionOptOptions?: any;
+  /** 扩展属性 */
+  [propName: string]: any;
 }
 
+/**
+ * 样式选项接口 - 图形样式相关配置
+ */
+export interface StyleOptions {
+  /** 描边颜色 */
+  strokeColor?: string | number[];
+  /** 描边宽度 */
+  strokeWidth?: number;
+  /** 线条虚线样式 */
+  lineDash?: number[];
+  /** 线条虚线偏移 */
+  lineDashOffset?: number;
+  /** 填充颜色 */
+  fillColor?: string;
+  /** 填充颜色回调函数 */
+  fillColorCallBack?: (feature: any) => string;
+}
+
+/**
+ * 文本选项接口 - 文本标注相关配置
+ */
+export interface TextOptions {
+  /** 文本可见性 */
+  textVisible?: boolean;
+  /** 文本内容回调函数 */
+  textCallBack?: (feature: any) => string;
+  /** 文本字体 */
+  textFont?: string;
+  /** 文本填充颜色 */
+  textFillColor?: string;
+  /** 文本描边颜色 */
+  textStrokeColor?: string;
+  /** 文本描边宽度 */
+  textStrokeWidth?: number;
+  /** 文本Y轴偏移 */
+  textOffsetY?: number;
+}
+
+/**
+ * 点位选项接口 - 点位图层专用配置
+ */
+export interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
+  /** 名称字段键 */
+  nameKey?: string;
+  /** 图标图片 */
+  img?: string;
+  /** 图标缩放比例 */
+  scale?: number;
+  /** 是否有图标 */
+  hasImg?: boolean;
+  /** 图标颜色 */
+  iconColor?: string;
+}
+
+/**
+ * 线条选项接口 - 线条图层专用配置
+ */
+export interface LineOptions extends BaseOptions, StyleOptions, TextOptions {
+  /** 线条类型 */
+  type?: string;
+}
+
+/**
+ * 多边形选项接口 - 多边形图层专用配置
+ */
+export interface PolygonOptions extends BaseOptions, StyleOptions, TextOptions {
+  /** 名称字段键 */
+  nameKey?: string;
+  /** 是否为蒙版 */
+  mask?: boolean;
+}
+
+/**
+ * 兼容性类型别名 - 保持向后兼容
+ * @deprecated 请使用具体的选项接口：PointOptions, LineOptions, PolygonOptions
+ */
+export type OptionsType = BaseOptions & StyleOptions & TextOptions & {
+  nameKey?: string;
+  img?: string;
+  scale?: number;
+  hasImg?: boolean;
+  iconColor?: string;
+  type?: string;
+  mask?: boolean;
+};
+
+/**
+ * 图片图层数据接口
+ */
+export interface ImageLayerData {
+  img: string;
+  extent: number[];
+}
+
+/**
+ * 蒙版图层配置接口
+ */
+export interface MaskLayerOptions {
+  extent?: any;
+  fillColor?: string;
+  strokeWidth?: number;
+  strokeColor?: string;
+  zIndex?: number;
+  opacity?: number;
+  visible?: boolean;
+  layerName?: string;
+}
+
+/**
+ * 颜色映射接口
+ */
+export interface ColorMap {
+  [level: string]: string;
+}
+
+/**
+ * 要素颜色更新选项接口
+ */
+export interface FeatureColorUpdateOptions extends BaseOptions, StyleOptions, TextOptions {
+  /** 名称字段键 */
+  nameKey?: string;
+}
+
+/**
+ * 点位数据接口
+ */
 export interface PointData {
-  lgtd: number,
-  lttd: number,
-
-  [propName: string]: any
+  lgtd: number;
+  lttd: number;
+  [key: string]: any;
 }
 
-export type MeasureHandlerType = 'Polygon' | 'LineString'
+/**
+ * 线数据接口
+ */
+export interface LineData {
+  type: string;
+  coordinates: number[][];
+  [key: string]: any;
+}
 
-export type EventType = 'click' | 'moveend' | 'hover'
+/**
+ * 聚合选项接口
+ */
+export interface ClusterOptions extends PointOptions {
+  /** 聚合距离 */
+  distance?: number;
+  /** 最小聚合距离 */
+  minDistance?: number;
+}
+
+/**
+ * 测量处理器类型
+ */
+export type MeasureHandlerType = 'LineString' | 'Polygon';
+
+/**
+ * 事件类型
+ */
+export type EventType = 'click' | 'hover' | 'moveend';
+
+/**
+ * DOM点位选项接口
+ */
+export interface DomPointOptions {
+  Vue: any;
+  Template: any;
+  lgtd: number;
+  lttd: number;
+  props?: any;
+}

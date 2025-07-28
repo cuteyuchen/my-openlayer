@@ -14,38 +14,71 @@ import BaseLayer from "ol/layer/Base";
 import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
 
+/**
+ * 地图工具类
+ * 提供地图的基础操作功能
+ */
 export default class MapTools {
   private readonly map: Map;
 
   constructor(map: Map) {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
     this.map = map;
   }
 
   /**
    * 根据名称获取图层
    * @param layerName 图层名称
+   * @returns 图层数组
+   * @throws 当参数无效时抛出错误
    */
-  getLayerByLayerName(layerName: string | string[]) {
-    if (!this.map) return []
-    return MapTools.getLayerByLayerName(this.map, layerName)
+  getLayerByLayerName(layerName: string | string[]): (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] {
+    if (!this.map) {
+      throw new Error('Map instance is not available');
+    }
+    return MapTools.getLayerByLayerName(this.map, layerName);
   }
 
-  static getLayerByLayerName(map: Map, layerName: string | string[]) {
-    const targetLayer: (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] = []
-    const layers = map.getLayers().getArray()
-    Object.values(layers).forEach((layer: any) => {
-      const _layerName = layer.get('layerName')
-      if (typeof layerName === "string") {
-        if (_layerName && _layerName === layerName) {
-          targetLayer.push(layer)
+  /**
+   * 根据图层名称获取图层
+   * @param map 地图实例
+   * @param layerName 图层名称
+   * @returns 图层数组
+   * @throws 当参数无效时抛出错误
+   */
+  static getLayerByLayerName(map: Map, layerName: string | string[]): (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+    
+    if (!layerName || (typeof layerName !== 'string' && !Array.isArray(layerName))) {
+      throw new Error('Valid layer name is required');
+    }
+    
+    const targetLayer: (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] = [];
+    
+    try {
+      const layers = map.getLayers().getArray();
+      layers.forEach((layer: BaseLayer) => {
+        const _layerName = layer.get('layerName');
+        if (typeof layerName === "string") {
+          if (_layerName && _layerName === layerName) {
+            targetLayer.push(layer as VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>);
+          }
+        } else {
+          if (_layerName && layerName.includes(_layerName)) {
+            targetLayer.push(layer as VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>);
+          }
         }
-      } else {
-        if (_layerName && layerName.includes(_layerName)) {
-          targetLayer.push(layer)
-        }
-      }
-    })
-    return targetLayer
+      });
+    } catch (error) {
+      console.error('Error getting layers:', error);
+      throw new Error('Failed to retrieve layers from map');
+    }
+    
+    return targetLayer;
   }
 
   /**
@@ -86,87 +119,151 @@ export default class MapTools {
   /**
    * 移除图层
    * @param layerName 图层名称
+   * @throws 当参数无效时抛出错误
    */
-
-  removeLayer(layerName: string | string[]) {
-    if (!this.map) return
-    MapTools.removeLayer(this.map, layerName)
+  removeLayer(layerName: string | string[]): void {
+    if (!this.map) {
+      throw new Error('Map instance is not available');
+    }
+    MapTools.removeLayer(this.map, layerName);
   }
 
   /**
    * 移除图层
    * @param map 地图对象
    * @param layerName 图层名称
+   * @throws 当参数无效时抛出错误
    */
-  static removeLayer(map: Map, layerName: string | string[]) {
-    const layers = MapTools.getLayerByLayerName(map, layerName)
-    layers.forEach(layer => {
-      map.removeLayer(layer)
-    })
-  }
-
-  setLayerVisible(layerName: string, visible: boolean) {
-    if (!this.map) return
-    MapTools.setLayerVisible(this.map, layerName, visible)
+  static removeLayer(map: Map, layerName: string | string[]): void {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+    
+    try {
+      const layers = MapTools.getLayerByLayerName(map, layerName);
+      layers.forEach(layer => {
+        map.removeLayer(layer);
+      });
+    } catch (error) {
+      console.error('Error removing layers:', error);
+      throw new Error('Failed to remove layers from map');
+    }
   }
 
   /**
    * 设置图层可见性
-   * @param map
    * @param layerName 图层名称
    * @param visible 是否可见
+   * @throws 当参数无效时抛出错误
    */
-
-  static setLayerVisible = (map: Map, layerName: string, visible: boolean) => {
-    const layers = MapTools.getLayerByLayerName(map, layerName)
-    layers.forEach(layer => {
-      layer.setVisible(visible)
-    })
+  setLayerVisible(layerName: string, visible: boolean): void {
+    if (!this.map) {
+      throw new Error('Map instance is not available');
+    }
+    MapTools.setLayerVisible(this.map, layerName, visible);
   }
 
-  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined) {
-    if (!this.map) return
-    MapTools.mapOnEvent(this.map, eventType, callback, clickType)
+  /**
+   * 设置图层可见性
+   * @param map 地图实例
+   * @param layerName 图层名称
+   * @param visible 是否可见
+   * @throws 当参数无效时抛出错误
+   */
+  static setLayerVisible = (map: Map, layerName: string, visible: boolean): void => {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+    
+    if (typeof layerName !== 'string') {
+      throw new Error('Layer name must be a string');
+    }
+    
+    if (typeof visible !== 'boolean') {
+      throw new Error('Visible parameter must be a boolean');
+    }
+    
+    try {
+      const layers = MapTools.getLayerByLayerName(map, layerName);
+      layers.forEach(layer => {
+        layer.setVisible(visible);
+      });
+    } catch (error) {
+      console.error('Error setting layer visibility:', error);
+      throw new Error('Failed to set layer visibility');
+    }
   }
 
   /**
    * 地图监听事件
-   * @param map
    * @param eventType 事件类型
-   * @param clickType 点击类型
    * @param callback 回调函数
+   * @param clickType 点击类型
+   * @throws 当参数无效时抛出错误
    */
-  static mapOnEvent(map: Map, eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon') {
+  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon' | undefined): void {
+    if (!this.map) {
+      throw new Error('Map instance is not available');
+    }
+    MapTools.mapOnEvent(this.map, eventType, callback, clickType);
+  }
+
+  /**
+   * 地图监听事件
+   * @param map 地图实例
+   * @param eventType 事件类型
+   * @param callback 回调函数
+   * @param clickType 点击类型
+   * @throws 当参数无效时抛出错误
+   */
+  static mapOnEvent(map: Map, eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon'): void {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+    
+    if (!eventType) {
+      throw new Error('Event type is required');
+    }
+    
+    if (typeof callback !== 'function') {
+      throw new Error('Callback must be a function');
+    }
+    
     const clickTypeObj = {
       point: ['point'],
       line: ['line'],
       polygon: ['polygon', 'MultiPolygon']
-    }
+    };
 
-    if (eventType === "click") {
-      map.on("click", (e) => {
-        // 获取点位 feature
-        const pixel: Pixel = map.getEventPixel(e.originalEvent);
-        const features: FeatureLike[] = map.getFeaturesAtPixel(pixel);
+    try {
+      if (eventType === "click") {
+        map.on("click", (e) => {
+          // 获取点位 feature
+          const pixel: Pixel = map.getEventPixel(e.originalEvent);
+          const features: FeatureLike[] = map.getFeaturesAtPixel(pixel);
 
-        let feature: FeatureLike | undefined = undefined;
-        if (features.length > 0) feature = features[0];
+          let feature: FeatureLike | undefined = undefined;
+          if (features.length > 0) feature = features[0];
 
-        callback(feature, { features, pixel });
-      });
-    } else if (eventType === 'moveend') {
-      map.on('moveend', function () {
-        const zoom = map.getView().getZoom()
-        if (zoom) {
-          callback(zoom)
-        }
-      })
-    } else if (eventType === 'hover') {
-      map.on('pointermove', (e: MapBrowserEvent<any>) => {
-        const pixel: Pixel = map.getEventPixel(e.originalEvent);
-        const features: FeatureLike[] = map.getFeaturesAtPixel(pixel);
-        callback({ features, pixel });
-      });
+          callback(feature, { features, pixel });
+        });
+      } else if (eventType === 'moveend') {
+        map.on('moveend', function () {
+          const zoom = map.getView().getZoom();
+          if (zoom !== undefined) {
+            callback(zoom);
+          }
+        });
+      } else if (eventType === 'hover') {
+        map.on('pointermove', (e: MapBrowserEvent<any>) => {
+          const pixel: Pixel = map.getEventPixel(e.originalEvent);
+          const features: FeatureLike[] = map.getFeaturesAtPixel(pixel);
+          callback({ features, pixel });
+        });
+      }
+    } catch (error) {
+      console.error('Error setting up map event:', error);
+      throw new Error('Failed to set up map event listener');
     }
   }
 }

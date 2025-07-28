@@ -14,7 +14,7 @@ import Line from "./core/Line";
 import MapBaseLayers from "./core/MapBaseLayers";
 import proj4 from "proj4";
 import MapTools from "./core/MapTools";
-import { OptionsType, MapInitType, MapLayersOptions, EventType } from './types'
+import { MapInitType, MapLayersOptions, EventType } from './types'
 import { defaults as defaultControls } from 'ol/control'
 import BaseLayer from "ol/layer/Base";
 // import { Pixel } from "ol/pixel";

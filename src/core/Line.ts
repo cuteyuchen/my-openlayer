@@ -3,26 +3,65 @@ import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
 import { Fill, Stroke, Style, Text } from "ol/style";
-import { OptionsType, MapJSONData } from "../types";
+import { Feature } from "ol";
+import { LineOptions, MapJSONData } from "../types";
 import MapTools from "./MapTools";
 
+/**
+ * 线要素管理类
+ * 用于在地图上添加和管理线要素
+ */
 export default class Line {
-  private map: Map;
+  private readonly map: Map;
   riverLayerList: any[] = [];
   riverLayerShow: boolean = false;
 
   [propertyName: string]: any
 
+  /**
+   * 构造函数
+   * @param map OpenLayers地图实例
+   * @throws 当地图实例无效时抛出错误
+   */
   constructor(map: Map) {
-    this.map = map
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+    this.map = map;
   }
 
-  addLine(data: MapJSONData, options: OptionsType) {
+  /**
+   * 添加线要素
+   * @param data GeoJSON格式的线数据
+   * @param options 配置项
+   * @returns 创建的矢量图层
+   * @throws 当数据格式无效时抛出错误
+   */
+  addLine(data: MapJSONData, options: LineOptions): VectorLayer<VectorSource> {
+    if (!data) {
+      throw new Error('Line data is required');
+    }
+
+    if (!options || !options.type) {
+      throw new Error('Options with type is required');
+    }
+
+    let features: Feature[];
+    try {
+      features = new GeoJSON().readFeatures(data);
+    } catch (error) {
+      throw new Error(`Invalid GeoJSON data: ${error}`);
+    }
+
+    if (!features || features.length === 0) {
+      console.warn('No features found in line data');
+    }
+
     const layer = new VectorLayer({
       name: options.layerName,
       layerName: options.layerName,
       source: new VectorSource({
-        features: (new GeoJSON()).readFeatures(data)
+        features: features
       }),
       style: function (feature: any) {
         feature.set('type', options.type)
@@ -45,7 +84,7 @@ export default class Line {
   }
 
   // 添加水系并按照zoom显示不同级别
-  addRiverLayersByZoom(fyRiverJson: MapJSONData, options: OptionsType = { type: 'river' }) {
+  addRiverLayersByZoom(fyRiverJson: MapJSONData, options: LineOptions = { type: 'river' }) {
     this.riverLayerShow = !!options.visible
     this.riverLayerList = []
     for (let i = 1; i <= 5; i++) {

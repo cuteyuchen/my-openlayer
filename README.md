@@ -1,6 +1,10 @@
 # my-openlayer
 
-my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地图组件库，专为 Web GIS 应用开发者设计，支持天地图底图加载、要素绘制、图层管理、事件监听等丰富功能，极大提升地图开发效率。
+my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地图组件库，专为 Web GIS 应用开发者设计。提供完整的 TypeScript 支持、模块化的类型定义、强大的错误处理和事件管理系统，支持天地图底图加载、要素绘制、图层管理、事件监听等丰富功能，极大提升地图开发效率。
+
+[![npm version](https://img.shields.io/npm/v/my-openlayer.svg)](https://www.npmjs.com/package/my-openlayer)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
@@ -10,8 +14,10 @@ my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地�
 - [安装](#安装)
 - [快速上手](#快速上手)
 - [详细用法](#详细用法)
+- [高级功能](#高级功能)
 - [API 文档与示例](#api-文档与示例)
 - [类型定义](#类型定义)
+- [迁移指南](#迁移指南)
 - [依赖](#依赖)
 - [贡献指南](#贡献指南)
 - [常见问题](#常见问题)
@@ -22,27 +28,40 @@ my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地�
 
 ## 功能亮点
 
-- **底图管理**
+- **🗺️ 底图管理**
   - 支持天地图矢量、影像、地形底图
   - 动态切换底图与注记图层
   - 地图裁剪与自定义范围显示
+  - 支持自定义底图源
 
-- **要素操作**
+- **📍 要素操作**
   - 点位标注（支持自定义图标、文字、聚合、闪烁）
   - 线要素绘制（支持样式自定义、河流分级显示）
   - 面要素绘制与分区高亮
   - DOM 点位（支持 Vue 组件渲染）
   - 热力图、图片图层
+  - 动态要素颜色更新
 
-- **地图工具**
+- **🛠️ 地图工具**
   - 图层管理（获取、移除、显隐控制）
   - 地图事件监听（点击、悬停、移动等）
   - 坐标转换、视图控制
-  - 测量工具
+  - 测量工具（距离、面积）
+  - 配置管理器
 
-- **高扩展性**
+- **⚡ 高级特性**
+  - **TypeScript 完全支持**：模块化类型定义，更好的开发体验
+  - **错误处理系统**：统一的错误处理和日志记录
+  - **事件管理系统**：强大的事件监听和管理机制
+  - **配置管理**：默认配置、配置合并、验证工具
+  - **向后兼容**：保持 API 稳定性
+
+- **🔧 开发友好**
   - 支持自定义图层、样式、交互逻辑
-  - 兼容主流前端框架
+  - 兼容主流前端框架（Vue、React、Angular）
+  - 完整的 JSDoc 注释
+  - 详细的迁移指南
+  - 丰富的示例代码
 
 ---
 
@@ -58,24 +77,30 @@ npm install my-openlayer
 
 ### 1. 初始化地图
 
-```javascript
-import MyOl from 'my-openlayer';
+```typescript
+// 方式一：默认导入（推荐）
+import MyOl, { MapInitType } from 'my-openlayer';
 
-const map = new MyOl('map-container', {
+// 方式二：命名导入
+// import { MyOl, MapInitType } from 'my-openlayer';
+
+// 地图初始化配置
+const mapConfig: MapInitType = {
   center: [119.81, 29.969],
   zoom: 10,
   minZoom: 8,
   maxZoom: 20,
   token: 'your-tianditu-token',
   annotation: true,
-  mapClip: false,
-  mapClipData: undefined,
   layers: {
     vec_c: [],
     img_c: [],
     ter_c: []
   }
-});
+};
+
+// 创建地图实例
+const map = new MyOl('map-container', mapConfig);
 ```
 
 ### 2. 容器 HTML
@@ -108,17 +133,23 @@ baseLayers.addAnnotationLayer({
 
 ### 点位操作
 
-```javascript
+```typescript
+import { PointOptions, ClusterOptions, PointData } from 'my-openlayer';
+
 const point = map.getPoint();
 
+// 点位数据
+const pointData: PointData[] = [
+  { lgtd: 119.81, lttd: 29.969, name: '测试点位', type: 'marker' }
+];
+
 // 添加普通点位
-point.addPoint([
-  { lgtd: 119.81, lttd: 29.969, name: '测试点位' }
-], {
+const pointOptions: PointOptions = {
   layerName: 'test-point',
   nameKey: 'name',
   img: 'marker.png',
   hasImg: true,
+  scale: 1.2,
   textFont: '12px sans-serif',
   textFillColor: '#FFF',
   textStrokeColor: '#000',
@@ -126,18 +157,23 @@ point.addPoint([
   textOffsetY: 20,
   zIndex: 4,
   visible: true
-});
+};
+point.addPoint(pointData, pointOptions);
 
 // 添加聚合点位
-point.addClusterPoint([
+const clusterData: PointData[] = [
   { lgtd: 119.81, lttd: 29.969, name: 'A' },
   { lgtd: 119.82, lttd: 29.97, name: 'B' }
-], {
+];
+const clusterOptions: ClusterOptions = {
   layerName: 'cluster-point',
   nameKey: 'name',
   img: 'cluster.png',
+  distance: 50,
+  minDistance: 20,
   zIndex: 4
-});
+};
+point.addClusterPoint(clusterData, clusterOptions);
 
 // 添加 Vue 组件点位
 const domPoints = point.setDomPointVue(
@@ -158,27 +194,49 @@ point.locationAction(119.81, 29.969, 15, 1000);
 
 ### 线要素操作
 
-```javascript
+```typescript
+import { LineOptions, MapJSONData } from 'my-openlayer';
+
 const line = map.getLine();
 
+// 线要素数据（GeoJSON 格式）
+const lineGeoJSON: MapJSONData = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: { name: '测试线路', type: 'highway' },
+      geometry: {
+        type: 'LineString',
+        coordinates: [[119.81, 29.969], [119.82, 29.97]]
+      }
+    }
+  ]
+};
+
 // 添加普通线要素
-line.addLineCommon(lineGeoJSON, {
+const lineOptions: LineOptions = {
   layerName: 'test-line',
   type: 'test-line',
   strokeColor: '#037AFF',
   strokeWidth: 3,
-  zIndex: 3
-});
+  lineDash: [5, 5], // 虚线样式
+  zIndex: 3,
+  textVisible: true,
+  textCallBack: (feature) => feature.get('name')
+};
+line.addLineCommon(lineGeoJSON, lineOptions);
 
 // 添加河流要素（支持分级显示）
-line.addRiverLayersByZoom(riverGeoJSON, {
+const riverOptions: LineOptions = {
   layerName: 'river',
   type: 'river',
   strokeColor: '#0071FF',
   strokeWidth: 3,
   zIndex: 6,
   visible: true
-});
+};
+line.addRiverLayersByZoom(riverGeoJSON, riverOptions);
 
 // 控制河流图层显隐
 line.showRiverLayer(true); // 显示
@@ -187,19 +245,38 @@ line.showRiverLayer(false); // 隐藏
 
 ### 面要素操作
 
-```javascript
+```typescript
+import MyOl, { PolygonOptions, HeatMapOptions, FeatureColorUpdateOptions, PointData } from 'my-openlayer';
+
 const polygon = map.getPolygon();
 
+// 面要素数据（GeoJSON 格式）
+const borderGeoJSON: MapJSONData = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: { name: '边界区域' },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[119.8, 29.96], [119.82, 29.96], [119.82, 29.98], [119.8, 29.98], [119.8, 29.96]]]
+      }
+    }
+  ]
+};
+
 // 添加边界面
-polygon.addBorderPolygon(borderGeoJSON, {
+const borderOptions: PolygonOptions = {
   layerName: 'border',
   fillColor: 'rgba(255,255,255,0)',
   strokeColor: '#EBEEF5',
-  strokeWidth: 2
-});
+  strokeWidth: 2,
+  zIndex: 1
+};
+polygon.addBorderPolygon(borderGeoJSON, borderOptions);
 
 // 添加分区面
-polygon.addPolygon(zoneGeoJSON, {
+const zoneOptions: PolygonOptions = {
   layerName: 'zone',
   fillColor: 'rgba(1, 111, 255, 0.3)',
   strokeColor: '#037AFF',
@@ -209,24 +286,180 @@ polygon.addPolygon(zoneGeoJSON, {
   textFont: '14px Calibri,sans-serif',
   textFillColor: '#FFF',
   textStrokeColor: '#409EFF',
-  textStrokeWidth: 2
-});
+  textStrokeWidth: 2,
+  zIndex: 2
+};
+polygon.addPolygon(zoneGeoJSON, zoneOptions);
 
 // 更新面颜色
-polygon.updateFeatureColor('zone', { 'A区': 'rgba(255,0,0,0.6)' }, { nameKey: 'name' });
+const colorUpdateOptions: FeatureColorUpdateOptions = {
+  nameKey: 'name'
+};
+polygon.updateFeatureColor('zone', { 'A区': 'rgba(255,0,0,0.6)' }, colorUpdateOptions);
 
 // 添加图片图层
-polygon.addImage('imgLayer', 'img.png', [minx, miny, maxx, maxy], { zIndex: 10 });
+const extent = [119.8, 29.96, 119.82, 29.98]; // [minx, miny, maxx, maxy]
+polygon.addImage('imgLayer', 'img.png', extent, { zIndex: 10 });
 
 // 添加热力图
-polygon.addHeatmap('heatLayer', [
+const heatData: PointData[] = [
   { lgtd: 119.81, lttd: 29.969, value: 10 },
   { lgtd: 119.82, lttd: 29.97, value: 20 }
-], {
+];
+const heatOptions: HeatMapOptions = {
+  layerName: 'heatLayer',
   valueKey: 'value',
   radius: 20,
-  blur: 15
+  blur: 15,
+  opacity: 0.8,
+  zIndex: 5
+};
+polygon.addHeatmap('heatLayer', heatData, heatOptions);
+```
+
+## 高级功能
+
+### 错误处理系统
+
+```typescript
+import { MyOl, ErrorHandler, ErrorType, MyOpenLayersError } from 'my-openlayer';
+
+// 获取错误处理器实例
+const errorHandler = ErrorHandler.getInstance();
+
+// 设置全局错误回调
+errorHandler.addErrorCallback((error: MyOpenLayersError) => {
+  console.log('地图错误:', error.message);
+  console.log('错误类型:', error.type);
+  console.log('错误详情:', error.details);
+  
+  // 发送错误到监控系统
+  sendToMonitoring({
+    type: error.type,
+    message: error.message,
+    timestamp: new Date().toISOString()
+  });
 });
+
+// 手动验证和错误处理
+try {
+  // 验证坐标
+  ErrorHandler.validateCoordinates(longitude, latitude);
+  
+  // 验证图层名称
+  ErrorHandler.validateLayerName(layerName);
+  
+  // 验证颜色格式
+  ErrorHandler.validateColor(color);
+  
+} catch (error) {
+  if (error instanceof MyOpenLayersError) {
+    console.error(`${error.type}错误:`, error.message);
+  }
+}
+
+// 错误类型
+// ErrorType.COORDINATE_ERROR - 坐标错误
+// ErrorType.LAYER_ERROR - 图层错误
+// ErrorType.STYLE_ERROR - 样式错误
+// ErrorType.DATA_ERROR - 数据错误
+// ErrorType.CONFIG_ERROR - 配置错误
+```
+
+### 事件管理系统
+
+```typescript
+import { MyOl, EventManager, MapEventType, EventCallback, MapEventData } from 'my-openlayer';
+
+// 创建事件管理器
+const eventManager = new EventManager(map.map); // 传入原生 ol.Map
+
+// 监听点击事件
+const clickCallback: EventCallback = (eventData: MapEventData) => {
+  console.log('点击位置:', eventData.coordinate);
+  console.log('点击要素:', eventData.feature);
+  console.log('像素位置:', eventData.pixel);
+};
+const clickListenerId = eventManager.on('click', clickCallback);
+
+// 监听缩放事件
+eventManager.on('zoomend', (eventData) => {
+  console.log('当前缩放级别:', eventData.zoom);
+  console.log('地图范围:', eventData.extent);
+});
+
+// 监听鼠标悬停事件
+eventManager.on('pointermove', (eventData) => {
+  if (eventData.feature) {
+    console.log('悬停要素:', eventData.feature.get('name'));
+  }
+});
+
+// 移除特定事件监听
+eventManager.off(clickListenerId);
+
+// 移除所有事件监听
+eventManager.removeAllListeners();
+
+// 一次性事件监听
+eventManager.on('click', (eventData) => {
+  console.log('只触发一次');
+}, { once: true });
+
+// 带过滤器的事件监听
+eventManager.on('click', (eventData) => {
+  console.log('点击了要素');
+}, {
+  filter: (eventData) => eventData.feature !== undefined
+});
+
+// 事件统计
+console.log('点击事件监听器数量:', eventManager.getListenerCount('click'));
+console.log('总事件触发次数:', eventManager.getTotalEventCount());
+```
+
+### 配置管理系统
+
+```typescript
+import { MyOl, ConfigManager, PointOptions, LineOptions } from 'my-openlayer';
+
+// 使用默认配置
+const pointOptions: PointOptions = ConfigManager.mergeOptions(
+  ConfigManager.DEFAULT_POINT_OPTIONS,
+  {
+    strokeColor: '#ff0000',
+    scale: 1.5,
+    textVisible: true
+  }
+);
+
+// 获取默认配置
+const defaultPointConfig = ConfigManager.DEFAULT_POINT_OPTIONS;
+const defaultLineConfig = ConfigManager.DEFAULT_LINE_OPTIONS;
+const defaultPolygonConfig = ConfigManager.DEFAULT_POLYGON_OPTIONS;
+
+// 验证工具
+if (ConfigManager.isValidCoordinate(lng, lat)) {
+  console.log('坐标有效');
+}
+
+if (ConfigManager.isValidColor('#ff0000')) {
+  console.log('颜色格式有效');
+}
+
+if (ConfigManager.isValidZIndex(10)) {
+  console.log('层级有效');
+}
+
+// 生成唯一ID
+const layerId = ConfigManager.generateId('layer'); // layer_1234567890
+const pointId = ConfigManager.generateId('point'); // point_1234567890
+
+// 深度合并配置
+const mergedConfig = ConfigManager.mergeOptions(
+  { a: 1, b: { c: 2 } },
+  { b: { d: 3 }, e: 4 }
+); // { a: 1, b: { c: 2, d: 3 }, e: 4 }
 ```
 
 ### 地图工具
@@ -254,7 +487,7 @@ map.mapOnEvent('click', (feature, event) => {
 ### 测量工具
 
 ```javascript
-import { MeasureHandler } from 'my-openlayer';
+import { MyOl, MeasureHandler } from 'my-openlayer';
 const measure = new MeasureHandler(map.map); // 传入原生 ol.Map
 measure.start('Polygon'); // 开始绘制多边形测量
 // measure.start('LineString'); // 开始绘制线测量
@@ -572,9 +805,12 @@ new MyOl(id: string, options: MapInitType)
 
 ## 类型定义
 
-详见 [src/types.ts](src/types.ts)，主要类型如下：
+本库提供完整的 TypeScript 类型定义，采用模块化设计，详见 [src/types.ts](src/types.ts)。
+
+### 核心类型
 
 ```typescript
+// 地图初始化配置
 interface MapInitType {
   layers?: BaseLayer[] | { [key: string]: BaseLayer[] },
   zoom?: number,
@@ -587,38 +823,191 @@ interface MapInitType {
   annotation?: boolean
 }
 
-interface OptionsType {
-  layerName?: string,
-  nameKey?: string,
-  img?: string,
-  hasImg?: boolean,
-  zIndex?: number,
-  visible?: boolean,
-  strokeColor?: string | number[],
-  strokeWidth?: number,
-  fillColor?: string,
-  textFont?: string,
-  textFillColor?: string,
-  textStrokeColor?: string,
-  textStrokeWidth?: number,
-  textOffsetY?: number,
-  [propName: string]: any
+// 点位数据
+interface PointData {
+  lgtd: number,  // 经度
+  lttd: number,  // 纬度
+  [key: string]: any  // 其他属性
 }
 
-interface PointData {
-  lgtd: number,
-  lttd: number,
-  [propName: string]: any
+// GeoJSON 数据
+interface MapJSONData {
+  type: string,
+  name?: string,
+  features: Feature[]
+}
+
+// 事件类型
+type EventType = 'click' | 'hover' | 'moveend';
+
+// 天地图类型
+type TiandituType = 'vec_c' | 'img_c' | 'ter_c' | string;
+```
+
+### 模块化选项接口
+
+```typescript
+// 基础选项 - 所有图层的公共配置
+interface BaseOptions {
+  /** 图层名称 */
+  layerName?: string;
+  /** 图层层级 */
+  zIndex?: number;
+  /** 图层可见性 */
+  visible?: boolean;
+  /** 图层透明度 */
+  opacity?: number;
+  /** 是否适应视图 */
+  fitView?: boolean;
+  // ... 其他基础属性
+}
+
+// 样式选项 - 图形样式相关配置
+interface StyleOptions {
+  /** 描边颜色 */
+  strokeColor?: string | number[];
+  /** 描边宽度 */
+  strokeWidth?: number;
+  /** 线条虚线样式 */
+  lineDash?: number[];
+  /** 填充颜色 */
+  fillColor?: string;
+  // ... 其他样式属性
+}
+
+// 文本选项 - 文本标注相关配置
+interface TextOptions {
+  /** 文本可见性 */
+  textVisible?: boolean;
+  /** 文本内容回调函数 */
+  textCallBack?: (feature: any) => string;
+  /** 文本字体 */
+  textFont?: string;
+  /** 文本填充颜色 */
+  textFillColor?: string;
+  // ... 其他文本属性
+}
+
+// 点位选项 - 点位图层专用配置
+interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
+  /** 名称字段键 */
+  nameKey?: string;
+  /** 图标图片 */
+  img?: string;
+  /** 图标缩放比例 */
+  scale?: number;
+  /** 是否有图标 */
+  hasImg?: boolean;
+  /** 图标颜色 */
+  iconColor?: string;
+}
+
+// 线条选项 - 线条图层专用配置
+interface LineOptions extends BaseOptions, StyleOptions, TextOptions {
+  /** 线条类型 */
+  type?: string;
+}
+
+// 多边形选项 - 多边形图层专用配置
+interface PolygonOptions extends BaseOptions, StyleOptions, TextOptions {
+  /** 名称字段键 */
+  nameKey?: string;
+  /** 是否为蒙版 */
+  mask?: boolean;
+}
+
+// 聚合选项 - 聚合点位专用配置
+interface ClusterOptions extends PointOptions {
+  /** 聚合距离 */
+  distance?: number;
+  /** 最小聚合距离 */
+  minDistance?: number;
+}
+
+// 热力图选项
+interface HeatMapOptions {
+  layerName?: string,
+  radius?: number,
+  blur?: number,
+  gradient?: string[],
+  opacity?: number,
+  visible?: boolean,
+  zIndex?: number,
+  valueKey?: string,
 }
 ```
+
+### 兼容性类型
+
+```typescript
+/**
+ * 兼容性类型别名 - 保持向后兼容
+ * @deprecated 请使用具体的选项接口：PointOptions, LineOptions, PolygonOptions
+ */
+type OptionsType = BaseOptions & StyleOptions & TextOptions & {
+  nameKey?: string;
+  img?: string;
+  scale?: number;
+  hasImg?: boolean;
+  iconColor?: string;
+  type?: string;
+  mask?: boolean;
+};
+```
+
+## 迁移指南
+
+如果您正在从旧版本的 `OptionsType` 迁移到新的模块化类型接口，请参考详细的 [迁移指南](MIGRATION_GUIDE.md)。
+
+### 快速迁移示例
+
+```typescript
+// 旧写法
+import { MyOl, OptionsType } from 'my-openlayer';
+const options: OptionsType = {
+  layerName: 'points',
+  strokeColor: '#ff0000',
+  img: '/icons/marker.png'
+};
+
+// 新写法
+import { MyOl, PointOptions } from 'my-openlayer';
+const options: PointOptions = {
+  layerName: 'points',
+  strokeColor: '#ff0000',
+  img: '/icons/marker.png'
+};
+```
+
+### 迁移优势
+
+- **类型安全**：更精确的类型检查
+- **代码提示**：更好的 IDE 支持
+- **可维护性**：清晰的模块化结构
+- **向后兼容**：保留 `OptionsType` 作为兼容性类型
 
 ---
 
 ## 依赖
 
-- [ol](https://openlayers.org/) ^6.15.1
-- [proj4](https://github.com/proj4js/proj4js) ^2.7.5
-- [turf](https://turfjs.org/) ^3.0.14
+### 运行时依赖
+
+- **[OpenLayers](https://openlayers.org/)** `^6.15.1` - 核心地图库
+- **[proj4](https://github.com/proj4js/proj4js)** `^2.7.5` - 坐标系转换
+- **[turf](https://turfjs.org/)** `^3.0.14` - 地理空间分析
+
+### 开发依赖
+
+- **[TypeScript](https://www.typescriptlang.org/)** `~5.6.2` - 类型支持
+- **[Vite](https://vitejs.dev/)** `^5.4.10` - 构建工具
+- **[@types/proj4](https://www.npmjs.com/package/@types/proj4)** `^2.5.2` - proj4 类型定义
+- **[@types/turf](https://www.npmjs.com/package/@types/turf)** `^3.5.32` - turf 类型定义
+
+### 对等依赖
+
+- **[OpenLayers](https://openlayers.org/)** `^6.15.1` - 确保版本兼容性
+
+> **注意**：本库与 OpenLayers 6.15.1 完全兼容，建议使用相同版本以获得最佳体验。
 
 ---
 
@@ -636,19 +1025,160 @@ interface PointData {
 
 ## 常见问题
 
-1. **如何获取天地图 token？**
-   - 访问 [天地图开发者平台](https://lbs.tianditu.gov.cn/) 注册账号并申请密钥(token)。
+### 基础配置
 
-2. **为什么地图无法加载？**
-   - 检查 token 是否正确
-   - 检查网络连接
-   - 确认坐标系是否正确
+**Q: 如何获取天地图 token？**
 
-3. **如何自定义点位样式？**
-   - 通过 `options` 参数配置样式，支持自定义图标和文字样式
+A: 访问 [天地图开发者平台](https://lbs.tianditu.gov.cn/) 注册账号并申请密钥(token)。申请后在初始化地图时传入 `token` 参数。
 
-4. **如何在 Vue/React/Angular 中集成？**
-   - 只需在组件生命周期内初始化和销毁 MyOl 实例即可，点位 DOM 支持 Vue 组件渲染
+**Q: 为什么地图无法加载？**
+
+A: 请检查以下几点：
+- 天地图 token 是否正确且有效
+- 网络连接是否正常
+- 坐标系是否正确（默认使用 EPSG:4326）
+- 容器元素是否存在且有正确的尺寸
+
+### 类型和开发
+
+**Q: 如何从旧版本迁移到新的类型系统？**
+
+A: 参考 [迁移指南](MIGRATION_GUIDE.md)，主要是将 `OptionsType` 替换为具体的类型接口如 `PointOptions`、`LineOptions` 等。
+
+**Q: TypeScript 报错怎么办？**
+
+A: 
+- 确保安装了正确的类型定义包
+- 使用具体的类型接口而不是通用的 `OptionsType`
+- 检查导入语句是否正确
+
+### 功能使用
+
+**Q: 如何自定义点位样式？**
+
+A: 通过 `PointOptions` 配置样式：
+```typescript
+const options: PointOptions = {
+  img: '/path/to/icon.png',
+  scale: 1.2,
+  strokeColor: '#ff0000',
+  textVisible: true
+};
+```
+
+**Q: 如何监听地图事件？**
+
+A: 使用 `EventManager` 或 `mapOnEvent` 方法：
+```typescript
+// 使用 EventManager
+const eventManager = new EventManager(map.map);
+eventManager.on('click', (eventData) => {
+  console.log('点击位置:', eventData.coordinate);
+});
+
+// 使用 mapOnEvent
+map.mapOnEvent('click', (feature, event) => {
+  console.log('点击要素:', feature);
+});
+```
+
+**Q: 如何处理错误？**
+
+A: 使用 `ErrorHandler` 进行错误处理：
+```typescript
+import { MyOl, ErrorHandler } from 'my-openlayer';
+
+// 设置全局错误回调
+ErrorHandler.getInstance().addErrorCallback((error) => {
+  console.error('地图错误:', error.message);
+});
+
+// 手动验证
+try {
+  ErrorHandler.validateCoordinates(lng, lat);
+} catch (error) {
+  console.error('坐标验证失败:', error.message);
+}
+```
+
+### 框架集成
+
+**Q: 如何在 Vue 中使用？**
+
+A: 在组件生命周期中初始化和销毁：
+```vue
+<template>
+  <div id="map-container" style="width: 100%; height: 400px;"></div>
+</template>
+
+<script setup>
+import { onMounted, onUnmounted } from 'vue';
+import { MyOl } from 'my-openlayer';
+
+let map = null;
+
+onMounted(() => {
+  map = new MyOl('map-container', {
+    center: [119.81, 29.969],
+    zoom: 10,
+    token: 'your-token'
+  });
+});
+
+onUnmounted(() => {
+  if (map) {
+    map.map.dispose();
+  }
+});
+</script>
+```
+
+**Q: 如何在 React 中使用？**
+
+A: 使用 useEffect 钩子：
+```jsx
+import React, { useEffect, useRef } from 'react';
+import MyOl from 'my-openlayer';
+
+function MapComponent() {
+  const mapRef = useRef(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      mapRef.current = new MyOl(containerRef.current, {
+        center: [119.81, 29.969],
+        zoom: 10,
+        token: 'your-token'
+      });
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.map.dispose();
+      }
+    };
+  }, []);
+
+  return <div ref={containerRef} style={{ width: '100%', height: '400px' }} />;
+}
+```
+
+### 性能优化
+
+**Q: 如何优化大量点位的性能？**
+
+A: 
+- 使用聚合功能：`addClusterPoint`
+- 设置合适的 `distance` 和 `minDistance` 参数
+- 考虑使用分层加载或虚拟化技术
+
+**Q: 如何减少内存占用？**
+
+A: 
+- 及时移除不需要的图层：`tools.removeLayer(layerName)`
+- 使用事件管理器的 `removeAllListeners()` 清理事件监听
+- 在组件销毁时调用 `map.dispose()`
 
 ---
 
@@ -660,8 +1190,52 @@ interface PointData {
 
 ## 联系方式
 
-如有问题或建议，请提交 [Issue](https://github.com/cuteyuchen/my-openlayer/issues) 或邮件联系 2364184627@qq.com
+如有问题或建议，欢迎通过以下方式联系：
+
+- 📧 **邮箱**: 2364184627@qq.com
+- 🐛 **问题反馈**: [GitHub Issues](https://github.com/cuteyuchen/my-openlayer/issues)
+- 💡 **功能建议**: [GitHub Discussions](https://github.com/cuteyuchen/my-openlayer/discussions)
+- 📖 **文档**: [在线文档](https://github.com/cuteyuchen/my-openlayer/blob/main/README.md)
+
+## 相关资源
+
+- 🌐 **OpenLayers 官网**: [https://openlayers.org/](https://openlayers.org/)
+- 🗺️ **天地图开发者平台**: [https://lbs.tianditu.gov.cn/](https://lbs.tianditu.gov.cn/)
+- 📚 **TypeScript 文档**: [https://www.typescriptlang.org/](https://www.typescriptlang.org/)
+- 🛠️ **Vite 构建工具**: [https://vitejs.dev/](https://vitejs.dev/)
+
+## 更新日志
+
+### v1.0.0 (最新)
+- ✨ 重构类型定义，采用模块化设计
+- 🛠️ 新增错误处理系统
+- 📊 新增事件管理系统
+- ⚙️ 新增配置管理器
+- 📝 完善 TypeScript 类型支持
+- 📖 新增详细的迁移指南
+- 🔧 优化 API 设计，提升开发体验
+
+查看完整的 [更新日志](CHANGELOG.md)
 
 ---
 
-> 本项目长期维护，欢迎 Star、Fork 和贡献代码！
+## 致谢
+
+感谢以下开源项目的支持：
+
+- [OpenLayers](https://openlayers.org/) - 强大的地图库
+- [TypeScript](https://www.typescriptlang.org/) - 类型安全的 JavaScript
+- [Vite](https://vitejs.dev/) - 快速的构建工具
+
+---
+
+<div align="center">
+
+**⭐ 如果这个项目对您有帮助，请给我们一个 Star！⭐**
+
+[![GitHub stars](https://img.shields.io/github/stars/cuteyuchen/my-openlayer.svg?style=social&label=Star)](https://github.com/cuteyuchen/my-openlayer)
+[![GitHub forks](https://img.shields.io/github/forks/cuteyuchen/my-openlayer.svg?style=social&label=Fork)](https://github.com/cuteyuchen/my-openlayer/fork)
+
+**本项目长期维护，欢迎 Star、Fork 和贡献代码！**
+
+</div>
