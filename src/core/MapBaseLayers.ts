@@ -15,6 +15,7 @@ import BaseLayer from "ol/layer/Base";
 import MapTools from "./MapTools";
 import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
 import { MapLayersOptions, TiandituType, AnnotationLayerOptions, MapLayers } from "../types";
+import { ValidationUtils } from "../utils/ValidationUtils";
 
 /**
  * 天地图服务器配置
@@ -104,11 +105,8 @@ export default class MapBaseLayers {
    * @private
    */
   private validateConstructorParams(map: Map, options: MapLayersOptions): void {
-    ErrorHandler.validateMap(map);
-    
-    if (!options || typeof options !== 'object') {
-      throw new Error('Valid options object is required');
-    }
+    ValidationUtils.validateMap(map);
+    ValidationUtils.validateOptions(options);
   }
 
   /**
@@ -404,13 +402,8 @@ export default class MapBaseLayers {
    */
   addGeoServerLayer(url: string, layerName: string, options: GeoServerLayerOptions = {}): TileLayer<TileWMS> {
     try {
-      if (!url || typeof url !== 'string') {
-        throw new Error('Valid URL is required for GeoServer layer');
-      }
-      
-      if (!layerName || typeof layerName !== 'string') {
-        throw new Error('Valid layer name is required for GeoServer layer');
-      }
+      ValidationUtils.validateNonEmptyString(url, 'Valid URL is required for GeoServer layer');
+      ValidationUtils.validateNonEmptyString(layerName, 'Valid layer name is required for GeoServer layer');
 
       const wmsLayer = new TileLayer({
         source: new TileWMS({
@@ -546,9 +539,7 @@ export default class MapBaseLayers {
    */
   static getTileGrid(length: number): WMTSTileGrid {
     try {
-      if (!length || length <= 0) {
-        throw new Error('Valid length is required for tile grid');
-      }
+      ValidationUtils.validatePositiveNumber(length, 'Valid length is required for tile grid');
 
       const projection: Projection = getProjection('EPSG:4326') as Projection;
       if (!projection) {

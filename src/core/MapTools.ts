@@ -12,6 +12,7 @@ import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
 import { EventManager, MapEventType, EventCallback, MapEventData } from "./EventManager";
 import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
+import { ValidationUtils } from "../utils/ValidationUtils";
 
 /**
  * 地图工具类
@@ -26,7 +27,7 @@ export default class MapTools {
     this.errorHandler = ErrorHandler.getInstance();
     
     try {
-      ErrorHandler.validateMap(map);
+      ValidationUtils.validateMap(map);
       this.map = map;
       this.eventManager = new EventManager(map);
     } catch (error) {
@@ -62,13 +63,8 @@ export default class MapTools {
    * @throws 当参数无效时抛出错误
    */
   static getLayerByLayerName(map: Map, layerName: string | string[]): (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] {
-    if (!map) {
-      throw new Error('Map instance is required');
-    }
-    
-    if (!layerName || (typeof layerName !== 'string' && !Array.isArray(layerName))) {
-      throw new Error('Valid layer name is required');
-    }
+    ValidationUtils.validateMap(map);
+    ValidationUtils.validateLayerNameParam(layerName);
     
     const targetLayer: (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] = [];
     

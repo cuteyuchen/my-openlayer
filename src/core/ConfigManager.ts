@@ -72,67 +72,7 @@ export class ConfigManager {
     textStrokeWidth: 2
   };
 
-  /**
-   * 验证坐标是否有效
-   * @param longitude 经度
-   * @param latitude 纬度
-   * @returns 是否有效
-   */
-  static isValidCoordinate(longitude: number, latitude: number): boolean {
-    return (
-      typeof longitude === 'number' &&
-      typeof latitude === 'number' &&
-      !isNaN(longitude) &&
-      !isNaN(latitude) &&
-      longitude >= -180 &&
-      longitude <= 180 &&
-      latitude >= -90 &&
-      latitude <= 90
-    );
-  }
 
-  /**
-   * 验证颜色字符串是否有效
-   * @param color 颜色字符串
-   * @returns 是否有效
-   */
-  static isValidColor(color: string): boolean {
-    if (!color || typeof color !== 'string') {
-      return false;
-    }
-    
-    // 简单的颜色格式验证
-    const colorRegex = /^(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|[a-zA-Z]+)$/;
-    return colorRegex.test(color);
-  }
-
-  /**
-   * 验证图层名称是否有效
-   * @param layerName 图层名称
-   * @returns 是否有效
-   */
-  static isValidLayerName(layerName: string): boolean {
-    return (
-      typeof layerName === 'string' &&
-      layerName.length > 0 &&
-      layerName.trim().length > 0
-    );
-  }
-
-  /**
-   * 验证范围是否有效
-   * @param extent 范围数组 [minX, minY, maxX, maxY]
-   * @returns 是否有效
-   */
-  static isValidExtent(extent: number[]): boolean {
-    return (
-      Array.isArray(extent) &&
-      extent.length === 4 &&
-      extent.every(coord => typeof coord === 'number' && !isNaN(coord)) &&
-      extent[0] < extent[2] && // minX < maxX
-      extent[1] < extent[3]    // minY < maxY
-    );
-  }
 
   /**
    * 合并配置选项

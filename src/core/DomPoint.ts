@@ -3,6 +3,7 @@ import Overlay from 'ol/Overlay'
 import { Coordinate } from 'ol/coordinate'
 import { DomPointOptions, VueInstance, VueApp, VueLegacyInstance, DomPointState } from '../types'
 import { ErrorHandler, ErrorType } from '../utils/ErrorHandler'
+import { ValidationUtils } from '../utils/ValidationUtils'
 
 /**
  * DOM点位管理类
@@ -69,35 +70,19 @@ export default class DomPoint {
    * @private
    */
   private validateConstructorParams(map: Map, options: DomPointOptions): void {
-    if (!map) {
-      throw new Error('Map instance is required');
-    }
-    
-    if (!options) {
-      throw new Error('Options are required');
-    }
+    ValidationUtils.validateRequired(map, 'Map instance is required');
+    ValidationUtils.validateRequired(options, 'Options are required');
     
     const { Vue, Template, longitude, latitude } = options;
     
-    if (!Vue || !Template) {
-      throw new Error('Vue and Template are required in options');
-    }
+    ValidationUtils.validateRequired(Vue, 'Vue is required in options');
+    ValidationUtils.validateRequired(Template, 'Template is required in options');
     
     if (typeof longitude !== 'number' || typeof latitude !== 'number') {
       throw new Error('Longitude and latitude must be numbers');
     }
     
-    if (isNaN(longitude) || isNaN(latitude)) {
-      throw new Error('Valid longitude and latitude are required');
-    }
-    
-    if (longitude < -180 || longitude > 180) {
-      throw new Error('Longitude must be between -180 and 180');
-    }
-    
-    if (latitude < -90 || latitude > 90) {
-      throw new Error('Latitude must be between -90 and 90');
-    }
+    ValidationUtils.validateCoordinate(longitude, latitude);
   }
 
   /**
@@ -223,9 +208,7 @@ export default class DomPoint {
       throw new Error('Cannot set visibility on destroyed DOM point');
     }
     
-    if (typeof visible !== 'boolean') {
-      throw new Error('Visible parameter must be a boolean');
-    }
+    ValidationUtils.validateType(visible, 'boolean', 'Visible parameter must be a boolean');
     
     try {
       this.dom.style.visibility = visible ? 'visible' : 'hidden';
@@ -255,13 +238,7 @@ export default class DomPoint {
       throw new Error('Cannot update position on destroyed DOM point');
     }
     
-    if (typeof longitude !== 'number' || typeof latitude !== 'number') {
-      throw new Error('Longitude and latitude must be numbers');
-    }
-    
-    if (isNaN(longitude) || isNaN(latitude)) {
-      throw new Error('Valid longitude and latitude are required');
-    }
+    ValidationUtils.validateCoordinate(longitude, latitude);
     
     try {
       this.position = [longitude, latitude];
@@ -329,9 +306,7 @@ export default class DomPoint {
       throw new Error('Cannot add class on destroyed DOM point');
     }
     
-    if (!className || typeof className !== 'string') {
-      throw new Error('Valid class name is required');
-    }
+    ValidationUtils.validateNonEmptyString(className, 'Valid class name is required');
     
     try {
       this.dom.classList.add(className);
@@ -351,9 +326,7 @@ export default class DomPoint {
       throw new Error('Cannot remove class on destroyed DOM point');
     }
     
-    if (!className || typeof className !== 'string') {
-      throw new Error('Valid class name is required');
-    }
+    ValidationUtils.validateNonEmptyString(className, 'Valid class name is required');
     
     try {
       this.dom.classList.remove(className);

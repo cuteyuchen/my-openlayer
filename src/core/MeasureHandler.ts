@@ -8,6 +8,7 @@ import { getArea, getLength } from 'ol/sphere.js';
 import { unByKey } from 'ol/Observable.js';
 import Map from "ol/Map";
 import { MeasureHandlerType } from "../types";
+import { ValidationUtils } from '../utils/ValidationUtils';
 
 import { Feature } from 'ol';
 
@@ -36,9 +37,7 @@ export default class MeasureHandler {
    * @throws 当地图实例无效时抛出错误
    */
   constructor(map: Map) {
-    if (!map) {
-      throw new Error('Map instance is required');
-    }
+    ValidationUtils.validateMap(map);
     
     this._map = map;
     this.source = new VectorSource();
@@ -195,13 +194,8 @@ export default class MeasureHandler {
    * @throws 当测量类型无效时抛出错误
    */
   start(type: MeasureHandlerType): void {
-    if (!type || (type !== 'LineString' && type !== 'Polygon')) {
-      throw new Error('Invalid measure type. Must be "LineString" or "Polygon"');
-    }
-    
-    if (!this._map) {
-      throw new Error("MeasureHandler has not been register to the map");
-    }
+    ValidationUtils.validateMeasureType(type);
+    ValidationUtils.validateMap(this._map);
     
     try {
       this.createMeasureTooltip();

@@ -15,6 +15,7 @@ import DomPoint from './DomPoint';
 import MapTools from "./MapTools";
 import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
+import { ValidationUtils } from '../utils/ValidationUtils';
 
 
 export default class Point {
@@ -22,6 +23,102 @@ export default class Point {
 
   constructor(map: Map) {
     this.map = map;
+  }
+
+
+
+  /**
+   * 创建文本样式
+   * @private
+   * @param options 选项
+   * @param text 文本内容
+   * @returns 文本样式
+   */
+  private createTextStyle(options: PointOptions | ClusterOptions, text: string): Text {
+    return new Text({
+      text: text,
+      font: options.textFont || '12px Calibri,sans-serif',
+      fill: new Fill({
+        color: options.textFillColor || '#FFF'
+      }),
+      stroke: new Stroke({
+        color: options.textStrokeColor || '#000',
+        width: options.textStrokeWidth || 3
+      }),
+      offsetY: options.textOffsetY || 20,
+    });
+  }
+
+  /**
+   * 创建图标样式
+   * @private
+   * @param options 选项
+   * @returns 图标样式
+   */
+  private createIconStyle(options: PointOptions | ClusterOptions): Icon {
+    const iconOptions: IconOptions = {
+      src: options.img,
+      scale: options.scale ?? 1,
+    };
+    if (options.iconColor) {
+      iconOptions.color = options.iconColor;
+    }
+    return new Icon(iconOptions);
+  }
+
+  /**
+   * 创建点样式
+   * @private
+   * @param options 选项
+   * @param item 数据项
+   * @returns 样式对象
+   */
+  private createPointStyle(options: PointOptions | ClusterOptions, item?: PointData): Style {
+    const style: StyleOptions = {};
+    
+    if (options.nameKey && item) {
+      style.text = this.createTextStyle(options, item[options.nameKey]);
+    }
+    
+    if (options.hasImg || options.hasImg === undefined) {
+      style.image = this.createIconStyle(options);
+    }
+    
+    return new Style(style);
+  }
+
+  /**
+   * 创建集群样式
+   * @private
+   * @param options 选项
+   * @param name 名称
+   * @returns 样式对象
+   */
+  private createClusterStyle(options: ClusterOptions, name: string): Style {
+    const style: StyleOptions = {};
+    
+    if (options.nameKey) {
+      style.text = this.createTextStyle(options, name);
+    }
+    
+    if (options.hasImg || options.hasImg === undefined) {
+      style.image = this.createIconStyle(options);
+    }
+    
+    return new Style(style);
+  }
+
+
+
+  /**
+   * 配置图层属性
+   * @private
+   * @param layer 图层
+   * @param options 选项
+   */
+  private configureLayer(layer: VectorLayer<VectorSource>, options: PointOptions | ClusterOptions): void {
+    layer.setVisible(options.visible === undefined ? true : options.visible);
+    this.map.addLayer(layer);
   }
 
   /**
@@ -35,15 +132,13 @@ export default class Point {
    * }
    */
   addPoint(pointData: PointData[], options: PointOptions): VectorLayer<VectorSource> | null {
-    if (!pointData || pointData.length === 0) {
-      console.warn('Point data is empty or undefined');
+    if (!ValidationUtils.validatePointData(pointData)) {
       return null;
     }
     
     const pointFeatureList: Feature[] = [];
     pointData.forEach((item) => {
-      if (!item.lgtd || !item.lttd) {
-        console.warn('Invalid coordinates for point:', item);
+      if (!ValidationUtils.validateCoordinates(item)) {
         return;
       }
       
@@ -51,35 +146,11 @@ export default class Point {
         rawData: item,
         type: options.layerName,
         geometry: new olPoint([item.lgtd, item.lttd])
-      })
-      const style: StyleOptions = {}
-      if (options.nameKey) {
-        style.text = new Text({
-          text: item[options.nameKey],
-          font: options.textFont || '12px Calibri,sans-serif',
-          fill: new Fill({
-            color: options.textFillColor || '#FFF'
-          }),
-          stroke: new Stroke({
-            color: options.textStrokeColor || '#000',
-            width: options.textStrokeWidth || 3
-          }),
-          offsetY: options.textOffsetY || 20,
-        })
-      }
-      if (options.hasImg || options.hasImg === undefined) {
-        const iconOptions: IconOptions = {
-          src: options.img,
-          scale: options.scale ?? 1,
-        }
-        if (options.iconColor) {
-          iconOptions.color = options.iconColor
-        }
-        style.image = new Icon(iconOptions)
-      }
-      pointFeature.setStyle(new Style(style))
-      pointFeatureList.push(pointFeature)
-    })
+      });
+      
+      pointFeature.setStyle(this.createPointStyle(options, item));
+      pointFeatureList.push(pointFeature);
+    });
 
     const PointVectorLayer = new VectorLayer({
       layerName: options.layerName,
@@ -87,23 +158,21 @@ export default class Point {
         features: pointFeatureList
       }),
       zIndex: options.zIndex || 21,
-    } as any)
-    PointVectorLayer.setVisible(options.visible === undefined ? true : options.visible)
-    this.map.addLayer(PointVectorLayer)
-    return PointVectorLayer
+    } as any);
+    
+    this.configureLayer(PointVectorLayer, options);
+    return PointVectorLayer;
   }
 
 
   addClusterPoint(pointData: PointData[], options: ClusterOptions): VectorLayer<VectorSource> | null {
-    if (!pointData || pointData.length === 0) {
-      console.warn('Point data is empty or undefined');
+    if (!ValidationUtils.validatePointData(pointData)) {
       return null;
     }
     
     const pointFeatureList: Feature[] = [];
     pointData.forEach(item => {
-      if (!item.lgtd || !item.lttd) {
-        console.warn('Invalid coordinates for cluster point:', item);
+      if (!ValidationUtils.validateCoordinates(item)) {
         return;
       }
       
@@ -119,46 +188,22 @@ export default class Point {
     });
 
     const clusterSource = new Cluster({
-      distance: 40, // The distance for clustering in pixels
+      distance: options.distance || 40, // The distance for clustering in pixels
+      minDistance: options.minDistance || 0,
       source: source,
     });
 
     const clusterLayer = new VectorLayer({
       layerName: options.layerName,
       source: clusterSource,
-      style: function (feature: any) {
+      style: (feature: any) => {
         const name = feature.get('features')[0].get(options.nameKey);
-        const style: StyleOptions = {}
-        if (options.nameKey) {
-          style.text = new Text({
-            text: name,
-            font: options.textFont || '12px Calibri,sans-serif',
-            fill: new Fill({
-              color: options.textFillColor || '#FFF'
-            }),
-            stroke: new Stroke({
-              color: options.textStrokeColor || '#000',
-              width: options.textStrokeWidth || 3
-            }),
-            offsetY: options.textOffsetY || 20,
-          })
-        }
-        if (options.hasImg || options.hasImg === undefined) {
-          const iconOptions: IconOptions = {
-            src: options.img,
-            scale: options.scale ?? 1,
-          }
-          if (options.iconColor) {
-            iconOptions.color = options.iconColor
-          }
-          style.image = new Icon(iconOptions)
-        }
-        return new Style(style)
+        return this.createClusterStyle(options, name);
       },
       zIndex: options.zIndex || 21,
     } as any);
-    clusterLayer.setVisible(options.visible === undefined ? true : options.visible)
-    this.map.addLayer(clusterLayer);
+    
+    this.configureLayer(clusterLayer, options);
     return clusterLayer;
   }
 
@@ -276,8 +321,7 @@ export default class Point {
    * @param duration 动画时长
    */
   locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean {
-    if (!lgtd || !lttd || isNaN(lgtd) || isNaN(lttd)) {
-      console.error('[地图定位]', '经纬度不能为空或无效');
+    if (!ValidationUtils.validateLngLat(lgtd, lttd)) {
       return false;
     }
     
@@ -294,8 +338,12 @@ export default class Point {
    * 设置dom元素为点位
    */
   setDomPoint(id: string, lgtd: number, lttd: number): boolean {
-    if (!id || !lgtd || !lttd || isNaN(lgtd) || isNaN(lttd)) {
-      console.error('Invalid parameters for setDomPoint');
+    if (!id) {
+      console.error('Element ID is required');
+      return false;
+    }
+    
+    if (!ValidationUtils.validateLngLat(lgtd, lttd)) {
       return false;
     }
     
@@ -347,7 +395,7 @@ export default class Point {
     
     try {
       const layer = pointInfoList.map((pointInfo: any) => {
-        if (!pointInfo.lgtd || !pointInfo.lttd || isNaN(pointInfo.lgtd) || isNaN(pointInfo.lttd)) {
+        if (!ValidationUtils.validateLngLat(pointInfo.lgtd, pointInfo.lttd)) {
           throw new Error('Valid longitude and latitude are required for each point');
         }
         

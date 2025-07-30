@@ -21,6 +21,7 @@ import {
   FeatureColorUpdateOptions 
 } from '../types'
 import MapTools from "./MapTools";
+import { ValidationUtils } from '../utils/ValidationUtils';
 
 /**
  * Polygon 类用于处理地图上的面要素操作
@@ -67,9 +68,7 @@ export default class Polygon {
    * @throws 当数据格式无效时抛出错误
    */
   addBorderPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource> {
-    if (!data || !data.features || !Array.isArray(data.features)) {
-      throw new Error('Invalid GeoJSON data: features array is required');
-    }
+    ValidationUtils.validateGeoJSONData(data);
 
     const mergedOptions: PolygonOptions = {
       layerName: 'border',
@@ -95,9 +94,7 @@ export default class Polygon {
    * @throws 当数据格式无效时抛出错误
    */
   addPolygon(dataJSON: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource> {
-    if (!dataJSON || !dataJSON.features || !Array.isArray(dataJSON.features)) {
-      throw new Error('Invalid GeoJSON data: features array is required');
-    }
+    ValidationUtils.validateGeoJSONData(dataJSON);
 
     const mergedOptions: PolygonOptions = {
       zIndex: 11,
@@ -230,9 +227,7 @@ export default class Polygon {
     colorObj?: { [propName: string]: string }, 
     options?: FeatureColorUpdateOptions
   ): void {
-    if (!layerName) {
-      throw new Error('Layer name is required');
-    }
+    ValidationUtils.validateLayerName(layerName);
 
     const layers = MapTools.getLayerByLayerName(this.map, layerName);
     if (layers.length === 0) {
@@ -416,13 +411,7 @@ export default class Polygon {
    * @throws 当数据格式无效时抛出错误
    */
   addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<any> {
-    if (!imageData || !imageData.img || !imageData.extent) {
-      throw new Error('Invalid image data: img and extent are required');
-    }
-
-    if (!Array.isArray(imageData.extent) || imageData.extent.length !== 4) {
-      throw new Error('Invalid extent: must be an array of 4 numbers [minX, minY, maxX, maxY]');
-    }
+    ValidationUtils.validateImageData(imageData);
 
     const mergedOptions: PolygonOptions = {
       opacity: 1,
@@ -514,9 +503,7 @@ export default class Polygon {
    * @throws 当数据格式无效时抛出错误
    */
   addMaskLayer(data: any, options?: MaskLayerOptions): VectorLayer<VectorSource> {
-    if (!data) {
-      throw new Error('Mask data is required');
-    }
+    ValidationUtils.validateMaskData(data);
 
     const mergedOptions: MaskLayerOptions = {
       fillColor: 'rgba(0, 0, 0, 0.5)',

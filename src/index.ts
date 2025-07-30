@@ -17,6 +17,9 @@ export type { MapEventType, EventCallback, MapEventData } from './core/EventMana
 // 错误处理
 export { ErrorHandler, MyOpenLayersError, ErrorType } from './utils/ErrorHandler'
 
+// 验证工具
+export { ValidationUtils } from './utils/ValidationUtils'
+
 // 类型定义 - 基础接口
 export type { BaseOptions, StyleOptions, TextOptions } from './types'
 
