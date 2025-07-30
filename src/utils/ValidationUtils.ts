@@ -206,14 +206,17 @@ export class ValidationUtils {
   /**
    * 验证图像数据
    * @param imageData 图像数据
+   * @param allowEmptyImg 是否允许img为空
    * @throws 如果图像数据无效则抛出异常
    */
-  static validateImageData(imageData: any): void {
-    if (!imageData || !imageData.img || !imageData.extent) {
-      throw new Error('Invalid image data: img and extent are required');
+  static validateImageData(imageData: any, allowEmptyImg: boolean = false): void {
+    if (!imageData) {
+      throw new Error('Invalid image data: imageData is required');
     }
-
-    if (!Array.isArray(imageData.extent) || imageData.extent.length !== 4) {
+    if (!allowEmptyImg && !imageData.img) {
+      throw new Error('Invalid image data: img is required');
+    }
+    if (imageData.extent && (!Array.isArray(imageData.extent) || imageData.extent.length !== 4)) {
       throw new Error('Invalid extent: must be an array of 4 numbers [minX, minY, maxX, maxY]');
     }
   }

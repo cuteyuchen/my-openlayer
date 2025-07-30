@@ -411,7 +411,9 @@ export default class Polygon {
    * @throws 当数据格式无效时抛出错误
    */
   addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<any> {
-    ValidationUtils.validateImageData(imageData);
+    // 检查是否允许空img（当存在layerName且存在同名图层时）
+    const allowEmptyImg = !imageData.img && !!options?.layerName;
+    ValidationUtils.validateImageData(imageData, allowEmptyImg);
 
     const mergedOptions: PolygonOptions = {
       opacity: 1,
@@ -421,35 +423,113 @@ export default class Polygon {
       ...options
     };
 
-    // 如果指定了图层名称，先移除同名图层
+    // 尝试更新现有图层
     if (mergedOptions.layerName) {
-      MapTools.removeLayer(this.map, mergedOptions.layerName);
+      const existingLayer = this.tryUpdateExistingImageLayer(imageData, mergedOptions);
+      if (existingLayer) {
+        return existingLayer;
+      }
     }
 
-    const source = new ImageStatic({
-      url: imageData.img,
-      imageExtent: imageData.extent
-    });
+    // 创建新图层
+    return this.createNewImageLayer(imageData, mergedOptions);
+  }
+
+  /**
+   * 尝试更新现有图层
+   * @private
+   */
+  private tryUpdateExistingImageLayer(imageData: ImageLayerData, options: PolygonOptions): ImageLayer<any> | null {
+    const existingLayers = MapTools.getLayerByLayerName(this.map, options.layerName!);
+    if (existingLayers.length === 0) {
+      return null;
+    }
+
+    const existingLayer = existingLayers[0] as ImageLayer<any>;
+    
+    // 如果没有extent，直接设置source为undefined
+    if (!imageData.extent) {
+      existingLayer.setSource(undefined);
+    } else {
+      // 创建新的source
+      const url = imageData.img || (existingLayer.getSource() as ImageStatic)?.getUrl() || '';
+      const newSource = new ImageStatic({
+        url,
+        imageExtent: imageData.extent
+      });
+      existingLayer.setSource(newSource);
+    }
+    
+    // 更新图层属性
+    this.updateImageLayerProperties(existingLayer, options);
+    
+    return existingLayer;
+  }
+
+  /**
+   * 创建新的图像图层
+   * @private
+   */
+  private createNewImageLayer(imageData: ImageLayerData, options: PolygonOptions): ImageLayer<any> {
+    let source: ImageStatic | undefined = undefined;
+    
+    // 只有当extent存在时才创建ImageStatic source
+    if (imageData.extent) {
+      source = new ImageStatic({
+        url: imageData.img || '',
+        imageExtent: imageData.extent
+      });
+    }
 
     const imageLayer = new ImageLayer({
       source,
-      opacity: mergedOptions.opacity!,
-      visible: mergedOptions.visible!
+      opacity: options.opacity!,
+      visible: options.visible!
     });
 
-    imageLayer.set('name', mergedOptions.layerName);
-    imageLayer.set('layerName', mergedOptions.layerName);
-    imageLayer.setZIndex(mergedOptions.zIndex!);
+    this.configureImageLayer(imageLayer, options);
+    return this.addImageLayerToMap(imageLayer, options);
+  }
 
-    // 应用地图裁剪
-    if (mergedOptions.mapClip && mergedOptions.mapClipData) {
-      const clippedLayer = MapTools.setMapClip(imageLayer, mergedOptions.mapClipData);
+  /**
+   * 更新图层属性
+   * @private
+   */
+  private updateImageLayerProperties(layer: ImageLayer<any>, options: PolygonOptions): void {
+    if (options.opacity !== undefined) {
+      layer.setOpacity(options.opacity);
+    }
+    if (options.visible !== undefined) {
+      layer.setVisible(options.visible);
+    }
+    if (options.zIndex !== undefined) {
+      layer.setZIndex(options.zIndex);
+    }
+  }
+
+  /**
+   * 配置图层基本属性
+   * @private
+   */
+  private configureImageLayer(layer: ImageLayer<any>, options: PolygonOptions): void {
+    layer.set('name', options.layerName);
+    layer.set('layerName', options.layerName);
+    layer.setZIndex(options.zIndex!);
+  }
+
+  /**
+   * 添加图层到地图并应用裁剪
+   * @private
+   */
+  private addImageLayerToMap(layer: ImageLayer<any>, options: PolygonOptions): ImageLayer<any> {
+    if (options.mapClip && options.mapClipData) {
+      const clippedLayer = MapTools.setMapClip(layer, options.mapClipData);
       this.map.addLayer(clippedLayer);
       return clippedLayer;
     }
-
-    this.map.addLayer(imageLayer);
-    return imageLayer;
+    
+    this.map.addLayer(layer);
+    return layer;
   }
 
   /**

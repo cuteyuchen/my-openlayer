@@ -1,7 +1,7 @@
 {
   "name": "my-openlayer",
   "private": false,
-  "version": "1.0.0",
+  "version": "1.0.3",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,14 +13,17 @@
     "vue"
   ],
   "files": [
-    "dist/*",
+    "dist/**/*",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
     "dev": "vite",
     "build": "tsc",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare-publish": "node scripts/prepare-publish.cjs",
+    "publish-flat": "npm run build && npm run prepare-publish && cd temp-publish && npm publish",
+    "publish-flat-dry": "npm run build && npm run prepare-publish && cd temp-publish && npm publish --dry-run"
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",
