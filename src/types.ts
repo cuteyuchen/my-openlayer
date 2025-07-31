@@ -1,4 +1,6 @@
 import BaseLayer from "ol/layer/Base";
+import TileLayer from "ol/layer/Tile";
+import { WMTS } from "ol/source";
 
 export interface Feature {
   type: string;
@@ -14,9 +16,9 @@ export interface MapJSONData {
   name?: string,
   features: Feature[]
 }
-
+type LayerItem = BaseLayer | TileLayer<WMTS>
 export interface MapInitType {
-  layers?: BaseLayer[] | { [key: string]: BaseLayer[] },
+  layers?: LayerItem[] | { [key: string]: LayerItem[] },
   zoom?: number,
   center?: number[],
   view?: any,
@@ -180,8 +182,8 @@ export type OptionsType = BaseOptions & StyleOptions & TextOptions & {
  * 图片图层数据接口
  */
 export interface ImageLayerData {
-  img: string;
-  extent: number[];
+  img?: string;
+  extent?: number[];
 }
 
 /**

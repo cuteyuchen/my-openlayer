@@ -10,15 +10,15 @@ import { Geometry, LinearRing, Point } from "ol/geom";
 import { fromExtent } from "ol/geom/Polygon";
 import Feature from "ol/Feature";
 import ImageStatic from "ol/source/ImageStatic";
-import { 
-  PolygonOptions, 
-  MapJSONData, 
-  PointData, 
-  HeatMapOptions, 
-  ImageLayerData, 
-  MaskLayerOptions, 
+import {
+  PolygonOptions,
+  MapJSONData,
+  PointData,
+  HeatMapOptions,
+  ImageLayerData,
+  MaskLayerOptions,
   ColorMap,
-  FeatureColorUpdateOptions 
+  FeatureColorUpdateOptions
 } from '../types'
 import MapTools from "./MapTools";
 import { ValidationUtils } from '../utils/ValidationUtils';
@@ -77,11 +77,11 @@ export default class Polygon {
     };
 
     const layer = this.addPolygon(data, mergedOptions);
-    
+
     if (mergedOptions.mask) {
       this.setOutLayer(data);
     }
-    
+
     return layer;
   }
 
@@ -101,7 +101,7 @@ export default class Polygon {
       visible: true,
       strokeColor: '#EBEEF5',
       strokeWidth: 2,
-      fillColor: 'rgba(255, 255, 255, 0.3)',
+      fillColor: 'rgba(255, 255, 255, 0)',
       textFont: '14px Calibri,sans-serif',
       textFillColor: '#FFF',
       textStrokeColor: '#409EFF',
@@ -132,7 +132,7 @@ export default class Polygon {
 
     // 设置要素样式
     this.setFeatureStyles(features, mergedOptions);
-    
+
     layer.setVisible(mergedOptions.visible!);
     this.map.addLayer(layer);
 
@@ -153,9 +153,9 @@ export default class Polygon {
     features.forEach(feature => {
       feature.set('type', options.type || options.layerName);
       feature.set('layerName', options.type || options.layerName);
-      
-      const fillColor = options.fillColorCallBack 
-        ? options.fillColorCallBack(feature) 
+
+      const fillColor = options.fillColorCallBack
+        ? options.fillColorCallBack(feature)
         : options.fillColor;
 
       const featureStyle = new Style({
@@ -223,8 +223,8 @@ export default class Polygon {
    * @throws 当图层不存在时抛出错误
    */
   updateFeatureColor(
-    layerName: string, 
-    colorObj?: { [propName: string]: string }, 
+    layerName: string,
+    colorObj?: { [propName: string]: string },
     options?: FeatureColorUpdateOptions
   ): void {
     ValidationUtils.validateLayerName(layerName);
@@ -268,8 +268,8 @@ export default class Polygon {
    * @param options 配置选项
    */
   private updateSingleFeatureColor(
-    feature: Feature, 
-    colorObj?: { [propName: string]: string }, 
+    feature: Feature,
+    colorObj?: { [propName: string]: string },
     options?: FeatureColorUpdateOptions
   ): void {
     const name = options?.nameKey ? feature.get(options.nameKey) : '';
@@ -446,7 +446,7 @@ export default class Polygon {
     }
 
     const existingLayer = existingLayers[0] as ImageLayer<any>;
-    
+
     // 如果没有extent，直接设置source为undefined
     if (!imageData.extent) {
       existingLayer.setSource(undefined);
@@ -459,10 +459,10 @@ export default class Polygon {
       });
       existingLayer.setSource(newSource);
     }
-    
+
     // 更新图层属性
     this.updateImageLayerProperties(existingLayer, options);
-    
+
     return existingLayer;
   }
 
@@ -472,7 +472,7 @@ export default class Polygon {
    */
   private createNewImageLayer(imageData: ImageLayerData, options: PolygonOptions): ImageLayer<any> {
     let source: ImageStatic | undefined = undefined;
-    
+
     // 只有当extent存在时才创建ImageStatic source
     if (imageData.extent) {
       source = new ImageStatic({
@@ -527,7 +527,7 @@ export default class Polygon {
       this.map.addLayer(clippedLayer);
       return clippedLayer;
     }
-    
+
     this.map.addLayer(layer);
     return layer;
   }
@@ -542,7 +542,7 @@ export default class Polygon {
     if (options?.layerName) {
       new MapTools(this.map).removeLayer(options.layerName)
     }
-    
+
     const heatmapLayer = new Heatmap({
       source: new VectorSource(),
       weight: function (fea: Feature) {
@@ -553,14 +553,14 @@ export default class Polygon {
       zIndex: options?.zIndex ?? 11,
       opacity: options?.opacity ?? 1,
     });
-    
+
     // 只有在指定layerName时才设置layerName
     if (options?.layerName) {
       heatmapLayer.set('layerName', options.layerName)
     }
-    
+
     this.map.addLayer(heatmapLayer);
-    
+
     const valueKey = options?.valueKey || 'value'
     const max = Math.max(...pointData.map(item => item[valueKey]))
     pointData.forEach((item) => {
@@ -571,7 +571,7 @@ export default class Polygon {
         })
       );
     })
-    
+
     return heatmapLayer
   }
 
@@ -621,7 +621,7 @@ export default class Polygon {
 
     maskLayer.set('layerName', mergedOptions.layerName);
     this.map.addLayer(maskLayer);
-    
+
     return maskLayer;
   }
 
