@@ -198,8 +198,8 @@ export default class Polygon {
     if (options.textCallBack) {
       return options.textCallBack(feature) || '';
     }
-    if (options.nameKey) {
-      return feature.get(options.nameKey) || '';
+    if (options.textKey) {
+      return feature.get(options.textKey) || '';
     }
     return '';
   }
@@ -272,7 +272,7 @@ export default class Polygon {
     colorObj?: { [propName: string]: string },
     options?: FeatureColorUpdateOptions
   ): void {
-    const name = options?.nameKey ? feature.get(options.nameKey) : '';
+    const name = options?.textKey ? feature.get(options.textKey) : '';
     const newColor = colorObj?.[name] || options?.fillColor;
 
     const featureStyle = new Style({

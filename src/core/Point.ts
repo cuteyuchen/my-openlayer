@@ -76,8 +76,8 @@ export default class Point {
   private createPointStyle(options: PointOptions | ClusterOptions, item?: PointData): Style {
     const style: StyleOptions = {};
     
-    if (options.nameKey && item) {
-      style.text = this.createTextStyle(options, item[options.nameKey]);
+    if (options.textKey && item) {
+      style.text = this.createTextStyle(options, item[options.textKey]);
     }
     
     if (options.img) {
@@ -97,7 +97,7 @@ export default class Point {
   private createClusterStyle(options: ClusterOptions, name: string): Style {
     const style: StyleOptions = {};
     
-    if (options.nameKey) {
+    if (options.textKey) {
       style.text = this.createTextStyle(options, name);
     }
     
@@ -126,7 +126,7 @@ export default class Point {
    * @param pointData
    * @param type
    * @param options {
-   *   nameKey: String 数据中的名称的key
+   *   textKey: String 数据中的文本的key
    *   img: String 图标
    * }
    */
@@ -177,7 +177,7 @@ export default class Point {
       
       const pointFeature = new Feature({
         geometry: new olPoint([item.lgtd, item.lttd]),
-        name: options.nameKey ? item[options.nameKey] : '',
+        name: options.textKey ? item[options.textKey] : '',
       });
       pointFeatureList.push(pointFeature);
     });
@@ -196,7 +196,7 @@ export default class Point {
       layerName: options.layerName,
       source: clusterSource,
       style: (feature: any) => {
-        const name = feature.get('features')[0].get(options.nameKey);
+        const name = feature.get('features')[0].get(options.textKey);
         return this.createClusterStyle(options, name);
       },
       zIndex: options.zIndex || 21,

@@ -134,8 +134,8 @@ export interface TextOptions {
  * 点位选项接口 - 点位图层专用配置
  */
 export interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
-  /** 名称字段键 */
-  nameKey?: string;
+  /** 文本字段键 */
+  textKey?: string;
   /** 图标图片 */
   img?: string;
   /** 图标缩放比例 */
@@ -156,8 +156,8 @@ export interface LineOptions extends BaseOptions, StyleOptions, TextOptions {
  * 多边形选项接口 - 多边形图层专用配置
  */
 export interface PolygonOptions extends BaseOptions, StyleOptions, TextOptions {
-  /** 名称字段键 */
-  nameKey?: string;
+  /** 文本字段键 */
+  textKey?: string;
   /** 是否为蒙版 */
   mask?: boolean;
 }
@@ -167,7 +167,7 @@ export interface PolygonOptions extends BaseOptions, StyleOptions, TextOptions {
  * @deprecated 请使用具体的选项接口：PointOptions, LineOptions, PolygonOptions
  */
 export type OptionsType = BaseOptions & StyleOptions & TextOptions & {
-  nameKey?: string;
+  textKey?: string;
   img?: string;
   scale?: number;
   iconColor?: string;
@@ -208,8 +208,8 @@ export interface ColorMap {
  * 要素颜色更新选项接口
  */
 export interface FeatureColorUpdateOptions extends BaseOptions, StyleOptions, TextOptions {
-  /** 名称字段键 */
-  nameKey?: string;
+  /** 文本字段键 */
+  textKey?: string;
 }
 
 /**
