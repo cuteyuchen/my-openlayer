@@ -1,7 +1,7 @@
 "use strict";
 
 import Map from "ol/Map";
-import { EventType, MapJSONData } from "../types";
+import { MapJSONData } from "../types";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
@@ -10,7 +10,6 @@ import { getVectorContext } from "ol/render";
 import BaseLayer from "ol/layer/Base";
 import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
-import { EventManager, MapEventType, EventCallback, MapEventData } from "./EventManager";
 import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
 import { ValidationUtils } from "../utils/ValidationUtils";
 
@@ -20,7 +19,6 @@ import { ValidationUtils } from "../utils/ValidationUtils";
  */
 export default class MapTools {
   private readonly map: Map;
-  private eventManager: EventManager;
   private errorHandler: ErrorHandler;
 
   constructor(map: Map) {
@@ -29,11 +27,10 @@ export default class MapTools {
     try {
       ValidationUtils.validateMap(map);
       this.map = map;
-      this.eventManager = new EventManager(map);
     } catch (error) {
       this.errorHandler.createAndHandleError(
-        `Failed to initialize MapTools: ${error}`,
-        ErrorType.MAP_ERROR,
+        `MapTools initialization failed: ${error}`,
+        ErrorType.COMPONENT_ERROR,
         { map, error }
       );
       throw error;
@@ -221,189 +218,7 @@ export default class MapTools {
     }
   }
 
-  /**
-   * 地图监听事件
-   * @param eventType 事件类型
-   * @param callback 回调函数
-   * @param options 事件选项
-   * @returns 事件监听器ID
-   * @throws 当参数无效时抛出错误
-   */
-  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, options?: { clickType?: 'point' | 'line' | 'polygon'; once?: boolean; filter?: (event: MapEventData) => boolean; }): string {
-    try {
-      ErrorHandler.validateMap(this.map);
-      
-      if (!eventType) {
-        throw new Error('Event type is required');
-      }
-      
-      if (typeof callback !== 'function') {
-        throw new Error('Callback must be a function');
-      }
 
-      return this.registerEventWithManager(eventType, callback, options);
-    } catch (error) {
-      this.errorHandler.createAndHandleError(
-        `Failed to register map event: ${error}`,
-        ErrorType.COMPONENT_ERROR,
-        { eventType, callback, options, error }
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 地图监听事件（静态方法，兼容性保留）
-   * @param map 地图实例
-   * @param eventType 事件类型
-   * @param callback 回调函数
-   * @param clickType 点击类型
-   * @throws 当参数无效时抛出错误
-   * @deprecated 推荐使用实例方法 mapOnEvent
-   */
-  static mapOnEvent(map: Map, eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon'): void {
-    const errorHandler = ErrorHandler.getInstance();
-    
-    try {
-      ErrorHandler.validateMap(map);
-      
-      if (!eventType) {
-        throw new Error('Event type is required');
-      }
-      
-      if (typeof callback !== 'function') {
-        throw new Error('Callback must be a function');
-      }
-
-      const eventManager = new EventManager(map);
-      const mapTools = new MapTools(map);
-      mapTools.registerEventWithManager(eventType, callback, { clickType });
-    } catch (error) {
-      errorHandler.createAndHandleError(
-        `Failed to register static map event: ${error}`,
-        ErrorType.COMPONENT_ERROR,
-        { map, eventType, callback, clickType, error }
-      );
-      throw error;
-    }
-  }
-
-
-
-  /**
-   * 兼容性方法：使用传统方式注册事件
-   * @private
-   */
-  private registerEventWithManager(eventType: EventType, callback: (feature?: any, e?: any) => void, options?: { clickType?: 'point' | 'line' | 'polygon'; once?: boolean; filter?: (event: MapEventData) => boolean; }): string {
-    const mapEventType = this.convertToMapEventType(eventType);
-    
-    const eventCallback: EventCallback = (event: MapEventData) => {
-      try {
-        if (eventType === 'click') {
-          const feature = event.feature;
-          const extraData = {
-            features: event.features || [],
-            pixel: event.pixel
-          };
-          
-          // 应用点击类型过滤
-          if (options?.clickType && feature) {
-            const geometryType = feature.getGeometry()?.getType();
-            const clickTypeMap = {
-              point: ['Point', 'MultiPoint'],
-              line: ['LineString', 'MultiLineString'],
-              polygon: ['Polygon', 'MultiPolygon']
-            };
-            
-            if (geometryType && !clickTypeMap[options.clickType].includes(geometryType)) {
-              return; // 不符合点击类型过滤条件
-            }
-          }
-          
-          callback(feature, extraData);
-        } else if (eventType === 'moveend') {
-          callback(event.zoom);
-        } else if (eventType === 'hover') {
-          callback({
-            features: event.features || [],
-            pixel: event.pixel
-          });
-        }
-      } catch (error) {
-        this.errorHandler.createAndHandleError(
-          `Error in event callback: ${error}`,
-          ErrorType.COMPONENT_ERROR,
-          { eventType, event, error }
-        );
-      }
-    };
-
-    return this.eventManager.on(mapEventType, eventCallback, {
-      once: options?.once,
-      filter: options?.filter
-    });
-  }
-
-  /**
-   * 转换事件类型
-   * @private
-   */
-  private convertToMapEventType(eventType: EventType): MapEventType {
-    const typeMap: Record<EventType, MapEventType> = {
-      'click': 'click',
-      'hover': 'hover',
-      'moveend': 'moveend'
-    };
-    
-    return typeMap[eventType] || 'click';
-  }
-
-  /**
-   * 移除事件监听器
-   * @param listenerId 监听器ID
-   * @returns 是否成功移除
-   */
-  removeEventListener(listenerId: string): boolean {
-    try {
-      return this.eventManager.off(listenerId);
-    } catch (error) {
-      this.errorHandler.createAndHandleError(
-        `Failed to remove event listener: ${error}`,
-        ErrorType.COMPONENT_ERROR,
-        { listenerId, error }
-      );
-      return false;
-    }
-  }
-
-  /**
-   * 移除指定类型的所有事件监听器
-   * @param eventType 事件类型
-   */
-  removeAllEventListeners(eventType?: EventType): void {
-    try {
-      if (eventType) {
-        const mapEventType = this.convertToMapEventType(eventType);
-        this.eventManager.offAll(mapEventType);
-      } else {
-        this.eventManager.clear();
-      }
-    } catch (error) {
-      this.errorHandler.createAndHandleError(
-        `Failed to remove event listeners: ${error}`,
-        ErrorType.COMPONENT_ERROR,
-        { eventType, error }
-      );
-    }
-  }
-
-  /**
-   * 获取 EventManager 实例
-   * @returns EventManager 实例
-   */
-  getEventManager(): EventManager {
-    return this.eventManager;
-  }
 
   /**
    * 获取地图实例

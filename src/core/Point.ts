@@ -10,8 +10,8 @@ import VectorSource from "ol/source/Vector";
 import { Cluster } from 'ol/source';
 import * as turf from '@turf/turf';
 import GeoJSON from "ol/format/GeoJSON";
-import { MapJSONData, PointOptions, ClusterOptions, PointData } from '../types'
-import DomPoint from './DomPoint';
+import { MapJSONData, PointOptions, ClusterOptions, PointData,VueTemplatePointInstance } from '../types'
+import VueTemplatePoint from './VueTemplatePoint';
 import MapTools from "./MapTools";
 import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
@@ -80,7 +80,7 @@ export default class Point {
       style.text = this.createTextStyle(options, item[options.nameKey]);
     }
     
-    if (options.hasImg || options.hasImg === undefined) {
+    if (options.img) {
       style.image = this.createIconStyle(options);
     }
     
@@ -101,7 +101,7 @@ export default class Point {
       style.text = this.createTextStyle(options, name);
     }
     
-    if (options.hasImg || options.hasImg === undefined) {
+    if (options.img) {
       style.image = this.createIconStyle(options);
     }
     
@@ -128,7 +128,6 @@ export default class Point {
    * @param options {
    *   nameKey: String 数据中的名称的key
    *   img: String 图标
-   *   hasImg: Boolean 是否显示图标
    * }
    */
   addPoint(pointData: PointData[], options: PointOptions): VectorLayer<VectorSource> | null {
@@ -209,7 +208,7 @@ export default class Point {
 
 
   // 在流域中心添加闪烁点位
-  setTwinkleLayerFromPolygon(twinkleList: any[], className: string, key: string, json: MapJSONData) {
+  addTwinkleLayerFromPolygon(twinkleList: any[], className: string, key: string, json: MapJSONData) {
     new MapTools(this.map).removeLayer('twinklePoint')
     // 计算多边形的中心点坐标
     const calculatePolygonCenter = (polygonCoordinates: any) => {
@@ -262,19 +261,19 @@ export default class Point {
       zIndex: 21
     } as any)
     this.map.addLayer(basinLayer)
-    this.setTwinkleLayer(twinkleList, className, key, (twinkleItem: any) => {
+    this.addTwinkleLayer(twinkleList, className, key, (twinkleItem: any) => {
 
     })
   }
 
   /**
-   * 设置闪烁点
-   * @param twinkleList 闪烁点数据 - 二维数组 [[],[]]
+   * 添加闪烁点
+   * @param twinkleList 闪烁点数据 - 二维数组 [[]，[]]
    * @param className 闪烁点样式,需要和id保持一致
    * @param key 闪烁点索引
    * @param callback
    */
-  setTwinkleLayer(twinkleList: any[], className: string = 'marker_warning', key: string, callback?: Function) {
+  addTwinkleLayer(twinkleList: any[], className: string = 'marker_warning', key: string, callback?: Function) {
     // 查找class是warn-points的dom，并删除
     const arr = document.getElementsByClassName(className)
     const l = arr.length;
@@ -337,7 +336,7 @@ export default class Point {
   /**
    * 设置dom元素为点位
    */
-  setDomPoint(id: string, lgtd: number, lttd: number): boolean {
+  addDomPoint(id: string, lgtd: number, lttd: number): boolean {
     if (!id) {
       console.error('Element ID is required');
       return false;
@@ -370,63 +369,34 @@ export default class Point {
   }
 
   /**
-   * 设置vue组件为点位
-   * @param pointInfoList 点位信息列表
+   * 添加vue组件为点位
+   * @param pointDataList 点位信息列表
    * @param template vue组件模板
    * @param Vue Vue实例
    * @returns 返回控制对象，包含显示、隐藏、移除方法
    * @throws 当参数无效时抛出错误
    */
-  setDomPointVue(pointInfoList: any[], template: any, Vue: any): {
+  addVueTemplatePoint(pointDataList: PointData[], template: any, options?: {
+    positioning?: 'bottom-left' | 'bottom-center' | 'bottom-right' | 'center-left' | 'center-center' | 'center-right' | 'top-left' | 'top-center' | 'top-right',
+    stopEvent?: boolean
+  }): {
     setVisible: (visible: boolean) => void,
-    remove: () => void
+    remove: () => void,
+    getPoints: () => VueTemplatePointInstance[]
   } {
-    if (!pointInfoList || !Array.isArray(pointInfoList) || pointInfoList.length === 0) {
+    if (!pointDataList || !Array.isArray(pointDataList) || pointDataList.length === 0) {
       throw new Error('Valid point info list is required');
     }
     
     if (!template) {
       throw new Error('Vue template is required');
     }
-    
-    if (!Vue) {
-      throw new Error('Vue instance is required');
-    }
-    
+
     try {
-      const layer = pointInfoList.map((pointInfo: any) => {
-        if (!ValidationUtils.validateLngLat(pointInfo.lgtd, pointInfo.lttd)) {
-          throw new Error('Valid longitude and latitude are required for each point');
-        }
-        
-        return new DomPoint(this.map, {
-          Vue,
-          Template: template,
-          lgtd: pointInfo.lgtd,
-          lttd: pointInfo.lttd,
-          props: {
-            stationInfo: {
-              type: Object,
-              default: pointInfo
-            }
-          },
-        })
-      })
-      
-      return {
-        setVisible: (visible: boolean) => {
-          layer.forEach((item: DomPoint) => {
-            item.setVisible(visible)
-          })
-        },
-        remove: () => {
-          layer.forEach((item: DomPoint) => {
-            item.remove()
-          })
-        }
-      }
+      const vueTemplatePoint = new VueTemplatePoint(this.map);
+      return vueTemplatePoint.addVueTemplatePoint(pointDataList, template, options);
     } catch (error) {
-      throw new Error(`Failed to create DOM points: ${error}`);
+      throw new Error(`Failed to create Vue template points: ${error}`);
     }
   }
 }

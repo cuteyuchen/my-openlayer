@@ -7,7 +7,7 @@ export { default as Polygon } from './core/Polygon'
 export { default as MapBaseLayers } from './core/MapBaseLayers'
 export { default as MapTools } from './core/MapTools'
 export { default as MeasureHandler } from './core/MeasureHandler'
-export { default as DomPoint } from './core/DomPoint'
+export { default as VueTemplatePoint } from './core/VueTemplatePoint'
 
 // 新增工具类
 export { ConfigManager } from './core/ConfigManager'
@@ -42,8 +42,7 @@ export type {
   LineData,
   ClusterOptions,
   MeasureHandlerType,
-  EventType,
-  DomPointOptions,
+  VueTemplatePointOptions,
   MapJSONData,
   Feature,
   AnnotationType,

@@ -7,7 +7,7 @@ import { ErrorHandler, ErrorType } from '../utils/ErrorHandler';
 /**
  * 事件类型定义
  */
-export type MapEventType = 'click' | 'dblclick' | 'hover' | 'moveend' | 'zoomend' | 'pointermove';
+export type MapEventType = 'click' | 'dblclick' | 'hover' | 'moveend' | 'zoomend' | 'pointermove' | 'rendercomplete' | 'error';
 
 /**
  * 事件回调函数类型
@@ -49,6 +49,7 @@ export class EventManager {
   private readonly map: OLMap;
   private listeners: Map<string, EventListener> = new Map();
   private eventCounters: Map<MapEventType, number> = new Map();
+  private mapEventListeners: Map<MapEventType, { handler: any; target: any; eventName: any; isOnce: boolean }> = new Map();
 
   /**
    * 构造函数
@@ -64,7 +65,7 @@ export class EventManager {
    * 初始化事件计数器
    */
   private initializeEventCounters(): void {
-    const eventTypes: MapEventType[] = ['click', 'dblclick', 'hover', 'moveend', 'zoomend', 'pointermove'];
+    const eventTypes: MapEventType[] = ['click', 'dblclick', 'hover', 'moveend', 'zoomend', 'pointermove', 'rendercomplete', 'error'];
     eventTypes.forEach(type => {
       this.eventCounters.set(type, 0);
     });
@@ -109,7 +110,13 @@ export class EventManager {
     }
 
     this.listeners.delete(id);
-    this.detachMapEventIfNeeded(listener.type);
+    
+    // 如果该类型没有其他监听器了，移除地图事件监听器
+    const remainingListeners = this.getListenerCount(listener.type);
+    if (remainingListeners === 0) {
+      this.detachMapEvent(listener.type);
+    }
+    
     return true;
   }
 
@@ -129,8 +136,11 @@ export class EventManager {
     idsToRemove.forEach(id => {
       this.listeners.delete(id);
     });
-
-    this.detachMapEventIfNeeded(type);
+    
+    // 移除对应的地图事件监听器
+    if (idsToRemove.length > 0) {
+      this.detachMapEvent(type);
+    }
   }
 
   /**
@@ -138,8 +148,10 @@ export class EventManager {
    */
   clear(): void {
     this.listeners.clear();
-    this.eventCounters.forEach((_: number, type: MapEventType) => {
-      this.detachMapEventIfNeeded(type);
+    
+    // 移除所有地图事件监听器
+    this.mapEventListeners.forEach((_, type) => {
+      this.detachMapEvent(type);
     });
   }
 
@@ -177,39 +189,69 @@ export class EventManager {
       return; // 已经附加过该类型的事件
     }
 
+    // 如果已经有地图事件监听器，先移除
+    if (this.mapEventListeners.has(type)) {
+      this.detachMapEvent(type);
+    }
+
+    let eventHandler: any;
+    let target: any = this.map;
+    let eventName: any;
+
     switch (type) {
       case 'click':
-        this.map.on('click', this.handleClickEvent.bind(this));
+        eventHandler = this.handleClickEvent.bind(this);
+        eventName = 'click';
         break;
       case 'dblclick':
-        this.map.on('dblclick', this.handleDblClickEvent.bind(this));
+        eventHandler = this.handleDblClickEvent.bind(this);
+        eventName = 'dblclick';
         break;
       case 'hover':
       case 'pointermove':
-        this.map.on('pointermove', this.handlePointerMoveEvent.bind(this));
+        eventHandler = this.handlePointerMoveEvent.bind(this);
+        eventName = 'pointermove';
         break;
       case 'moveend':
-        this.map.on('moveend', this.handleMoveEndEvent.bind(this));
+        eventHandler = this.handleMoveEndEvent.bind(this);
+        eventName = 'moveend';
         break;
       case 'zoomend':
-        this.map.getView().on('change:resolution', this.handleZoomEndEvent.bind(this));
+        eventHandler = this.handleZoomEndEvent.bind(this);
+        target = this.map.getView();
+        eventName = 'change:resolution';
         break;
+      case 'rendercomplete':
+        eventHandler = this.handleRenderCompleteEvent.bind(this);
+        eventName = 'rendercomplete';
+        this.map.once(eventName, eventHandler);
+        this.mapEventListeners.set(type, { handler: eventHandler, target, eventName, isOnce: true });
+        return;
+      case 'error':
+        eventHandler = this.handleErrorEvent.bind(this);
+        eventName = 'error';
+        break;
+      default:
+        return;
     }
+
+    target.on(eventName, eventHandler);
+    this.mapEventListeners.set(type, { handler: eventHandler, target, eventName, isOnce: false });
   }
 
   /**
-   * 分离地图事件（如果不再需要）
+   * 移除地图事件监听器
    * @param type 事件类型
    */
-  private detachMapEventIfNeeded(type: MapEventType): void {
-    const remainingListeners = this.getListenerCount(type);
-    if (remainingListeners > 0) {
-      return; // 还有其他监听器需要该事件
+  private detachMapEvent(type: MapEventType): void {
+    const mapListener = this.mapEventListeners.get(type);
+    if (!mapListener) {
+      return;
     }
 
-    // 注意：OpenLayers 不提供直接移除特定事件监听器的方法
-    // 这里只是示例，实际实现可能需要保存事件监听器的引用
-    console.warn(`Event type '${type}' detachment not fully implemented`);
+    const { handler, target, eventName } = mapListener;
+    target.un(eventName, handler);
+    this.mapEventListeners.delete(type);
   }
 
   /**
@@ -262,6 +304,31 @@ export class EventManager {
       coordinate: this.map.getView().getCenter()
     };
     this.triggerListeners('zoomend', eventData);
+  }
+
+  /**
+   * 处理渲染完成事件
+   */
+  private handleRenderCompleteEvent(): void {
+    const eventData: MapEventData = {
+      type: 'rendercomplete',
+      zoom: this.map.getView().getZoom(),
+      coordinate: this.map.getView().getCenter()
+    };
+    this.triggerListeners('rendercomplete', eventData);
+  }
+
+  /**
+   * 处理错误事件
+   * @param error 错误对象
+   */
+  private handleErrorEvent(error: any): void {
+    const eventData: MapEventData = {
+      type: 'error',
+      originalEvent: error,
+      error: error
+    };
+    this.triggerListeners('error', eventData);
   }
 
   /**

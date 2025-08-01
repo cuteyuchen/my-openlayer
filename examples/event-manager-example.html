@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventManager 使用示例</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@8.2.0/ol.css" type="text/css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ccc;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        .control-group {
+            margin-bottom: 10px;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            min-height: 100px;
+        }
+        .feature-info {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>EventManager 使用示例</h1>
+    <p>本示例展示如何使用新的 EventManager 替代原有的 mapOnEvent 方法</p>
+    
+    <div class="controls">
+        <div class="control-group">
+            <strong>事件监听控制：</strong>
+            <button id="addClickListener">添加点击监听</button>
+            <button id="addHoverListener">添加悬停监听</button>
+            <button id="addMoveEndListener">添加移动结束监听</button>
+            <button id="addZoomEndListener">添加缩放结束监听</button>
+        </div>
+        <div class="control-group">
+            <strong>事件移除控制：</strong>
+            <button id="removeLastListener">移除最后一个监听器</button>
+            <button id="removeAllListeners">移除所有监听器</button>
+        </div>
+        <div class="control-group">
+            <strong>监听器信息：</strong>
+            <button id="showListenersInfo">显示监听器信息</button>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="info">
+        <h3>事件信息：</h3>
+        <div id="eventInfo">等待事件触发...</div>
+    </div>
+    
+    <script type="module">
+        import MyOl from '../src/MyOl.ts';
+        
+        // 初始化地图
+        const myOl = new MyOl('map', {
+            center: [119.81, 29.969],
+            zoom: 10
+        });
+        
+        // 获取事件管理器
+        const eventManager = myOl.getEventManager();
+        
+        // 存储监听器ID
+        const listenerIds = [];
+        
+        // 获取DOM元素
+        const eventInfo = document.getElementById('eventInfo');
+        const addClickBtn = document.getElementById('addClickListener');
+        const addHoverBtn = document.getElementById('addHoverListener');
+        const addMoveEndBtn = document.getElementById('addMoveEndListener');
+        const addZoomEndBtn = document.getElementById('addZoomEndListener');
+        const removeLastBtn = document.getElementById('removeLastListener');
+        const removeAllBtn = document.getElementById('removeAllListeners');
+        const showInfoBtn = document.getElementById('showListenersInfo');
+        
+        // 辅助函数：添加事件信息
+        function addEventInfo(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type === 'feature' ? 'feature-info' : '';
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            eventInfo.appendChild(div);
+            eventInfo.scrollTop = eventInfo.scrollHeight;
+        }
+        
+        // 添加点击监听器
+        addClickBtn.addEventListener('click', () => {
+            const listenerId = eventManager.on('click', (event) => {
+                const coord = event.coordinate;
+                const features = event.features || [];
+                addEventInfo(`地图点击 - 坐标: [${coord[0].toFixed(6)}, ${coord[1].toFixed(6)}], 要素数量: ${features.length}`, 'feature');
+            });
+            listenerIds.push(listenerId);
+            addEventInfo(`添加点击监听器，ID: ${listenerId}`);
+        });
+        
+        // 添加悬停监听器
+        addHoverBtn.addEventListener('click', () => {
+            const listenerId = eventManager.on('hover', (event) => {
+                const coord = event.coordinate;
+                const features = event.features || [];
+                addEventInfo(`鼠标悬停 - 坐标: [${coord[0].toFixed(6)}, ${coord[1].toFixed(6)}], 要素数量: ${features.length}`);
+            });
+            listenerIds.push(listenerId);
+            addEventInfo(`添加悬停监听器，ID: ${listenerId}`);
+        });
+        
+        // 添加移动结束监听器
+        addMoveEndBtn.addEventListener('click', () => {
+            const listenerId = eventManager.on('moveend', (event) => {
+                const zoom = event.zoom;
+                const coord = event.coordinate;
+                addEventInfo(`地图移动结束 - 缩放级别: ${zoom}, 中心点: [${coord[0].toFixed(6)}, ${coord[1].toFixed(6)}]`);
+            });
+            listenerIds.push(listenerId);
+            addEventInfo(`添加移动结束监听器，ID: ${listenerId}`);
+        });
+        
+        // 添加缩放结束监听器
+        addZoomEndBtn.addEventListener('click', () => {
+            const listenerId = eventManager.on('zoomend', (event) => {
+                const zoom = event.zoom;
+                const coord = event.coordinate;
+                addEventInfo(`地图缩放结束 - 缩放级别: ${zoom}, 中心点: [${coord[0].toFixed(6)}, ${coord[1].toFixed(6)}]`);
+            });
+            listenerIds.push(listenerId);
+            addEventInfo(`添加缩放结束监听器，ID: ${listenerId}`);
+        });
+        
+        // 移除最后一个监听器
+        removeLastBtn.addEventListener('click', () => {
+            if (listenerIds.length > 0) {
+                const listenerId = listenerIds.pop();
+                const success = eventManager.off(listenerId);
+                addEventInfo(`移除监听器 ${listenerId}: ${success ? '成功' : '失败'}`);
+            } else {
+                addEventInfo('没有监听器可以移除');
+            }
+        });
+        
+        // 移除所有监听器
+        removeAllBtn.addEventListener('click', () => {
+            eventManager.clear();
+            listenerIds.length = 0;
+            addEventInfo('已移除所有监听器');
+        });
+        
+        // 显示监听器信息
+        showInfoBtn.addEventListener('click', () => {
+            const listenersInfo = eventManager.getListenersInfo();
+            addEventInfo(`当前监听器数量: ${listenersInfo.length}`);
+            listenersInfo.forEach(info => {
+                addEventInfo(`- ID: ${info.id}, 类型: ${info.type}, 一次性: ${info.isOnce}, 有过滤器: ${info.hasFilter}`);
+            });
+        });
+        
+        // 初始化时添加一些说明
+        addEventInfo('EventManager 示例已加载');
+        addEventInfo('点击上方按钮添加不同类型的事件监听器');
+        addEventInfo('然后在地图上进行操作来触发事件');
+        
+        // 添加基础图层
+        const baseLayers = myOl.getMapBaseLayers();
+        baseLayers.initTiandituLayers();
+    </script>
+</body>
+</html>

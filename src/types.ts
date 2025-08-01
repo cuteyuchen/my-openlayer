@@ -140,8 +140,6 @@ export interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
   img?: string;
   /** 图标缩放比例 */
   scale?: number;
-  /** 是否有图标 */
-  hasImg?: boolean;
   /** 图标颜色 */
   iconColor?: string;
 }
@@ -172,7 +170,6 @@ export type OptionsType = BaseOptions & StyleOptions & TextOptions & {
   nameKey?: string;
   img?: string;
   scale?: number;
-  hasImg?: boolean;
   iconColor?: string;
   type?: string;
   mask?: boolean;
@@ -284,7 +281,7 @@ export interface VueLegacyInstance {
 /**
  * DOM点位状态枚举
  */
-export enum DomPointState {
+export enum VueTemplatePointState {
   CREATED = 'created',
   MOUNTED = 'mounted',
   VISIBLE = 'visible',
@@ -293,20 +290,40 @@ export enum DomPointState {
 }
 
 /**
- * DOM点位选项接口
+ * Vue模板点位选项接口
  */
-export interface DomPointOptions {
-  Vue: any;
+export interface VueTemplatePointOptions {
   Template: any;
   lgtd: number;
   lttd: number;
   props?: any;
-  longitude?: number;
-  latitude?: number;
   styleType?: 'default' | 'custom';
   positioning?: 'bottom-left' | 'bottom-center' | 'bottom-right' | 'center-left' | 'center-center' | 'center-right' | 'top-left' | 'top-center' | 'top-right';
   stopEvent?: boolean;
   visible?: boolean;
   className?: string;
   zIndex?: number;
+}
+
+/**
+ * Vue模板点位实例接口
+ */
+export interface VueTemplatePointInstance {
+  id: string;
+  dom: HTMLElement;
+  anchor: any;
+  app: VueApp | VueLegacyInstance | null;
+  state: VueTemplatePointState;
+  position: number[];
+  options: VueTemplatePointOptions;
+  setVisible(visible: boolean): void;
+  updatePosition(lgtd: number, lttd: number): void;
+  updateProps(newProps: Record<string, any>): void;
+  setStyle(styles: Partial<CSSStyleDeclaration>): void;
+  addClass(className: string): void;
+  removeClass(className: string): void;
+  remove(): void;
+  getState(): VueTemplatePointState;
+  getOptions(): Readonly<VueTemplatePointOptions>;
+  isDestroyed(): boolean;
 }

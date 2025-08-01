@@ -8,6 +8,7 @@ import { FeatureLike } from "ol/Feature";
 import { LineOptions, MapJSONData } from "../types";
 import MapTools from "./MapTools";
 import { ValidationUtils } from "../utils/ValidationUtils";
+import { EventManager } from "./EventManager";
 
 
 /**
@@ -49,6 +50,9 @@ export default class Line {
   /** OpenLayers 地图实例 */
   private readonly map: Map;
   
+  /** 事件管理器实例 */
+  private readonly eventManager: EventManager;
+  
   /** 河流图层列表 */
   private riverLayerList: VectorLayer<VectorSource>[] = [];
   
@@ -71,6 +75,7 @@ export default class Line {
   constructor(map: Map) {
     ValidationUtils.validateMapInstance(map);
     this.map = map;
+    this.eventManager = new EventManager(map);
   }
 
   /**
@@ -205,7 +210,7 @@ export default class Line {
     }
 
     // 设置缩放事件监听
-    MapTools.mapOnEvent(this.map, 'moveend', () => {
+    this.eventManager.on('moveend', () => {
       this.showRiverLayerByZoom();
     });
 

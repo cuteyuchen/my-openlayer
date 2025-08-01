@@ -149,6 +149,14 @@ export default class MapBaseLayers {
         this.switchBaseLayer(firstLayerType as TiandituType);
       }
     }
+     // 添加注记图层
+      if (this.options.annotation) {
+        if (!this.options.token) {
+        throw new Error('请配置token后才能使用天地图注记');
+      }
+        const { token, zIndex = TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
+        this.loadDefaultAnnotationLayer(token, zIndex);
+      }
   }
 
   /**
@@ -167,11 +175,6 @@ export default class MapBaseLayers {
       this.layers.vec_c = [this.createTiandituLayer({ type: 'vec_c', token, zIndex, visible: false })];
       this.layers.img_c = [this.createTiandituLayer({ type: 'img_c', token, zIndex, visible: false })];
       this.layers.ter_c = [this.createTiandituLayer({ type: 'ter_c', token, zIndex, visible: false })];
-
-      // 添加注记图层
-      if (this.options.annotation) {
-        this.loadDefaultAnnotationLayer(token, zIndex);
-      }
     } catch (error) {
       this.errorHandler.createAndHandleError(
         `Failed to initialize Tianditu layers: ${ error }`,

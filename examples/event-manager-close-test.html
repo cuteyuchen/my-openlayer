@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EventManager 关闭方法测试</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@8.2.0/ol.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    #map {
+      width: 100%;
+      height: 400px;
+      border: 1px solid #ccc;
+    }
+    .controls {
+      margin: 20px 0;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      background: #007cba;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #005a87;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .info {
+      margin: 10px 0;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 4px;
+    }
+    .log {
+      margin: 10px 0;
+      padding: 10px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>EventManager 关闭方法测试</h1>
+  <p>此示例测试 EventManager 的 off、offAll 和 clear 方法是否能正确移除地图事件监听器。</p>
+  
+  <div id="map"></div>
+  
+  <div class="controls">
+    <button id="addClick">添加点击监听器</button>
+    <button id="addHover">添加悬停监听器</button>
+    <button id="addMove">添加移动监听器</button>
+    <button id="removeFirst">移除第一个监听器</button>
+    <button id="removeAllClick">移除所有点击监听器</button>
+    <button id="clearAll">清除所有监听器</button>
+  </div>
+  
+  <div class="info">
+    <div>当前监听器数量: <span id="listenerCount">0</span></div>
+    <div>地图事件监听器数量: <span id="mapListenerCount">0</span></div>
+  </div>
+  
+  <div class="log" id="log"></div>
+
+  <script type="module">
+    import { Map, View } from 'https://cdn.jsdelivr.net/npm/ol@8.2.0/index.js';
+    import TileLayer from 'https://cdn.jsdelivr.net/npm/ol@8.2.0/layer/Tile.js';
+    import OSM from 'https://cdn.jsdelivr.net/npm/ol@8.2.0/source/OSM.js';
+    import { EventManager } from '../src/core/EventManager.js';
+
+    // 创建地图
+    const map = new Map({
+      target: 'map',
+      layers: [
+        new TileLayer({
+          source: new OSM()
+        })
+      ],
+      view: new View({
+        center: [0, 0],
+        zoom: 2
+      })
+    });
+
+    // 创建事件管理器
+    const eventManager = new EventManager(map);
+    
+    // 存储监听器ID
+    const listenerIds = [];
+    
+    // 日志函数
+    function log(message) {
+      const logElement = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      logElement.innerHTML += `[${time}] ${message}<br>`;
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+    
+    // 更新计数器
+    function updateCounters() {
+      const info = eventManager.getListenersInfo();
+      document.getElementById('listenerCount').textContent = info.length;
+      
+      // 计算地图事件监听器数量（通过反射获取私有属性）
+      const mapListenerCount = eventManager.mapEventListeners ? eventManager.mapEventListeners.size : 0;
+      document.getElementById('mapListenerCount').textContent = mapListenerCount;
+    }
+    
+    // 添加点击监听器
+    document.getElementById('addClick').addEventListener('click', () => {
+      const id = eventManager.on('click', (event) => {
+        log(`点击事件触发: ${event.coordinate}`);
+      });
+      listenerIds.push(id);
+      log(`添加点击监听器: ${id}`);
+      updateCounters();
+    });
+    
+    // 添加悬停监听器
+    document.getElementById('addHover').addEventListener('click', () => {
+      const id = eventManager.on('hover', (event) => {
+        log(`悬停事件触发: ${event.coordinate}`);
+      });
+      listenerIds.push(id);
+      log(`添加悬停监听器: ${id}`);
+      updateCounters();
+    });
+    
+    // 添加移动监听器
+    document.getElementById('addMove').addEventListener('click', () => {
+      const id = eventManager.on('moveend', (event) => {
+        log(`移动结束事件触发`);
+      });
+      listenerIds.push(id);
+      log(`添加移动监听器: ${id}`);
+      updateCounters();
+    });
+    
+    // 移除第一个监听器
+    document.getElementById('removeFirst').addEventListener('click', () => {
+      if (listenerIds.length > 0) {
+        const id = listenerIds.shift();
+        const success = eventManager.off(id);
+        log(`移除监听器 ${id}: ${success ? '成功' : '失败'}`);
+        updateCounters();
+      } else {
+        log('没有监听器可移除');
+      }
+    });
+    
+    // 移除所有点击监听器
+    document.getElementById('removeAllClick').addEventListener('click', () => {
+      eventManager.offAll('click');
+      // 从数组中移除点击监听器ID
+      const info = eventManager.getListenersInfo();
+      const remainingIds = info.map(item => item.id);
+      listenerIds.splice(0, listenerIds.length, ...remainingIds);
+      log('移除所有点击监听器');
+      updateCounters();
+    });
+    
+    // 清除所有监听器
+    document.getElementById('clearAll').addEventListener('click', () => {
+      eventManager.clear();
+      listenerIds.length = 0;
+      log('清除所有监听器');
+      updateCounters();
+    });
+    
+    // 初始化计数器
+    updateCounters();
+    log('EventManager 关闭方法测试已初始化');
+  </script>
+</body>
+</html>

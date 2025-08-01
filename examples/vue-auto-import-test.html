@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue自动导入测试</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@8.2.0/ol.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ccc;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .controls button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #007cba;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .controls button:hover {
+            background: #005a87;
+        }
+        .info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        .vue-component {
+            background: linear-gradient(45deg, #42b883, #35495e);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            min-width: 200px;
+        }
+        .vue-component h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .vue-component p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .vue-component .coordinates {
+            font-family: monospace;
+            background: rgba(255,255,255,0.2);
+            padding: 5px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Vue自动导入测试</h1>
+    <div class="info">
+        <p>此测试验证VueTemplatePoint类是否能够自动检测并导入Vue，无需手动传递Vue参数。</p>
+        <p>Vue版本: <span id="vue-version">检测中...</span></p>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="controls">
+        <button onclick="addVuePoint()">添加Vue组件点位</button>
+        <button onclick="removeAllPoints()">移除所有点位</button>
+        <button onclick="toggleVisibility()">切换显示/隐藏</button>
+    </div>
+    
+    <div class="info">
+        <p>状态: <span id="status">准备就绪</span></p>
+    </div>
+
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- OpenLayers CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/ol@8.2.0/dist/ol.js"></script>
+    <!-- 我们的库 -->
+    <script src="../dist/index.js"></script>
+    
+    <script>
+        let map;
+        let pointManager;
+        let domPoints = [];
+        
+        // Vue组件模板
+        const VuePointTemplate = {
+            template: `
+                <div class="vue-component">
+                    <h3>{{ pointData.name }}</h3>
+                    <p>类型: {{ pointData.type }}</p>
+                    <p>状态: {{ pointData.status }}</p>
+                    <div class="coordinates">
+                        经度: {{ pointData.lgtd.toFixed(6) }}<br>
+                        纬度: {{ pointData.lttd.toFixed(6) }}
+                    </div>
+                </div>
+            `,
+            props: {
+                pointData: {
+                    type: Object,
+                    required: true
+                }
+            }
+        };
+        
+        // 初始化地图
+        function initMap() {
+            map = new ol.Map({
+                target: 'map',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    })
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([116.404, 39.915]),
+                    zoom: 10
+                })
+            });
+            
+            pointManager = new MyOpenLayers.Point(map);
+            updateStatus('地图初始化完成');
+            
+            // 检测Vue版本
+            if (typeof Vue !== 'undefined') {
+                document.getElementById('vue-version').textContent = Vue.version || 'Vue 2.x';
+            } else {
+                document.getElementById('vue-version').textContent = '未检测到Vue';
+            }
+        }
+        
+        // 添加Vue组件点位
+        function addVuePoint() {
+            try {
+                const pointData = {
+                    name: `Vue点位 ${domPoints.length + 1}`,
+                    type: 'Vue组件',
+                    status: '正常',
+                    lgtd: 116.404 + (Math.random() - 0.5) * 0.1,
+                    lttd: 39.915 + (Math.random() - 0.5) * 0.1
+                };
+                
+                // 注意：现在不需要传递Vue参数了
+                const domPointController = pointManager.setVueTemplatePointVue([pointData], VuePointTemplate);
+                domPoints.push(domPointController);
+                
+                updateStatus(`成功添加Vue点位，当前共${domPoints.length}个点位`);
+            } catch (error) {
+                updateStatus(`添加Vue点位失败: ${error.message}`);
+                console.error('Error adding Vue point:', error);
+            }
+        }
+        
+        // 移除所有点位
+        function removeAllPoints() {
+            try {
+                domPoints.forEach(point => {
+                    if (point && point.remove) {
+                        point.remove();
+                    }
+                });
+                domPoints = [];
+                updateStatus('已移除所有点位');
+            } catch (error) {
+                updateStatus(`移除点位失败: ${error.message}`);
+                console.error('Error removing points:', error);
+            }
+        }
+        
+        // 切换显示/隐藏
+        function toggleVisibility() {
+            try {
+                const isVisible = domPoints.length > 0 && Math.random() > 0.5; // 随机切换
+                domPoints.forEach(point => {
+                    if (point && point.setVisible) {
+                        point.setVisible(!isVisible);
+                    }
+                });
+                updateStatus(`已${!isVisible ? '显示' : '隐藏'}所有点位`);
+            } catch (error) {
+                updateStatus(`切换显示状态失败: ${error.message}`);
+                console.error('Error toggling visibility:', error);
+            }
+        }
+        
+        // 更新状态
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            console.log('Status:', message);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', initMap);
+    </script>
+</body>
+</html>

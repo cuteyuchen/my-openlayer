@@ -24,7 +24,7 @@ import { EventManager } from './core/EventManager';
 import { ConfigManager } from './core/ConfigManager';
 
 // 类型定义导入
-import { MapInitType, MapLayersOptions, EventType } from './types'
+import { MapInitType, MapLayersOptions } from './types'
 
 /**
  * MyOl 地图核心类
@@ -43,7 +43,7 @@ export default class MyOl {
   
   // 管理器实例
   private readonly errorHandler: ErrorHandler;
-  private readonly eventManager: EventManager;
+  private _eventManager?: EventManager;
   private readonly configManager: ConfigManager;
   
   // 配置选项
@@ -97,11 +97,12 @@ export default class MyOl {
         layers: layers,
         controls: this.createControls()
       });
+
+      if(layers.length === 0||this.options.annotation) {
+        this.getMapBaseLayers()
+      }
       
-      // 初始化事件管理器（需要地图实例）
-      this.eventManager = new EventManager(this.map);
-      
-      // 初始化事件监听
+      // 初始化基础事件监听（地图错误等）
       this.initializeEventListeners();
       
     } catch (error) {
@@ -175,15 +176,17 @@ export default class MyOl {
    * @private
    */
   private initializeEventListeners(): void {
+    const eventManager = this.getEventManager();
+    
     // 地图加载完成事件
-    this.map.once('rendercomplete', () => {
+    eventManager.on('rendercomplete', (eventData) => {
       console.debug('地图初始化完成', { map: this.map });
-    });
+    }, { once: true });
     
     // 地图错误事件
-    this.map.on('error', (error) => {
+    eventManager.on('error', (eventData) => {
       this.errorHandler.handleError(
-        new MyOpenLayersError( '地图渲染错误',  ErrorType.MAP_ERROR, { error } )
+        new MyOpenLayersError('地图渲染错误', ErrorType.MAP_ERROR, { error: eventData.error })
       );
     });
   }
@@ -248,12 +251,8 @@ export default class MyOl {
       return this._polygon;
     } catch (error) {
       this.errorHandler.handleError(
-        new MyOpenLayersError(
-          '面要素模块初始化失败',
-          ErrorType.COMPONENT_ERROR,
-          { error }
-        )
-      );
+        new MyOpenLayersError(  '面要素模块初始化失败',  ErrorType.COMPONENT_ERROR,  { error })
+     );
       throw error;
     }
   }
@@ -308,11 +307,7 @@ export default class MyOl {
       return this._point;
     } catch (error) {
       this.errorHandler.handleError(
-        new MyOpenLayersError(
-          '点要素模块初始化失败',
-          ErrorType.COMPONENT_ERROR,
-          { error }
-        )
+        new MyOpenLayersError( '点要素模块初始化失败', ErrorType.COMPONENT_ERROR, { error })
       );
       throw error;
     }
@@ -331,11 +326,7 @@ export default class MyOl {
       return this._line;
     } catch (error) {
       this.errorHandler.handleError(
-        new MyOpenLayersError(
-          '线要素模块初始化失败',
-          ErrorType.COMPONENT_ERROR,
-          { error }
-        )
+        new MyOpenLayersError('线要素模块初始化失败',  ErrorType.COMPONENT_ERROR,  { error })
       );
       throw error;
     }
@@ -430,38 +421,6 @@ export default class MyOl {
     }
   }
 
-  /**
-   * 监听地图事件
-   * @param eventType 事件类型
-   * @param callback 回调函数
-   * @param clickType 点击类型（可选）
-   */
-  mapOnEvent(eventType: EventType, callback: (feature?: any, e?: any) => void, clickType?: 'point' | 'line' | 'polygon'): void {
-    try {
-      if (typeof callback !== 'function') {
-        throw new Error('回调函数必须是函数类型');
-      }
-      
-      MapTools.mapOnEvent(this.map, eventType, callback, clickType);
-      
-      // 记录事件监听
-      console.debug('地图事件监听已添加', {
-        eventType,
-        clickType
-      });
-      
-    } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `添加地图事件监听失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.MAP_ERROR,
-          { eventType, clickType }
-        )
-      );
-      throw error;
-    }
-  }
-
   // ==========================================
   // 管理器访问方法
   // ==========================================
@@ -479,7 +438,10 @@ export default class MyOl {
    * @returns EventManager 事件管理器
    */
   getEventManager(): EventManager {
-    return this.eventManager;
+    if (!this._eventManager) {
+      this._eventManager = new EventManager(this.map);
+    }
+    return this._eventManager;
   }
 
   /**
@@ -503,8 +465,10 @@ export default class MyOl {
    */
   destroy(): void {
     try {
-      // 清理事件监听
-      this.eventManager.clear();
+      // 清理事件监听（仅在已初始化时）
+      if (this._eventManager) {
+        this._eventManager.clear();
+      }
       
       // 销毁功能模块
       this._point = undefined;
