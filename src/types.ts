@@ -1,6 +1,7 @@
 import BaseLayer from "ol/layer/Base";
 import TileLayer from "ol/layer/Tile";
 import { WMTS } from "ol/source";
+import View from "ol/View";
 
 export interface Feature {
   type: string;
@@ -21,7 +22,7 @@ export interface MapInitType {
   layers?: LayerItem[] | { [key: string]: LayerItem[] },
   zoom?: number,
   center?: number[],
-  view?: any,
+  view?: View,
   minZoom?: number,
   maxZoom?: number,
   extent?: number[],

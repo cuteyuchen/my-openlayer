@@ -372,11 +372,12 @@ export default class Point {
    * 添加vue组件为点位
    * @param pointDataList 点位信息列表
    * @param template vue组件模板
-   * @param Vue Vue实例
+   * @param options 选项，包含Vue实例
    * @returns 返回控制对象，包含显示、隐藏、移除方法
    * @throws 当参数无效时抛出错误
    */
   addVueTemplatePoint(pointDataList: PointData[], template: any, options?: {
+    Vue?: any,
     positioning?: 'bottom-left' | 'bottom-center' | 'bottom-right' | 'center-left' | 'center-center' | 'center-right' | 'top-left' | 'top-center' | 'top-right',
     stopEvent?: boolean
   }): {
@@ -390,6 +391,10 @@ export default class Point {
     
     if (!template) {
       throw new Error('Vue template is required');
+    }
+
+    if (!options?.Vue) {
+      throw new Error('Vue instance is required in options');
     }
 
     try {

@@ -5,60 +5,13 @@ import { VueTemplatePointOptions, VueApp, VueLegacyInstance, VueTemplatePointSta
 import { ErrorHandler, ErrorType } from '../utils/ErrorHandler'
 import { ValidationUtils } from '../utils/ValidationUtils'
 
-// 动态导入Vue
-let Vue: any = null;
-let isVue3 = false;
-
-// 检测Vue版本并导入
-async function detectAndImportVue() {
-  try {
-    // 尝试动态导入Vue
-    const vueModule = await import('vue');
-    Vue = vueModule.default || vueModule;
-    
-    // 检测Vue版本
-    if (Vue && (Vue.version?.startsWith('3') || Vue.createApp)) {
-      isVue3 = true;
-    } else {
-      isVue3 = false;
-    }
-  } catch (e) {
-    console.warn('Vue not found. Please ensure Vue is installed in your project.');
-    Vue = null;
-  }
-}
-
-// 同步版本的Vue检测（用于兼容性）
-function detectVueSync() {
-  try {
-    // 尝试从全局对象获取Vue
-    if (typeof window !== 'undefined' && (window as any).Vue) {
-      Vue = (window as any).Vue;
-      isVue3 = !!(Vue.version?.startsWith('3') || Vue.createApp);
-      return;
-    }
-    
-    // 如果在Node.js环境中，尝试require
-      if (typeof window === 'undefined') {
-        try {
-          // 使用eval来避免TypeScript编译时的require检查
-          const requireFunc = eval('require');
-          Vue = requireFunc('vue');
-          isVue3 = !!(Vue.version?.startsWith('3') || Vue.createApp);
-        } catch (e) {
-          console.warn('Vue not found. Please ensure Vue is installed in your project.');
-          Vue = null;
-        }
-      }
-  } catch (e) {
-    console.warn('Failed to detect Vue:', e);
-  }
-}
-
-// 初始化Vue导入
-detectVueSync();
-if (!Vue) {
-  detectAndImportVue();
+/**
+ * 检测Vue版本
+ * @param Vue Vue实例
+ * @returns 是否为Vue3
+ */
+function isVue3(Vue: any): boolean {
+  return !!(Vue && (Vue.version?.startsWith('3') || Vue.createApp));
 }
 
 /**
@@ -76,6 +29,7 @@ export default class VueTemplatePoint {
    */
   constructor(map: OLMap) {
     ValidationUtils.validateRequired(map, 'Map instance is required');
+    
     this.map = map;
     this.errorHandler = ErrorHandler.getInstance();
   }
@@ -88,6 +42,7 @@ export default class VueTemplatePoint {
    * @returns 点位控制器
    */
   addVueTemplatePoint(pointDataList: any[], template: any, options?: {
+    Vue?: any,
     positioning?: 'bottom-left' | 'bottom-center' | 'bottom-right' | 'center-left' | 'center-center' | 'center-right' | 'top-left' | 'top-center' | 'top-right',
     stopEvent?: boolean
   }): {
@@ -103,7 +58,13 @@ export default class VueTemplatePoint {
       throw new Error('Vue template is required');
     }
 
+    if (!options?.Vue) {
+      throw new Error('Vue instance is required in options');
+    }
+
     try {
+      const Vue = options.Vue;
+      const vueIsVue3 = isVue3(Vue);
       const instances: VueTemplatePointInstance[] = [];
       
       pointDataList.forEach((pointData: any) => {
@@ -125,7 +86,7 @@ export default class VueTemplatePoint {
           stopEvent: options?.stopEvent,
         };
         
-        const instance = new VueTemplatePointInstanceImpl(this.map, pointOptions, this.errorHandler);
+        const instance = new VueTemplatePointInstanceImpl(this.map, pointOptions, this.errorHandler, Vue, vueIsVue3);
         instances.push(instance);
         this.vuePoints.set(instance.id, instance);
       });
@@ -199,10 +160,14 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
   public readonly options: VueTemplatePointOptions;
   private readonly map: OLMap;
   private readonly errorHandler: ErrorHandler;
+  private readonly Vue: any;
+  private readonly isVue3: boolean;
 
-  constructor(map: OLMap, options: VueTemplatePointOptions, errorHandler: ErrorHandler) {
+  constructor(map: OLMap, options: VueTemplatePointOptions, errorHandler: ErrorHandler, Vue: any, isVue3: boolean) {
     this.map = map;
     this.errorHandler = errorHandler;
+    this.Vue = Vue;
+    this.isVue3 = isVue3;
     this.options = this.mergeDefaultOptions(options);
     this.id = this.generateUniqueId();
     this.position = [this.options.lgtd, this.options.lttd];
@@ -306,21 +271,21 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
   private createVueApp(): void {
     const { Template, props } = this.options;
     
-    if (!Vue) {
-      throw new Error('Vue is not available. Please ensure Vue is installed in your project.');
+    if (!this.Vue) {
+      throw new Error('Vue is not available. Please ensure Vue instance is provided.');
     }
     
     try {
-      if (isVue3) {
+      if (this.isVue3) {
         // Vue 3
-        this.app = Vue.createApp!({
+        this.app = this.Vue.createApp!({
           ...Template,
           props: props || {}
         });
         (this.app as VueApp).mount(this.dom);
       } else {
         // Vue 2
-        this.app = new Vue({
+        this.app = new this.Vue({
           el: this.dom,
           render: (h: any) => h(Template, { props: props || {} })
         }) as VueLegacyInstance;
@@ -508,7 +473,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
   private destroyVueApp(): void {
     if (this.app) {
       try {
-        if (isVue3) {
+        if (this.isVue3) {
           // Vue 3: 使用 unmount
           (this.app as VueApp).unmount();
         } else {

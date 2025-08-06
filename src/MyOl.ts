@@ -91,14 +91,18 @@ export default class MyOl {
       const layers: BaseLayer[] = Array.isArray(this.options.layers) ? this.options.layers : [];
       
       // 创建地图实例
-      this.map = new Map({
+      // 确保 view 选项不会传递给 OpenLayers Map 构造函数，避免 "then is not a function" 错误
+      // 我们完全控制传递给 Map 的选项，不直接传递用户的 options
+      const mapOptions = {
         target: id,
-        view: MyOl.createView(this.options),
+        view: this.options.view || MyOl.createView(this.options),
         layers: layers,
         controls: this.createControls()
-      });
+      };
+      
+      this.map = new Map(mapOptions);
 
-      if(layers.length === 0||this.options.annotation) {
+      if(this.options.token && (layers.length === 0||this.options.annotation)) {
         this.getMapBaseLayers()
       }
       
