@@ -151,12 +151,10 @@ export default class Polygon {
    */
   private setFeatureStyles(features: Feature[], options: PolygonOptions): void {
     features.forEach(feature => {
-      feature.set('type', options.type || options.layerName);
-      feature.set('layerName', options.type || options.layerName);
+      feature.set('type',  options.layerName);
+      feature.set('layerName',  options.layerName);
 
-      const fillColor = options.fillColorCallBack
-        ? options.fillColorCallBack(feature)
-        : options.fillColor;
+      const fillColor = options.fillColorCallBack ? options.fillColorCallBack(feature) : options.fillColor;
 
       const featureStyle = new Style({
         stroke: new Stroke({
@@ -245,7 +243,6 @@ export default class Polygon {
       fillColor: 'rgba(255, 255, 255, 0.3)',
       textFont: '14px Calibri,sans-serif',
       textFillColor: '#FFF',
-      textStrokeColor: '#409EFF',
       textStrokeWidth: 2,
       ...options
     };
@@ -290,10 +287,10 @@ export default class Polygon {
         featureStyle.setText(new Text({
           text,
           font: options.textFont!,
-          fill: new Fill({ color: options.textFillColor! }),
+          fill: new Fill({ color: options.textFillColor }),
           stroke: new Stroke({
-            color: options.textStrokeColor!,
-            width: options.textStrokeWidth!
+            color: options.textStrokeColor,
+            width: options.textStrokeWidth
           })
         }));
       }

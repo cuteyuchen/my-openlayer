@@ -44,7 +44,7 @@ export type {
   MeasureHandlerType,
   VueTemplatePointOptions,
   MapJSONData,
-  Feature,
+  FeatureData,
   AnnotationType,
   TiandituType,
   MapLayers,

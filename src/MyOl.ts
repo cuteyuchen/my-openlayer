@@ -33,32 +33,30 @@ import { MapInitType, MapLayersOptions } from './types'
 export default class MyOl {
   // 核心地图实例
   public readonly map: Map;
-  
+
   // 功能模块实例（懒加载）
   private _baseLayers?: MapBaseLayers;
   private _polygon?: Polygon;
   private _mapTools?: MapTools;
   private _point?: Point;
   private _line?: Line;
-  
+
   // 管理器实例
   private readonly errorHandler: ErrorHandler;
   private _eventManager?: EventManager;
   private readonly configManager: ConfigManager;
-  
+
   // 配置选项
   private readonly options: MapInitType;
-  
+
   // 默认配置
   static readonly DefaultOptions: MapInitType = {
     layers: undefined,
     zoom: 10,
     center: [119.81, 29.969],
-    minZoom: 8,
-    maxZoom: 20,
     extent: undefined
   };
-  
+
   // 坐标系配置
   private static readonly PROJECTIONS = {
     CGCS2000: "EPSG:4490",
@@ -73,23 +71,23 @@ export default class MyOl {
   constructor(id: string, options?: Partial<MapInitType>) {
     // 初始化错误处理器（必须最先初始化）
     this.errorHandler = ErrorHandler.getInstance();
-    
+
     try {
       // 初始化配置管理器
       this.configManager = new ConfigManager();
-      
+
       // 合并配置（处理 undefined 情况）
       this.options = ConfigManager.mergeOptions(MyOl.DefaultOptions, options || {});
-      
+
       // 参数验证
       this.validateConstructorParams(id, this.options);
-      
+
       // 初始化坐标系
       MyOl.initializeProjections();
-      
+
       // 准备图层
       const layers: BaseLayer[] = Array.isArray(this.options.layers) ? this.options.layers : [];
-      
+
       // 创建地图实例
       // 确保 view 选项不会传递给 OpenLayers Map 构造函数，避免 "then is not a function" 错误
       // 我们完全控制传递给 Map 的选项，不直接传递用户的 options
@@ -99,16 +97,16 @@ export default class MyOl {
         layers: layers,
         controls: this.createControls()
       };
-      
+
       this.map = new Map(mapOptions);
 
       if(this.options.token && (layers.length === 0||this.options.annotation)) {
         this.getMapBaseLayers()
       }
-      
+
       // 初始化基础事件监听（地图错误等）
       this.initializeEventListeners();
-      
+
     } catch (error) {
       this.errorHandler.handleError(
         new MyOpenLayersError(
@@ -129,18 +127,18 @@ export default class MyOl {
     if (!id || typeof id !== 'string') {
       throw new Error('地图容器 ID 必须是非空字符串');
     }
-    
+
     if (!options || typeof options !== 'object') {
       throw new Error('地图配置选项不能为空');
     }
-    
+
     // 检查 DOM 元素是否存在
     const element = document.getElementById(id);
     if (!element) {
       throw new Error(`找不到 ID 为 '${id}' 的 DOM 元素`);
     }
   }
-  
+
   /**
    * 初始化坐标系
    * @private
@@ -149,10 +147,10 @@ export default class MyOl {
     // 定义 CGCS2000 坐标系
     proj4.defs(MyOl.PROJECTIONS.CGCS2000, "+proj=longlat +ellps=GRS80 +no_defs");
     proj4.defs(MyOl.PROJECTIONS.CGCS2000_3_DEGREE, "+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs");
-    
+
     // 注册到 OpenLayers
     olProj4Register(proj4);
-    
+
     // 添加 CGCS2000 投影
     const cgsc2000 = new olProjProjection({
       code: MyOl.PROJECTIONS.CGCS2000,
@@ -162,7 +160,7 @@ export default class MyOl {
     });
     olProjAddProjection(cgsc2000);
   }
-  
+
   /**
    * 创建地图控件
    * @private
@@ -174,19 +172,19 @@ export default class MyOl {
       attribution: false
     }).extend([]);
   }
-  
+
   /**
    * 初始化事件监听
    * @private
    */
   private initializeEventListeners(): void {
     const eventManager = this.getEventManager();
-    
+
     // 地图加载完成事件
     eventManager.on('rendercomplete', (eventData) => {
       console.debug('地图初始化完成', { map: this.map });
     }, { once: true });
-    
+
     // 地图错误事件
     eventManager.on('error', (eventData) => {
       this.errorHandler.handleError(
@@ -194,7 +192,7 @@ export default class MyOl {
       );
     });
   }
-  
+
   /**
    * 创建地图视图
    * @param options 视图配置
@@ -208,16 +206,16 @@ export default class MyOl {
         worldExtent: [-180, -90, 180, 90],
         units: "degrees"
       });
-      
+
       const viewOptions = {
         projection,
         center: olProjFromLonLat(options.center as number[], projection),
         zoom: options.zoom ?? MyOl.DefaultOptions.zoom!,
-        minZoom: options.minZoom ?? MyOl.DefaultOptions.minZoom!,
-        maxZoom: options.maxZoom ?? MyOl.DefaultOptions.maxZoom!,
+        minZoom: options.minZoom,
+        maxZoom: options.maxZoom,
         ...(options.extent && { extent: options.extent })
       };
-      
+
       return new View(viewOptions);
     } catch (error) {
       throw new MyOpenLayersError(
@@ -227,7 +225,7 @@ export default class MyOl {
       );
     }
   }
-  
+
   /**
    * 获取视图（向后兼容）
    * @deprecated 请使用 createView 方法
@@ -272,7 +270,7 @@ export default class MyOl {
         if (Array.isArray(this.options.layers)) {
           console.warn('已设置默认底图，MapBaseLayers 中的 switchBaseLayer 方法将失效');
         }
-        
+
         const layerOptions: MapLayersOptions = {
           layers: this.options.layers,
           annotation: this.options.annotation,
@@ -281,7 +279,7 @@ export default class MyOl {
           mapClipData: this.options.mapClipData,
           token: this.options.token || ''
         };
-        
+
         this._baseLayers = new MapBaseLayers(this.map, layerOptions);
         console.debug('基础图层模块已加载');
       }
@@ -366,10 +364,10 @@ export default class MyOl {
       if (!this.options.center) {
         throw new Error('未设置中心点，无法重置位置');
       }
-      
+
       const [longitude, latitude] = this.options.center;
       this.locationAction(longitude, latitude, this.options.zoom, duration);
-      
+
     } catch (error) {
       this.errorHandler.handleError(
         new MyOpenLayersError(
@@ -394,17 +392,17 @@ export default class MyOl {
       if (typeof longitude !== 'number' || typeof latitude !== 'number') {
         throw new Error('经纬度必须是数字类型');
       }
-      
+
       if (longitude < -180 || longitude > 180) {
         throw new Error('经度值必须在 -180 到 180 之间');
       }
-      
+
       if (latitude < -90 || latitude > 90) {
         throw new Error('纬度值必须在 -90 到 90 之间');
       }
-      
+
       this.getPoint().locationAction(longitude, latitude, zoom, duration);
-      
+
       // 记录定位操作
       console.debug('地图定位完成', {
         longitude,
@@ -412,7 +410,7 @@ export default class MyOl {
         zoom,
         duration
       });
-      
+
     } catch (error) {
       this.errorHandler.handleError(
         new MyOpenLayersError(
@@ -473,19 +471,19 @@ export default class MyOl {
       if (this._eventManager) {
         this._eventManager.clear();
       }
-      
+
       // 销毁功能模块
       this._point = undefined;
       this._line = undefined;
       this._polygon = undefined;
       this._mapTools = undefined;
       this._baseLayers = undefined;
-      
+
       // 销毁地图
       this.map.setTarget(undefined);
-      
+
       console.debug('地图实例已销毁', { map: this.map });
-      
+
     } catch (error) {
       this.errorHandler.handleError(
         new MyOpenLayersError(

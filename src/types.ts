@@ -2,8 +2,9 @@ import BaseLayer from "ol/layer/Base";
 import TileLayer from "ol/layer/Tile";
 import { WMTS } from "ol/source";
 import View from "ol/View";
+import Feature from "ol/Feature";
 
-export interface Feature {
+export interface FeatureData {
   type: string;
   properties: any;
   geometry: {
@@ -15,9 +16,11 @@ export interface Feature {
 export interface MapJSONData {
   type: string,
   name?: string,
-  features: Feature[]
+  features: FeatureData[]
 }
+
 type LayerItem = BaseLayer | TileLayer<WMTS>
+
 export interface MapInitType {
   layers?: LayerItem[] | { [key: string]: LayerItem[] },
   zoom?: number,
@@ -90,7 +93,7 @@ export interface BaseOptions {
   /** 投影选项 */
   projectionOptOptions?: any;
   /** 扩展属性 */
-  [propName: string]: any;
+  // [propName: string]: any;
 }
 
 /**
@@ -108,7 +111,7 @@ export interface StyleOptions {
   /** 填充颜色 */
   fillColor?: string;
   /** 填充颜色回调函数 */
-  fillColorCallBack?: (feature: any) => string;
+  fillColorCallBack?: (feature: Feature) => string;
 }
 
 /**
@@ -118,7 +121,7 @@ export interface TextOptions {
   /** 文本可见性 */
   textVisible?: boolean;
   /** 文本内容回调函数 */
-  textCallBack?: (feature: any) => string;
+  textCallBack?: (feature: Feature) => string;
   /** 文本字体 */
   textFont?: string;
   /** 文本填充颜色 */
@@ -219,6 +222,7 @@ export interface FeatureColorUpdateOptions extends BaseOptions, StyleOptions, Te
 export interface PointData {
   lgtd: number;
   lttd: number;
+
   [key: string]: any;
 }
 
@@ -228,6 +232,7 @@ export interface PointData {
 export interface LineData {
   type: string;
   coordinates: number[][];
+
   [key: string]: any;
 }
 
@@ -256,8 +261,11 @@ export type EventType = 'click' | 'hover' | 'moveend';
  */
 export interface VueInstance {
   mount(element: Element | string): VueInstance;
+
   unmount?(): void;
+
   $destroy?(): void;
+
   [key: string]: any;
 }
 
@@ -266,7 +274,9 @@ export interface VueInstance {
  */
 export interface VueApp {
   mount(element: Element | string): VueInstance;
+
   unmount(): void;
+
   [key: string]: any;
 }
 
@@ -275,7 +285,9 @@ export interface VueApp {
  */
 export interface VueLegacyInstance {
   $mount(element?: Element | string): VueLegacyInstance;
+
   $destroy(): void;
+
   [key: string]: any;
 }
 
@@ -317,14 +329,24 @@ export interface VueTemplatePointInstance {
   state: VueTemplatePointState;
   position: number[];
   options: VueTemplatePointOptions;
+
   setVisible(visible: boolean): void;
+
   updatePosition(lgtd: number, lttd: number): void;
+
   updateProps(newProps: Record<string, any>): void;
+
   setStyle(styles: Partial<CSSStyleDeclaration>): void;
+
   addClass(className: string): void;
+
   removeClass(className: string): void;
+
   remove(): void;
+
   getState(): VueTemplatePointState;
+
   getOptions(): Readonly<VueTemplatePointOptions>;
+
   isDestroyed(): boolean;
 }
