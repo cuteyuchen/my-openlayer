@@ -14,7 +14,7 @@ import XYZ from "ol/source/XYZ";
 import BaseLayer from "ol/layer/Base";
 import MapTools from "./MapTools";
 import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
-import { MapLayersOptions, TiandituType, AnnotationLayerOptions, MapLayers } from "../types";
+import { MapLayersOptions, TiandituType, AnnotationLayerOptions, MapLayers, AnnotationType } from "../types";
 import { ValidationUtils } from "../utils/ValidationUtils";
 
 /**
@@ -26,6 +26,8 @@ const TIANDITU_CONFIG = {
   DEFAULT_ZINDEX: 9,
   ANNOTATION_ZINDEX_OFFSET: 10
 } as const;
+
+const TIANDITU_TYPES = ['vec_c', 'img_c', 'ter_c']
 
 /**
  * GeoServer图层选项接口
@@ -50,7 +52,7 @@ interface GeoServerLayerOptions {
  */
 interface TiandituLayerOptions {
   /** 图层类型 */
-  type: TiandituType;
+  type: TiandituType | string;
   /** 天地图token */
   token: string;
   /** 图层层级 */
@@ -88,7 +90,15 @@ export default class MapBaseLayers {
       this.options = this.mergeDefaultOptions(options);
 
       // 初始化图层
-      this.initializeLayers();
+      if (this.options?.token) {
+        this.initializeLayers();
+      }
+
+      if (this.layers && Object.keys(this.layers).length > 0) {
+        this.addMapLayer();
+        const firstLayerType = Object.keys(this.layers)[0];
+        this.switchBaseLayer(firstLayerType);
+      }
 
     } catch (error) {
       this.errorHandler.createAndHandleError(
@@ -140,23 +150,16 @@ export default class MapBaseLayers {
       if (!this.options.token) {
         throw new Error('请配置token后才能使用天地图底图');
       }
-
       this.initTiandituLayers();
-
-      if (this.layers && Object.keys(this.layers).length > 0) {
-        this.addMapLayer();
-        const firstLayerType = Object.keys(this.layers)[0];
-        this.switchBaseLayer(firstLayerType as TiandituType);
-      }
     }
-     // 添加注记图层
-      if (this.options.annotation) {
-        if (!this.options.token) {
+    // 添加注记图层
+    if (this.options.annotation) {
+      if (!this.options.token) {
         throw new Error('请配置token后才能使用天地图注记');
       }
-        const { token, zIndex = TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
-        this.loadDefaultAnnotationLayer(token, zIndex);
-      }
+      const { token, zIndex = TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
+      this.loadDefaultAnnotationLayer(token, zIndex);
+    }
   }
 
   /**
@@ -199,7 +202,7 @@ export default class MapBaseLayers {
    * 切换注记类别
    * @param annotationType 注记类型 ('cva_c' | 'cia_c' | 'cta_c')
    */
-  switchAnnotationLayer(annotationType: 'cva_c' | 'cia_c' | 'cta_c'): void {
+  switchAnnotationLayer(annotationType: AnnotationType): void {
     try {
       if (!this.options.token) {
         throw new Error('Token is required for annotation layer');
@@ -211,10 +214,10 @@ export default class MapBaseLayers {
 
       const baseZIndex = this.options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX;
       this.setAnnotationLayer(annotationType, this.options.token, baseZIndex);
-      
+
     } catch (error) {
       this.errorHandler.createAndHandleError(
-        `Failed to switch annotation layer to '${annotationType}': ${error}`,
+        `Failed to switch annotation layer to '${ annotationType }': ${ error }`,
         ErrorType.LAYER_ERROR,
         { annotationType, error }
       );
@@ -236,17 +239,17 @@ export default class MapBaseLayers {
 
     // 创建新的注记图层，确保层级在基本图层之上
     const annotationZIndex = baseZIndex + TIANDITU_CONFIG.ANNOTATION_ZINDEX_OFFSET;
-    
+
     let annotationLayer = this.createAnnotationLayer({
       type: annotationType,
       token,
       zIndex: annotationZIndex,
       visible: true
     });
-    
+
     // 应用剪切处理
     annotationLayer = this.processLayer(annotationLayer) as TileLayer<XYZ>;
-    
+
     this.currentAnnotationLayer = annotationLayer;
     this.currentAnnotationType = annotationType;
     this.map.addLayer(this.currentAnnotationLayer);
@@ -282,13 +285,22 @@ export default class MapBaseLayers {
    * 切换底图图层
    * @param type 图层类型
    */
-  switchBaseLayer(type: TiandituType): void {
+  switchBaseLayer(type: TiandituType | string): void {
     try {
       if (Array.isArray(this.options.layers)) {
         this.errorHandler.createAndHandleError(
           '需要按照键值对的方式配置底图才可使用切换底图功能',
           ErrorType.LAYER_ERROR,
           { layersType: 'array', requestedType: type }
+        );
+        return;
+      }
+
+      if (TIANDITU_TYPES.includes(type) && !this.options.token) {
+        this.errorHandler.createAndHandleError(
+          '请配置token后才能使用天地图底图',
+          ErrorType.LAYER_ERROR,
+          { requestedType: type }
         );
         return;
       }

@@ -35,7 +35,7 @@ export interface MapInitType {
 }
 
 export type AnnotationType = 'cva_c' | 'cia_c' | 'cta_c'
-export type TiandituType = 'vec_c' | 'img_c' | 'ter_c' | string
+export type TiandituType = 'vec_c' | 'img_c' | 'ter_c'
 
 export interface MapLayers {
   vec_c?: BaseLayer[];
