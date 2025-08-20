@@ -173,7 +173,11 @@ export default class Line {
             if (feature.properties && feature.properties.level === level) {
               try {
                 const olFeature = geojson.readFeature(feature);
-                vectorSource.addFeature(olFeature);
+                if (Array.isArray(olFeature)) {
+                  vectorSource.addFeatures(olFeature);
+                } else {
+                  vectorSource.addFeature(olFeature);
+                }
               } catch (error) {
                 console.warn(`Failed to load river feature at level ${level}:`, error);
               }

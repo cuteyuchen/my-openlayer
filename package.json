@@ -1,7 +1,7 @@
 {
   "name": "my-openlayer",
   "private": false,
-  "version": "1.0.15",
+  "version": "2.0.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,9 +27,8 @@
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",
-    "ol": "^6.15.1",
-    "proj4": "^2.7.5",
-    "my-openlayer": "^1.0.9"
+    "ol": "^10.6.1",
+    "proj4": "^2.7.5"
   },
   "devDependencies": {
     "@types/proj4": "^2.5.2",
@@ -41,6 +40,6 @@
     "vue-tsc": "^2.0.6"
   },
   "peerDependencies": {
-    "ol": "^6.15.1"
+    "ol": "^10.6.1"
   }
 }

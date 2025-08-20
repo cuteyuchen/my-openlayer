@@ -230,7 +230,11 @@ export default class Point {
       feature.properties.level = item.lev
       const geojson = new GeoJSON();
       const olFeature = geojson.readFeature(feature);
-      vectorSource.addFeature(olFeature)
+      if (Array.isArray(olFeature)) {
+        vectorSource.addFeatures(olFeature);
+      } else {
+        vectorSource.addFeature(olFeature);
+      }
       if (feature) {
         const polygonCenter = calculatePolygonCenter(feature.geometry.coordinates)
         item.lgtd = polygonCenter[0]
