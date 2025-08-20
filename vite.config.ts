@@ -16,5 +16,5 @@ export default defineConfig({
       "@": resolve("examples"),
       packages: resolve("packages")
     }
-  },
+  }
 })

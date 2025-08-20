@@ -90,9 +90,7 @@ export default class MapBaseLayers {
       this.options = this.mergeDefaultOptions(options);
 
       // 初始化图层
-      if (this.options?.token) {
-        this.initializeLayers();
-      }
+      this.initializeLayers();
 
       if (this.layers && Object.keys(this.layers).length > 0) {
         this.addMapLayer();
@@ -146,11 +144,9 @@ export default class MapBaseLayers {
     // 如果没有配置底图，则默认使用天地图底图
     if (!Array.isArray(this.options.layers)) {
       this.layers = this.options.layers || {};
-
-      if (!this.options.token) {
-        throw new Error('请配置token后才能使用天地图底图');
+      if (this.options.token) {
+        this.initTiandituLayers();
       }
-      this.initTiandituLayers();
     }
     // 添加注记图层
     if (this.options.annotation) {

@@ -5,7 +5,7 @@
 </template>
 
 <script>
-// 从环境变量获取天地图 token
+// 使用 import.meta.env 获取天地图 token（Vite 推荐方式）
 import { Map, View } from 'ol'
 import TileLayer from 'ol/layer/Tile'
 import { XYZ } from 'ol/source'
@@ -14,8 +14,8 @@ import { fromLonLat } from 'ol/proj'
 export default {
   name: 'App',
   mounted() {
-    // 从环境变量获取 token，如果没有则使用占位符
-    const tiandituToken = process.env.VUE_APP_TIANDITU_TOKEN || 'YOUR_TIANDITU_TOKEN_HERE'
+    // 使用 import.meta.env 获取 token，如果没有则使用占位符
+    const tiandituToken = import.meta.env.VITE_TIANDITU_TOKEN || 'YOUR_TIANDITU_TOKEN_HERE'
     
     const map = new Map({
       target: 'map',
@@ -43,6 +43,6 @@ export default {
 <style>
 .map {
   width: 100%;
-  height: 500px;
+  height: 100%;
 }
 </style>

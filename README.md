@@ -1,6 +1,6 @@
 # my-openlayer
 
-my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地图组件库，专为 Web GIS 应用开发者设计。提供完整的 TypeScript 支持、模块化的类型定义、强大的错误处理和事件管理系统，支持天地图底图加载、要素绘制、图层管理、事件监听等丰富功能，极大提升地图开发效率。
+my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地图组件库，专为 Web GIS 应用开发者设计。提供完整的 TypeScript 支持、模块化的类型定义、强大的错误处理和事件管理系统，支持天地图底图加载、要素绘制、图层管理、事件监听等丰富功能，极大提升地图开发效率。支持 TypeScript，具备完整的类型定义和模块化设计。
 
 [![npm version](https://img.shields.io/npm/v/my-openlayer.svg)](https://www.npmjs.com/package/my-openlayer)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
@@ -28,32 +28,32 @@ my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地�
 
 ## 功能亮点
 
-- **🗺️ 底图管理**
-  - 支持天地图矢量、影像、地形底图
-  - 动态切换底图与注记图层
+- **🗺️ 底图管理 (MapBaseLayers)**
+  - 支持天地图矢量、影像、地形底图切换
+  - 动态切换底图与注记图层管理
   - 地图裁剪与自定义范围显示
-  - 支持自定义底图源
+  - 支持自定义底图源和配置
 
 - **📍 要素操作**
-  - 点位标注（支持自定义图标、文字、聚合、闪烁）
-  - 线要素绘制（支持样式自定义、河流分级显示）
-  - 面要素绘制与分区高亮
-  - DOM 点位（支持 Vue 组件渲染）
+  - **点位管理 (Point)**：点位标注（支持自定义图标、文字、聚合、闪烁）
+  - **线要素绘制 (Line)**：线要素绘制（支持样式自定义、河流分级显示）
+  - **面要素 (Polygon)**：面要素绘制与分区高亮
+  - **Vue组件支持 (VueTemplatePoint)**：DOM 点位（支持 Vue 组件渲染，完整生命周期管理）
   - 热力图、图片图层
   - 动态要素颜色更新
 
 - **🛠️ 地图工具**
-  - 图层管理（获取、移除、显隐控制）
-  - 地图事件监听（点击、悬停、移动等）
-  - 坐标转换、视图控制
-  - 测量工具（距离、面积）
-  - 配置管理器
+  - **测量工具 (MeasureHandler)**：距离和面积测量
+  - **地图工具 (MapTools)**：图层管理（获取、移除、显隐控制）
+  - **事件管理 (EventManager)**：地图事件监听（点击、悬停、移动等）
+  - **配置管理 (ConfigManager)**：坐标转换、视图控制、配置管理器
 
 - **⚡ 高级特性**
   - **TypeScript 完全支持**：模块化类型定义，更好的开发体验
-  - **错误处理系统**：统一的错误处理和日志记录
-  - **事件管理系统**：强大的事件监听和管理机制
-  - **配置管理**：默认配置、配置合并、验证工具
+  - **错误处理系统 (ErrorHandler)**：统一的错误处理和日志记录
+  - **验证工具 (ValidationUtils)**：参数验证和数据校验
+  - **模块化设计**：支持按需加载和懒加载
+  - **坐标系支持**：CGCS2000坐标系和投影转换
   - **向后兼容**：保持 API 稳定性
 
 - **🔧 开发友好**
@@ -69,6 +69,47 @@ my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地�
 
 ```bash
 npm install my-openlayer
+# 或
+yarn add my-openlayer
+# 或
+pnpm add my-openlayer
+```
+
+### 依赖要求
+
+- **OpenLayers**: ^7.0.0 或更高版本
+- **proj4**: ^2.8.0 或更高版本
+- **@turf/turf**: ^6.5.0 或更高版本（用于高级几何计算）
+
+### 环境配置
+
+使用天地图服务需要配置API Token：
+
+```bash
+# 在项目根目录创建 .env 文件
+VUE_APP_TIANDITU_TOKEN=your_tianditu_token_here
+
+# 其他可选配置
+VUE_APP_MAP_CENTER_LON=119.81
+VUE_APP_MAP_CENTER_LAT=29.969
+VUE_APP_MAP_ZOOM=10
+```
+
+### 配置选项
+
+#### 基础配置
+
+```javascript
+const config = {
+  target: 'map',                                    // 地图容器ID
+  center: [119.81, 29.969],                         // 地图中心点
+  zoom: 10,                                         // 缩放级别
+  tiandituToken: process.env.VUE_APP_TIANDITU_TOKEN, // 天地图token（从环境变量获取）
+  minZoom: 1,                                       // 最小缩放级别
+  maxZoom: 20,                                      // 最大缩放级别
+  annotation: true,                                 // 是否显示注记
+  coordinateSystem: 'EPSG:4326',                    // 坐标系（默认WGS84，支持CGCS2000）
+};
 ```
 
 ---
@@ -90,7 +131,7 @@ const mapConfig: MapInitType = {
   zoom: 10,
   minZoom: 8,
   maxZoom: 20,
-  token: 'your-tianditu-token',
+  token: process.env.VUE_APP_TIANDITU_TOKEN, // 从环境变量获取天地图token
   annotation: true,
   layers: {
     vec_c: [],
@@ -511,6 +552,20 @@ measure.destory();
 new MyOl(id: string, options: MapInitType)
 ```
 
+**参数说明：**
+
+- `id`: 地图容器的 DOM 元素 ID
+- `options`: 地图初始化配置对象
+  - `center`: 地图中心点坐标 `[longitude, latitude]`
+  - `zoom`: 初始缩放级别
+  - `token`: 天地图 API Token（建议从环境变量获取）
+  - `minZoom`: 最小缩放级别（可选，默认：1）
+  - `maxZoom`: 最大缩放级别（可选，默认：20）
+  - `annotation`: 是否显示注记图层（可选，默认：true）
+  - `layers`: 图层配置（可选）
+  - `extent`: 地图范围限制（可选）
+  - `mapClipData`: 地图裁剪数据（可选）
+
 #### 方法
 
 - **getPoint()**
@@ -532,15 +587,33 @@ new MyOl(id: string, options: MapInitType)
   ```
 
 - **getTools()**
-  > 获取地图工具实例。
+  > 获取地图工具实例，提供图层管理、事件监听等功能。
   ```javascript
   const tools = map.getTools();
   ```
 
 - **getMapBaseLayers()**
-  > 获取底图图层管理实例。
+  > 获取底图图层管理实例，用于底图切换和管理。
   ```javascript
   const baseLayers = map.getMapBaseLayers();
+  ```
+
+- **getEventManager()**
+  > 获取事件管理器实例，用于统一的事件监听和管理。
+  ```javascript
+  const eventManager = map.getEventManager();
+  ```
+
+- **getConfigManager()**
+  > 获取配置管理器实例，用于配置验证和管理。
+  ```javascript
+  const configManager = map.getConfigManager();
+  ```
+
+- **getMap()**
+  > 获取原生 OpenLayers 地图实例。
+  ```javascript
+  const olMap = map.getMap();
   ```
 
 - **resetPosition(duration?: number)**
@@ -568,7 +641,7 @@ new MyOl(id: string, options: MapInitType)
 ### MapBaseLayers
 
 - **switchBaseLayer(type: TiandituType)**
-  > 切换底图。
+  > 切换底图类型，自动处理注记图层。
   ```javascript
   baseLayers.switchBaseLayer('img_c');
   ```
@@ -583,6 +656,19 @@ new MyOl(id: string, options: MapInitType)
   });
   ```
 
+- **toggleAnnotation(show?: boolean)**
+  > 切换注记图层显示状态。
+  ```javascript
+  baseLayers.toggleAnnotation(true); // 显示注记
+  baseLayers.toggleAnnotation(false); // 隐藏注记
+  ```
+
+- **getCurrentBaseLayer()**
+  > 获取当前底图类型。
+  ```javascript
+  const currentType = baseLayers.getCurrentBaseLayer();
+  ```
+
 - **initLayer()**
   > 初始化底图图层。
   ```javascript
@@ -594,7 +680,7 @@ new MyOl(id: string, options: MapInitType)
 ### Point
 
 - **addPoint(pointData: PointData[], options: OptionsType)**
-  > 添加普通点位。
+  > 添加普通点位到指定图层，支持自定义样式和图标。
   ```javascript
   point.addPoint([
     { lgtd: 119.81, lttd: 29.969, name: '测试点位' }
@@ -607,7 +693,7 @@ new MyOl(id: string, options: MapInitType)
   ```
 
 - **addClusterPoint(pointData: PointData[], options: OptionsType)**
-  > 添加聚合点位。
+  > 添加聚合点位，自动根据缩放级别聚合显示。
   ```javascript
   point.addClusterPoint([
     { lgtd: 119.81, lttd: 29.969, name: 'A' },
@@ -617,6 +703,19 @@ new MyOl(id: string, options: MapInitType)
     nameKey: 'name',
     img: 'cluster.png',
     zIndex: 4
+  });
+  ```
+
+- **addTwinklePoint(pointData: PointData[], options: OptionsType)**
+  > 添加闪烁点位，具有动画效果。
+  ```javascript
+  point.addTwinklePoint([
+    { lgtd: 119.81, lttd: 29.969, name: '闪烁点位' }
+  ], {
+    layerName: 'twinkle-point',
+    nameKey: 'name',
+    img: 'twinkle.png',
+    hasImg: true
   });
   ```
 
@@ -776,29 +875,75 @@ new MyOl(id: string, options: MapInitType)
 
 ### MeasureHandler
 
+测量工具类，提供距离和面积测量功能，支持实时测量显示。
+
 - **start(type: 'Polygon' | 'LineString')**
-  > 开始测量。
+  > 开始测量，支持距离和面积测量。
   ```javascript
-  measure.start('Polygon');
-  measure.start('LineString');
+  measure.start('Polygon');  // 面积测量
+  measure.start('LineString');  // 距离测量
   ```
 
 - **end()**
-  > 结束测量。
+  > 结束当前测量操作。
   ```javascript
   measure.end();
   ```
 
 - **clean()**
-  > 清除所有测量结果。
+  > 清除所有测量结果和图形。
   ```javascript
   measure.clean();
   ```
 
 - **destory()**
-  > 销毁测量工具。
+  > 销毁测量工具，释放资源。
   ```javascript
   measure.destory();
+  ```
+
+### ErrorHandler
+
+错误处理工具类，提供统一的错误处理和日志记录。
+
+- **getInstance()**
+  > 获取错误处理器单例实例。
+  ```javascript
+  const errorHandler = ErrorHandler.getInstance();
+  ```
+
+- **handleError(error: MyOpenLayersError)**
+  > 处理错误，记录日志并触发回调。
+  ```javascript
+  errorHandler.handleError(error);
+  ```
+
+- **validate(condition: boolean, message: string, context?: any)**
+  > 验证条件，失败时抛出错误。
+  ```javascript
+  ErrorHandler.validate(isValid, '验证失败', { data });
+  ```
+
+### ValidationUtils
+
+验证工具类，提供各种数据验证方法。
+
+- **isValidCoordinate(longitude: number, latitude: number)**
+  > 验证坐标是否有效。
+  ```javascript
+  const isValid = ValidationUtils.isValidCoordinate(119.81, 29.969);
+  ```
+
+- **validateMapInstance(map: any)**
+  > 验证地图实例。
+  ```javascript
+  ValidationUtils.validateMapInstance(map);
+  ```
+
+- **validateLayerName(layerName: string)**
+  > 验证图层名称。
+  ```javascript
+  ValidationUtils.validateLayerName('myLayer');
   ```
 
 ---
@@ -820,7 +965,8 @@ interface MapInitType {
   extent?: number[],
   mapClipData?: MapJSONData,
   token?: string,
-  annotation?: boolean
+  annotation?: boolean,
+  coordinateSystem?: string // 坐标系（支持CGCS2000）
 }
 
 // 点位数据
@@ -937,6 +1083,50 @@ interface HeatMapOptions {
 }
 ```
 
+### VueTemplatePointOptions
+
+Vue 组件点位配置类型，支持 Vue 2 和 Vue 3。
+
+```typescript
+interface VueTemplatePointOptions {
+  coordinate: [number, number];     // 点位坐标
+  template: any;                    // Vue 组件模板
+  data?: any;                       // 传递给组件的数据
+  vue: VueInstance | VueApp;        // Vue 实例（Vue 2/3）
+  layerName?: string;               // 图层名称
+  id?: string;                      // 点位唯一标识
+  className?: string;               // CSS 类名
+  stopEvent?: boolean;              // 是否阻止事件冒泡
+}
+```
+
+### ErrorType
+
+错误类型枚举。
+
+```typescript
+enum ErrorType {
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  MAP_ERROR = 'MAP_ERROR',
+  LAYER_ERROR = 'LAYER_ERROR',
+  COORDINATE_ERROR = 'COORDINATE_ERROR',
+  DATA_ERROR = 'DATA_ERROR',
+  COMPONENT_ERROR = 'COMPONENT_ERROR'
+}
+```
+
+### MyOpenLayersError
+
+自定义错误类。
+
+```typescript
+class MyOpenLayersError extends Error {
+  public readonly type: ErrorType;
+  public readonly timestamp: Date;
+  public readonly context?: any;
+}
+```
+
 ### 兼容性类型
 
 ```typescript
@@ -956,8 +1146,6 @@ type OptionsType = BaseOptions & StyleOptions & TextOptions & {
 ```
 
 ## 迁移指南
-
-如果您正在从旧版本的 `OptionsType` 迁移到新的模块化类型接口，请参考详细的 [迁移指南](MIGRATION_GUIDE.md)。
 
 ### 快速迁移示例
 
@@ -992,20 +1180,23 @@ const options: PointOptions = {
 
 ### 运行时依赖
 
-- **[OpenLayers](https://openlayers.org/)** `^6.15.1` - 核心地图库
-- **[proj4](https://github.com/proj4js/proj4js)** `^2.7.5` - 坐标系转换
-- **[turf](https://turfjs.org/)** `^3.0.14` - 地理空间分析
+- **ol**: ^7.5.2 - OpenLayers 地图库
+- **proj4**: ^2.9.2 - 坐标系转换库
+- **@turf/turf**: ^6.5.0 - 地理空间分析库
 
 ### 开发依赖
 
-- **[TypeScript](https://www.typescriptlang.org/)** `~5.6.2` - 类型支持
-- **[Vite](https://vitejs.dev/)** `^5.4.10` - 构建工具
-- **[@types/proj4](https://www.npmjs.com/package/@types/proj4)** `^2.5.2` - proj4 类型定义
-- **[@types/turf](https://www.npmjs.com/package/@types/turf)** `^3.5.32` - turf 类型定义
+- **@types/ol**: ^6.5.3 - OpenLayers TypeScript 类型定义
+- **typescript**: ^5.0.0 - TypeScript 编译器
+- **vite**: ^4.4.5 - 构建工具
+- **@vitejs/plugin-vue**: ^4.2.3 - Vue 插件支持
+- **vue-tsc**: ^1.8.5 - Vue TypeScript 编译器
 
 ### 对等依赖
 
-- **[OpenLayers](https://openlayers.org/)** `^6.15.1` - 确保版本兼容性
+- **vue**: ^2.6.0 || ^3.0.0 - Vue.js 框架（可选，用于 Vue 组件支持）
+- **element-ui**: ^2.15.0 - Element UI 组件库（Vue 2）
+- **element-plus**: ^2.0.0 - Element Plus 组件库（Vue 3）
 
 > **注意**：本库与 OpenLayers 6.15.1 完全兼容，建议使用相同版本以获得最佳体验。
 
@@ -1206,14 +1397,46 @@ A:
 
 ## 更新日志
 
-### v1.0.0 (最新)
-- ✨ 重构类型定义，采用模块化设计
-- 🛠️ 新增错误处理系统
-- 📊 新增事件管理系统
-- ⚙️ 新增配置管理器
-- 📝 完善 TypeScript 类型支持
-- 📖 新增详细的迁移指南
-- 🔧 优化 API 设计，提升开发体验
+### v1.0.15 (2025-08-20)
+
+#### 新增功能
+- ✨ 完整的 TypeScript 支持和类型定义
+- ✨ 模块化架构设计，支持按需引入
+- ✨ 天地图底图支持（矢量、影像、地形）
+- ✨ 点要素操作（普通点位、聚合点位、闪烁点位）
+- ✨ Vue 组件集成支持（Vue 2/3 兼容）
+- ✨ 线要素和面要素绘制
+- ✨ 热力图和图片图层支持
+- ✨ 测量工具（距离、面积）
+- ✨ 事件管理和配置管理系统
+- ✨ 错误处理和验证工具
+- ✨ CGCS2000 坐标系支持
+
+#### 技术特性
+- 🔧 支持 Vue 2 和 Vue 3
+- 🔧 完整的 TypeScript 类型定义
+- 🔧 模块化设计，懒加载支持
+- 🔧 统一的错误处理机制
+- 🔧 向后兼容性保证
+- 🔧 环境变量配置支持
+
+#### 核心类库
+- 📦 MyOl - 地图核心管理类
+- 📦 MapBaseLayers - 底图管理
+- 📦 Point/Line/Polygon - 要素操作
+- 📦 VueTemplatePoint - Vue 组件支持
+- 📦 MapTools - 地图工具集
+- 📦 MeasureHandler - 测量工具
+- 📦 EventManager - 事件管理
+- 📦 ConfigManager - 配置管理
+- 📦 ErrorHandler - 错误处理
+- 📦 ValidationUtils - 验证工具
+
+#### 文档
+- 📚 完整的 API 文档和类型定义
+- 📚 详细的使用示例和最佳实践
+- 📚 环境配置和部署指南
+- 📚 FAQ 和常见问题解决方案
 
 查看完整的 [更新日志](CHANGELOG.md)
 
