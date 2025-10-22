@@ -6,27 +6,6 @@ my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地�
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🌟 版本分支策略
-
-本项目采用双分支策略支持不同版本的 OpenLayers：
-
-| 分支 | OpenLayers 版本 | 项目版本 | 状态 | 推荐使用场景 |
-|------|----------------|----------|------|-------------|
-| **main** | 10.6.1+ | 2.x.x | 🚀 主要开发 | 新项目、追求最新功能 |
-| **ol6-legacy** | 6.15.1 | 1.x.x | 🛠️ 维护支持 | 现有项目、兼容性需求 |
-
-### 安装指南
-
-```bash
-# 最新版本 (OpenLayers 10.x)
-npm install my-openlayer@latest
-
-# 兼容版本 (OpenLayers 6.x)
-npm install my-openlayer@^1.0.0
-```
-
-📖 **详细说明**: [分支策略文档](./README-BRANCHES.md) | [迁移指南](./MIGRATION-GUIDE.md)
-
 ---
 
 ## 目录

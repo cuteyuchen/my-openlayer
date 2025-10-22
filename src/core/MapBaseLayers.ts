@@ -665,7 +665,7 @@ export default class MapBaseLayers {
         return;
       }
 
-      this.layers[type]?.forEach((layer: BaseLayer) => {
+      this.layers[type].forEach((layer: BaseLayer) => {
         this.map.removeLayer(layer);
       });
 

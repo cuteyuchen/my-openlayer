@@ -2,7 +2,8 @@ import BaseLayer from "ol/layer/Base";
 import TileLayer from "ol/layer/Tile";
 import { WMTS } from "ol/source";
 import View from "ol/View";
-import Feature from "ol/Feature";
+import Feature, { FeatureLike } from "ol/Feature";
+import { Style } from "ol/style";
 
 export interface FeatureData {
   type: string;
@@ -92,6 +93,8 @@ export interface BaseOptions {
   mapClipData?: MapJSONData;
   /** 投影选项 */
   projectionOptOptions?: any;
+  /** 自定义样式函数 */
+  style?: Style | Style[] | ((feature: FeatureLike) => Style | Style[]);
   /** 扩展属性 */
   // [propName: string]: any;
 }

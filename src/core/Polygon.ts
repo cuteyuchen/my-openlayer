@@ -154,6 +154,16 @@ export default class Polygon {
       feature.set('type',  options.layerName);
       feature.set('layerName',  options.layerName);
 
+      // 如果传入了自定义样式，直接使用
+      if (options.style) {
+       if (typeof options.style === 'function') {
+        feature.setStyle(options.style(feature));
+       }else {
+        feature.setStyle(options.style);
+       }
+       return
+      }
+
       const fillColor = options.fillColorCallBack ? options.fillColorCallBack(feature) : options.fillColor;
 
       const featureStyle = new Style({

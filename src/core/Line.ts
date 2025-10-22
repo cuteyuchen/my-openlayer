@@ -111,6 +111,16 @@ export default class Line {
           feature.set('type', mergedOptions.type);
           feature.set('layerName', mergedOptions.type);
         }
+        
+        // 如果传入了自定义样式，直接使用
+        if (mergedOptions.style) {
+          if (typeof mergedOptions.style === 'function') {
+            return mergedOptions.style(feature);
+          }else {
+            return mergedOptions.style;
+          }
+        }
+        
         return new Style({
           stroke: new Stroke({
             color: mergedOptions.strokeColor,
@@ -198,6 +208,16 @@ export default class Line {
             feature.set('type', mergedOptions.layerName);
             feature.set('layerName', mergedOptions.layerName);
           }
+          
+          // 如果传入了自定义样式，直接使用
+          if (mergedOptions.style) {
+          if (typeof mergedOptions.style === 'function') {
+            return mergedOptions.style(feature);
+          }else {
+            return mergedOptions.style;
+          }
+        }
+          
           return new Style({
             stroke: new Stroke({
               color: mergedOptions.strokeColor,
@@ -294,6 +314,15 @@ export default class Line {
       },
       source: new VectorSource({ features }),
       style: (feature: FeatureLike) => {
+        // 如果传入了自定义样式，直接使用
+         if (mergedOptions.style) {
+          if (typeof mergedOptions.style === 'function') {
+            return mergedOptions.style(feature);
+          }else {
+            return mergedOptions.style;
+          }
+        }
+        
         const level = feature.get('level');
         const levelWidth = mergedOptions.levelWidthMap[Number(level)] || 1;
         return new Style({
