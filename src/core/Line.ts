@@ -68,6 +68,8 @@ export default class Line {
     5: 0.5
   };
 
+
+
   /**
    * 构造函数
    * @param map OpenLayers地图实例
@@ -84,6 +86,7 @@ export default class Line {
    * @param options 配置项
    * @returns 创建的矢量图层
    */
+  addLine(data: MapJSONData, options?: LineOptions): VectorLayer<VectorSource>;
   addLine(data: MapJSONData, options: LineOptions = {}): VectorLayer<VectorSource> {
     ValidationUtils.validateGeoJSONData(data);
 
@@ -139,6 +142,68 @@ export default class Line {
     return layer;
   }
 
+  /**
+   * 从URL添加线要素
+   * @param url 数据URL
+   * @param options 配置项
+   * @returns 创建的矢量图层
+   */
+  addLineByUrl(url: string, options: LineOptions = {}): VectorLayer<VectorSource> {
+    const defaultOptions = {
+      type: 'line',
+      strokeColor: 'rgba(3, 122, 255, 1)',
+      strokeWidth: 2,
+      visible: true,
+      zIndex: 15,
+      layerName: options.layerName || 'lineLayer'
+    };
+
+    const mergedOptions = { ...defaultOptions, ...options };
+
+    const source = new VectorSource({
+      url,
+      format: new GeoJSON(options.projectionOptOptions)
+    });
+    
+    const layer = new VectorLayer({
+      properties: {
+        name: mergedOptions.layerName,
+        layerName: mergedOptions.layerName
+      },
+      source,
+      style: (feature: FeatureLike) => {
+        if (feature instanceof Feature) {
+          feature.set('type', mergedOptions.type);
+          feature.set('layerName', mergedOptions.type);
+        }
+        
+        // 如果传入了自定义样式，直接使用
+        if (mergedOptions.style) {
+          if (typeof mergedOptions.style === 'function') {
+            return mergedOptions.style(feature);
+          }else {
+            return mergedOptions.style;
+          }
+        }
+        
+        return new Style({
+          stroke: new Stroke({
+            color: mergedOptions.strokeColor,
+            width: mergedOptions.strokeWidth,
+            lineDash: mergedOptions.lineDash,
+            lineDashOffset: mergedOptions.lineDashOffset
+          })
+        });
+      },
+      zIndex: mergedOptions.zIndex
+    });
+
+    layer.setVisible(mergedOptions.visible);
+    this.map.addLayer(layer);
+    
+    return layer;
+  }
+
 
 
   /**
@@ -147,6 +212,7 @@ export default class Line {
    * @param options 河流图层配置选项
    * @throws {Error} 当数据格式无效时抛出错误
    */
+  addRiverLayersByZoom(fyRiverJson: MapJSONData, options?: RiverLayerOptions): void;
   addRiverLayersByZoom(fyRiverJson: MapJSONData, options: RiverLayerOptions = {}): void {
     ValidationUtils.validateGeoJSONData(fyRiverJson);
 
@@ -242,6 +308,115 @@ export default class Line {
     this.showRiverLayerByZoom();
   }
 
+  /**
+   * 从URL添加分级河流图层，根据缩放级别显示不同级别的河流
+   * @param url 河流数据URL
+   * @param options 河流图层配置选项
+   * @throws {Error} 当数据格式无效时抛出错误
+   */
+  addRiverLayersByZoomByUrl(url: string, options: RiverLayerOptions = {}): void {
+    const defaultOptions = {
+      type: 'river',
+      levelCount: 5,
+      zoomOffset: 8,
+      strokeColor: 'rgb(0,113,255)',
+      strokeWidth: 3,
+      visible: true,
+      zIndex: 15,
+      layerName: 'riverLayer',
+      removeExisting: options.removeExisting ?? false,
+      levelWidthMap: this.defaultLevelWidthMap
+    };
+
+    const mergedOptions = { ...defaultOptions, ...options };
+
+    // 清除现有河流图层
+    if (mergedOptions.removeExisting) {
+      this.clearRiverLayers();
+    }
+
+    this.riverLayerShow = mergedOptions.visible;
+    this.riverLayerList = [];
+
+    // 创建分级河流图层
+    for (let level = 1; level <= mergedOptions.levelCount; level++) {
+      const vectorSource = new VectorSource({
+        url,
+        format: new GeoJSON(),
+        loader: function(extent, resolution, projection, success, failure) {
+          fetch(url)
+            .then(response => response.json())
+            .then(data => {
+              const geojson = new GeoJSON();
+              data.features.forEach((feature: any) => {
+                if (feature.properties && feature.properties.level === level) {
+                  try {
+                    const olFeature = geojson.readFeature(feature);
+                    if (Array.isArray(olFeature)) {
+                      vectorSource.addFeatures(olFeature);
+                    } else {
+                      vectorSource.addFeature(olFeature);
+                    }
+                  } catch (error) {
+                    console.warn(`Failed to load river feature at level ${level}:`, error);
+                  }
+                }
+              });
+              success?.(vectorSource.getFeatures());
+            })
+            .catch(error => {
+              console.error('Error loading river data:', error);
+              failure?.();
+            });
+        }
+      });
+
+      const riverLayer = new VectorLayer({
+        properties: {
+          name: mergedOptions.layerName,
+          layerName: mergedOptions.layerName,
+          riverLevel: level
+        },
+        source: vectorSource,
+        style: (feature: FeatureLike) => {
+          if (feature instanceof Feature) {
+            feature.set('type', mergedOptions.layerName);
+            feature.set('layerName', mergedOptions.layerName);
+          }
+          
+          // 如果传入了自定义样式，直接使用
+          if (mergedOptions.style) {
+          if (typeof mergedOptions.style === 'function') {
+            return mergedOptions.style(feature);
+          }else {
+            return mergedOptions.style;
+          }
+        }
+          
+          return new Style({
+            stroke: new Stroke({
+              color: mergedOptions.strokeColor,
+              width: mergedOptions.strokeWidth
+            })
+          });
+        },
+        zIndex: mergedOptions.zIndex
+      });
+
+      riverLayer.setVisible(false);
+      this.riverLayerList.push(riverLayer);
+      this.map.addLayer(riverLayer);
+    }
+
+    // 设置缩放事件监听
+    this.eventManager.on('moveend', () => {
+      this.showRiverLayerByZoom();
+    });
+
+    // 初始显示
+    this.showRiverLayerByZoom();
+  }
+
 
 
   /**
@@ -282,6 +457,7 @@ export default class Line {
    * @param options 河流图层配置选项
    * @returns 创建的河流图层
    */
+  addRiverWidthByLevel(data: MapJSONData, options?: RiverLayerOptions): VectorLayer<VectorSource>;
   addRiverWidthByLevel(data: MapJSONData, options: RiverLayerOptions = {}): VectorLayer<VectorSource> {
     ValidationUtils.validateGeoJSONData(data);
     
@@ -313,6 +489,71 @@ export default class Line {
         layerName: mergedOptions.layerName
       },
       source: new VectorSource({ features }),
+      style: (feature: FeatureLike) => {
+        // 如果传入了自定义样式，直接使用
+         if (mergedOptions.style) {
+          if (typeof mergedOptions.style === 'function') {
+            return mergedOptions.style(feature);
+          }else {
+            return mergedOptions.style;
+          }
+        }
+        
+        const level = feature.get('level');
+        const levelWidth = mergedOptions.levelWidthMap[Number(level)] || 1;
+        return new Style({
+          stroke: new Stroke({
+            color: mergedOptions.strokeColor,
+            width: levelWidth
+          })
+        });
+      },
+      zIndex: mergedOptions.zIndex
+    });
+
+    riverLayer.setVisible(mergedOptions.visible);
+    this.map.addLayer(riverLayer);
+    
+    return riverLayer;
+  }
+
+  /**
+   * 从URL添加按级别显示不同宽度的河流图层
+   * @param url 河流数据URL
+   * @param options 河流图层配置选项
+   * @returns 创建的河流图层
+   */
+  addRiverWidthByLevelByUrl(url: string, options: RiverLayerOptions = {}): VectorLayer<VectorSource> {
+    // 合并默认配置
+    const mergedOptions = {
+      type: 'river',
+      layerName: 'river',
+      strokeColor: 'rgba(3, 122, 255, 1)',
+      strokeWidth: 2,
+      visible: true,
+      zIndex: 15,
+      levelWidthMap: this.defaultLevelWidthMap,
+      removeExisting: options.removeExisting ?? false,
+      ...options
+    };
+
+    // 移除同名图层（如果存在）
+    if (mergedOptions.removeExisting && mergedOptions.layerName) {
+      MapTools.removeLayer(this.map, mergedOptions.layerName);
+    }
+
+    const source = new VectorSource({
+      url,
+      format: new GeoJSON(options.projectionOptOptions)
+    });
+
+    // 创建河流图层
+    const riverLayer = new VectorLayer({
+      properties: {
+        name: mergedOptions.layerName,
+        layerName: mergedOptions.layerName
+      },
+      source,
       style: (feature: FeatureLike) => {
         // 如果传入了自定义样式，直接使用
          if (mergedOptions.style) {

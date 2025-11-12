@@ -19,6 +19,7 @@ import Point from "./core/Point";
 import Line from "./core/Line";
 import MapBaseLayers from "./core/MapBaseLayers";
 import MapTools from "./core/MapTools";
+import SelectHandler from "./core/SelectHandler";
 import { ErrorHandler, MyOpenLayersError, ErrorType } from './utils/ErrorHandler';
 import { EventManager } from './core/EventManager';
 import { ConfigManager } from './core/ConfigManager';
@@ -40,6 +41,7 @@ export default class MyOl {
   private _mapTools?: MapTools;
   private _point?: Point;
   private _line?: Line;
+  private _selectHandler?: SelectHandler;
 
   // 管理器实例
   private readonly errorHandler: ErrorHandler;
@@ -335,6 +337,25 @@ export default class MyOl {
   }
 
   /**
+   * 获取要素选择处理器模块
+   * @returns SelectHandler 要素选择处理器实例
+   */
+  getSelectHandler(): SelectHandler {
+    try {
+      if (!this._selectHandler) {
+        this._selectHandler = new SelectHandler(this.map);
+        console.debug('要素选择模块已加载');
+      }
+      return this._selectHandler;
+    } catch (error) {
+      this.errorHandler.handleError(
+        new MyOpenLayersError('要素选择模块初始化失败', ErrorType.COMPONENT_ERROR, { error })
+      );
+      throw error;
+    }
+  }
+
+  /**
    * 获取地图工具模块
    * @returns MapTools 地图工具实例
    */
@@ -478,6 +499,7 @@ export default class MyOl {
       this._polygon = undefined;
       this._mapTools = undefined;
       this._baseLayers = undefined;
+      this._selectHandler = undefined;
 
       // 销毁地图
       this.map.setTarget(undefined);

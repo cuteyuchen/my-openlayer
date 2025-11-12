@@ -71,7 +71,6 @@ export default class Polygon {
     ValidationUtils.validateGeoJSONData(data);
 
     const mergedOptions: PolygonOptions = {
-      layerName: 'border',
       fillColor: 'rgba(255, 255, 255, 0)',
       ...options
     };
@@ -81,6 +80,25 @@ export default class Polygon {
     if (mergedOptions.mask) {
       this.setOutLayer(data);
     }
+
+    return layer;
+  }
+
+  /**
+   * 从URL添加地图边框图层
+   * @param url 数据URL
+   * @param options 图层配置选项
+   * @returns 创建的图层实例
+   * @throws 当数据格式无效时抛出错误
+   */
+  addBorderPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource> {
+    const mergedOptions: PolygonOptions = {
+      layerName: 'border',
+      fillColor: 'rgba(255, 255, 255, 0)',
+      ...options
+    };
+
+    const layer = this.addPolygonByUrl(url, mergedOptions);
 
     return layer;
   }
@@ -139,6 +157,65 @@ export default class Polygon {
     // 如果需要适应视图
     if (mergedOptions.fitView) {
       this.fitViewToLayer(layer);
+    }
+
+    return layer;
+  }
+
+  /**
+   * 从URL添加多边形图层
+   * @param url 数据URL
+   * @param options 图层配置选项
+   * @returns 创建的矢量图层
+   * @throws 当数据格式无效时抛出错误
+   */
+  addPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource> {
+    const mergedOptions: PolygonOptions = {
+      zIndex: 11,
+      visible: true,
+      strokeColor: '#EBEEF5',
+      strokeWidth: 2,
+      fillColor: 'rgba(255, 255, 255, 0)',
+      textFont: '14px Calibri,sans-serif',
+      textFillColor: '#FFF',
+      textStrokeColor: '#409EFF',
+      textStrokeWidth: 2,
+      ...options
+    };
+
+    // 如果指定了图层名称，先移除同名图层
+    if (mergedOptions.layerName) {
+      new MapTools(this.map).removeLayer(mergedOptions.layerName);
+    }
+
+    const source = new VectorSource({
+      url,
+      format: new GeoJSON(mergedOptions.projectionOptOptions ?? {})
+    });
+
+    const layer = new VectorLayer({
+      properties: {
+        name: mergedOptions.layerName,
+        layerName: mergedOptions.layerName
+      },
+      source,
+      zIndex: mergedOptions.zIndex
+    });
+
+    // 在数据加载后设置样式
+    source.once('featuresloadend', () => {
+      const loadedFeatures = source.getFeatures();
+      this.setFeatureStyles(loadedFeatures, mergedOptions);
+    });
+
+    layer.setVisible(mergedOptions.visible!);
+    this.map.addLayer(layer);
+
+    // 如果需要适应视图
+    if (mergedOptions.fitView) {
+      source.once('featuresloadend', () => {
+        this.fitViewToLayer(layer);
+      });
     }
 
     return layer;

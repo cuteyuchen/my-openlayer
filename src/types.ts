@@ -4,6 +4,7 @@ import { WMTS } from "ol/source";
 import View from "ol/View";
 import Feature, { FeatureLike } from "ol/Feature";
 import { Style } from "ol/style";
+import MapBrowserEvent from "ol/MapBrowserEvent";
 
 export interface FeatureData {
   type: string;
@@ -352,4 +353,57 @@ export interface VueTemplatePointInstance {
   getOptions(): Readonly<VueTemplatePointOptions>;
 
   isDestroyed(): boolean;
+}
+
+/**
+ * 选择模式类型
+ */
+export type SelectMode = 'click' | 'hover' | 'ctrl';
+
+/**
+ * 选择回调事件接口
+ */
+export interface SelectCallbackEvent {
+  /** 新选中的要素数组 */
+  selected: FeatureLike[];
+  /** 取消选中的要素数组 */
+  deselected: FeatureLike[];
+  /** 地图浏览器事件 */
+  mapBrowserEvent: MapBrowserEvent<any>;
+}
+
+/**
+ * 要素选择配置选项
+ */
+export interface SelectOptions {
+  /** 是否支持多选，默认 false */
+  multi?: boolean;
+  /** 图层过滤器，指定可选择的图层名称列表 */
+  layerFilter?: string[];
+  /** 要素过滤器函数 */
+  featureFilter?: (feature: FeatureLike) => boolean;
+  /** 点击容差（像素），默认为 0 */
+  hitTolerance?: number;
+  /** 选中要素的样式 */
+  selectStyle?: Style | Style[] | ((feature: FeatureLike) => Style | Style[]);
+  /** 选中要素时的回调函数 */
+  onSelect?: (event: SelectCallbackEvent) => void;
+  /** 取消选中要素时的回调函数 */
+  onDeselect?: (event: SelectCallbackEvent) => void;
+}
+
+/**
+ * 编程式选择选项接口
+ */
+export interface ProgrammaticSelectOptions {
+  /** 图层名称，指定在哪个图层中选择要素 */
+  layerName?: string;
+  /** 自定义选中样式（仅作用于此次选择） */
+  selectStyle?: Style | Style[] | ((feature: FeatureLike) => Style | Style[]);
+  /** 是否定位至选中要素，默认 false */
+  fitView?: boolean;
+  /** 定位动画持续时间（毫秒），默认 500 */
+  fitDuration?: number;
+  /** 定位时的边距（像素），默认 100 */
+  fitPadding?: number;
 }

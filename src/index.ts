@@ -8,6 +8,7 @@ export { default as MapBaseLayers } from './core/MapBaseLayers'
 export { default as MapTools } from './core/MapTools'
 export { default as MeasureHandler } from './core/MeasureHandler'
 export { default as VueTemplatePoint } from './core/VueTemplatePoint'
+export { default as SelectHandler } from './core/SelectHandler'
 
 // 新增工具类
 export { ConfigManager } from './core/ConfigManager'
@@ -48,5 +49,9 @@ export type {
   AnnotationType,
   TiandituType,
   MapLayers,
-  AnnotationLayerOptions
+  AnnotationLayerOptions,
+  SelectOptions,
+  SelectMode,
+  SelectCallbackEvent,
+  ProgrammaticSelectOptions
 } from './types'
