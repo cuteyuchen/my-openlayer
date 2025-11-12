@@ -255,7 +255,7 @@ export default class Line {
                   vectorSource.addFeature(olFeature);
                 }
               } catch (error) {
-                console.warn(`Failed to load river feature at level ${level}:`, error);
+                ErrorHandler.getInstance().warn(`Failed to load river feature at level ${level}:`, error);
               }
             }
           });
@@ -358,14 +358,14 @@ export default class Line {
                       vectorSource.addFeature(olFeature);
                     }
                   } catch (error) {
-                    console.warn(`Failed to load river feature at level ${level}:`, error);
+                    ErrorHandler.getInstance().warn(`Failed to load river feature at level ${level}:`, error);
                   }
                 }
               });
               success?.(vectorSource.getFeatures());
             })
             .catch(error => {
-              console.error('Error loading river data:', error);
+              ErrorHandler.getInstance().error('Error loading river data:', error);
               failure?.();
             });
         }

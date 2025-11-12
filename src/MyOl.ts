@@ -81,6 +81,10 @@ export default class MyOl {
       // 合并配置（处理 undefined 情况）
       this.options = ConfigManager.mergeOptions(MyOl.DefaultOptions, options || {});
 
+      // 初始化日志配置（默认关闭，级别为 error）
+      this.errorHandler.setEnabled(this.options.enableLog ?? false);
+      this.errorHandler.setLogLevel(this.options.logLevel ?? 'error');
+
       // 参数验证
       this.validateConstructorParams(id, this.options);
 
@@ -184,7 +188,7 @@ export default class MyOl {
 
     // 地图加载完成事件
     eventManager.on('rendercomplete', (eventData) => {
-      console.debug('地图初始化完成', { map: this.map });
+      this.errorHandler.debug('地图初始化完成', { map: this.map });
     }, { once: true });
 
     // 地图错误事件
@@ -233,7 +237,7 @@ export default class MyOl {
    * @deprecated 请使用 createView 方法
    */
   static getView(options: MapInitType = MyOl.DefaultOptions): View {
-    console.warn('getView 方法已废弃，请使用 createView 方法');
+    ErrorHandler.getInstance().warn('getView 方法已废弃，请使用 createView 方法');
     return MyOl.createView(options);
   }
 
@@ -250,7 +254,7 @@ export default class MyOl {
     try {
       if (!this._polygon) {
         this._polygon = new Polygon(this.map);
-        console.debug('面要素模块已加载');
+        this.errorHandler.debug('面要素模块已加载');
       }
       return this._polygon;
     } catch (error) {
@@ -270,7 +274,7 @@ export default class MyOl {
       if (!this._baseLayers) {
         // 检查是否设置了自定义底图
         if (Array.isArray(this.options.layers)) {
-          console.warn('已设置默认底图，MapBaseLayers 中的 switchBaseLayer 方法将失效');
+          this.errorHandler.warn('已设置默认底图，MapBaseLayers 中的 switchBaseLayer 方法将失效');
         }
 
         const layerOptions: MapLayersOptions = {
@@ -283,7 +287,7 @@ export default class MyOl {
         };
 
         this._baseLayers = new MapBaseLayers(this.map, layerOptions);
-        console.debug('基础图层模块已加载');
+        this.errorHandler.debug('基础图层模块已加载');
       }
       return this._baseLayers;
     } catch (error) {
@@ -306,7 +310,7 @@ export default class MyOl {
     try {
       if (!this._point) {
         this._point = new Point(this.map);
-        console.debug('点要素模块已加载');
+        this.errorHandler.debug('点要素模块已加载');
       }
       return this._point;
     } catch (error) {
@@ -325,7 +329,7 @@ export default class MyOl {
     try {
       if (!this._line) {
         this._line = new Line(this.map);
-        console.debug('线要素模块已加载');
+        this.errorHandler.debug('线要素模块已加载');
       }
       return this._line;
     } catch (error) {
@@ -344,7 +348,7 @@ export default class MyOl {
     try {
       if (!this._selectHandler) {
         this._selectHandler = new SelectHandler(this.map);
-        console.debug('要素选择模块已加载');
+        this.errorHandler.debug('要素选择模块已加载');
       }
       return this._selectHandler;
     } catch (error) {
@@ -363,7 +367,7 @@ export default class MyOl {
     try {
       if (!this._mapTools) {
         this._mapTools = new MapTools(this.map);
-        console.debug('工具模块已加载');
+        this.errorHandler.debug('工具模块已加载');
       }
       return this._mapTools;
     } catch (error) {
@@ -425,7 +429,7 @@ export default class MyOl {
       this.getPoint().locationAction(longitude, latitude, zoom, duration);
 
       // 记录定位操作
-      console.debug('地图定位完成', {
+      this.errorHandler.debug('地图定位完成', {
         longitude,
         latitude,
         zoom,
@@ -504,7 +508,7 @@ export default class MyOl {
       // 销毁地图
       this.map.setTarget(undefined);
 
-      console.debug('地图实例已销毁', { map: this.map });
+      this.errorHandler.debug('地图实例已销毁', { map: this.map });
 
     } catch (error) {
       this.errorHandler.handleError(

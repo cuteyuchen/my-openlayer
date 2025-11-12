@@ -21,6 +21,7 @@ import {
   FeatureColorUpdateOptions
 } from '../types'
 import MapTools from "./MapTools";
+import { ErrorHandler } from '../utils/ErrorHandler';
 import { ValidationUtils } from '../utils/ValidationUtils';
 
 /**
@@ -336,7 +337,7 @@ export default class Polygon {
 
     const features = layer.getSource()?.getFeatures();
     if (!features) {
-      console.warn(`No features found in layer '${layerName}'`);
+      ErrorHandler.getInstance().warn(`No features found in layer '${layerName}'`);
       return;
     }
 
@@ -418,7 +419,7 @@ export default class Polygon {
           group = group.concat(coords)
         })
       } else {
-        console.log('暂时不支持的类型')
+        ErrorHandler.getInstance().warn('暂时不支持的类型')
       }
       return group
     }
@@ -685,7 +686,7 @@ export default class Polygon {
     }
 
     if (!features || features.length === 0) {
-      console.warn('No features found in mask data');
+      ErrorHandler.getInstance().warn('No features found in mask data');
     }
 
     const maskLayer = new VectorLayer({

@@ -9,6 +9,7 @@ import { unByKey } from 'ol/Observable.js';
 import Map from "ol/Map";
 import { MeasureHandlerType } from "../types";
 import { ValidationUtils } from '../utils/ValidationUtils';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
 import { Feature } from 'ol';
 
@@ -204,7 +205,7 @@ export default class MeasureHandler {
         this._map.removeInteraction(this._draw);
       }
     } catch (error) {
-      console.error('Error starting measurement:', error);
+      ErrorHandler.getInstance().error('Error starting measurement:', error);
       throw new Error('Failed to start measurement');
     }
     this._draw = new Draw({

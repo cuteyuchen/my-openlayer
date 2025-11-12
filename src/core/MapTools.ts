@@ -80,7 +80,7 @@ export default class MapTools {
         }
       });
     } catch (error) {
-      console.error('Error getting layers:', error);
+      ErrorHandler.getInstance().error('Error getting layers:', error);
       throw new Error('Failed to retrieve layers from map');
     }
     
@@ -138,7 +138,7 @@ export default class MapTools {
         this.map.removeLayer(layer);
       });
     } catch (error) {
-      console.error('Error removing layers:', error);
+      ErrorHandler.getInstance().error('Error removing layers:', error);
       throw new Error('Failed to remove layers from map');
     }
   }
@@ -160,7 +160,7 @@ export default class MapTools {
         map.removeLayer(layer);
       });
     } catch (error) {
-      console.error('Error removing layers:', error);
+      ErrorHandler.getInstance().error('Error removing layers:', error);
       throw new Error('Failed to remove layers from map');
     }
   }
@@ -182,7 +182,7 @@ export default class MapTools {
         layer.setVisible(visible);
       });
     } catch (error) {
-      console.error('Error setting layer visibility:', error);
+      ErrorHandler.getInstance().error('Error setting layer visibility:', error);
       throw new Error('Failed to set layer visibility');
     }
   }
@@ -213,7 +213,7 @@ export default class MapTools {
         layer.setVisible(visible);
       });
     } catch (error) {
-      console.error('Error setting layer visibility:', error);
+      ErrorHandler.getInstance().error('Error setting layer visibility:', error);
       throw new Error('Failed to set layer visibility');
     }
   }

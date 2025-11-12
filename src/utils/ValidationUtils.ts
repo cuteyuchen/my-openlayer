@@ -2,6 +2,8 @@
  * 验证工具类
  * 统一管理所有验证方法
  */
+import { ErrorHandler } from './ErrorHandler';
+
 export class ValidationUtils {
   /**
    * 验证坐标是否有效
@@ -30,7 +32,7 @@ export class ValidationUtils {
    */
   static validateLngLat(lgtd: number, lttd: number): boolean {
     if (!lgtd || !lttd || isNaN(lgtd) || isNaN(lttd)) {
-      console.error('Invalid longitude or latitude coordinates');
+      ErrorHandler.getInstance().error('Invalid longitude or latitude coordinates');
       return false;
     }
     return true;
@@ -43,7 +45,7 @@ export class ValidationUtils {
    */
   static validatePointData(pointData: any[]): boolean {
     if (!pointData || pointData.length === 0) {
-      console.warn('Point data is empty or undefined');
+      ErrorHandler.getInstance().warn('Point data is empty or undefined');
       return false;
     }
     return true;
@@ -56,7 +58,7 @@ export class ValidationUtils {
    */
   static validateCoordinates(item: any): boolean {
     if (!item.lgtd || !item.lttd) {
-      console.warn('Invalid coordinates for point:', item);
+      ErrorHandler.getInstance().warn('Invalid coordinates for point:', item);
       return false;
     }
     return true;
@@ -112,11 +114,11 @@ export class ValidationUtils {
    */
   static validateGeoJSONData(data: any): boolean {
     if (!data) {
-      console.warn('GeoJSON data is required');
+      ErrorHandler.getInstance().warn('GeoJSON data is required');
       return false;
     }
     if (!data.features || !Array.isArray(data.features)) {
-      console.warn('Invalid GeoJSON data: features array is required');
+      ErrorHandler.getInstance().warn('Invalid GeoJSON data: features array is required');
       return false;
     }
     return true;
@@ -129,7 +131,7 @@ export class ValidationUtils {
    */
   static validateOptions(options: any): boolean {
     if (!options || typeof options !== 'object') {
-      console.warn('Options are required and must be an object');
+      ErrorHandler.getInstance().warn('Options are required and must be an object');
       return false;
     }
     return true;
@@ -160,7 +162,7 @@ export class ValidationUtils {
    */
   static validateElementId(id: string): boolean {
     if (!id) {
-      console.error('Element ID is required');
+      ErrorHandler.getInstance().error('Element ID is required');
       return false;
     }
     return true;
@@ -175,17 +177,17 @@ export class ValidationUtils {
    */
   static validateVueParams(pointInfoList: any[], template: any, Vue: any): boolean {
     if (!pointInfoList || !Array.isArray(pointInfoList) || pointInfoList.length === 0) {
-      console.error('Valid point info list is required');
+      ErrorHandler.getInstance().error('Valid point info list is required');
       return false;
     }
     
     if (!template) {
-      console.error('Vue template is required');
+      ErrorHandler.getInstance().error('Vue template is required');
       return false;
     }
     
     if (!Vue) {
-      console.error('Vue instance is required');
+      ErrorHandler.getInstance().error('Vue instance is required');
       return false;
     }
     

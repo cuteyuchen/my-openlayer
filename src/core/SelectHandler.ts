@@ -129,7 +129,7 @@ export default class SelectHandler {
       this.map.addInteraction(this.selectInteraction);
       this.isEnabled = true;
 
-      console.debug('要素选择已启用', { mode, options: mergedOptions });
+      this.errorHandler.debug('要素选择已启用', { mode, options: mergedOptions });
       return this;
 
     } catch (error) {
@@ -158,7 +158,7 @@ export default class SelectHandler {
       this.isEnabled = false;
       this.currentMode = undefined;
 
-      console.debug('要素选择已禁用');
+      this.errorHandler.debug('要素选择已禁用');
       return this;
 
     } catch (error) {
@@ -205,12 +205,12 @@ export default class SelectHandler {
   selectByIds(featureIds: string[], options?: ProgrammaticSelectOptions): this {
     try {
       if (!this.selectInteraction) {
-        console.warn('选择交互未启用，无法选择要素');
+        this.errorHandler.warn('选择交互未启用，无法选择要素');
         return this;
       }
 
       if (!featureIds || featureIds.length === 0) {
-        console.warn('要素ID列表为空');
+        this.errorHandler.warn('要素ID列表为空');
         return this;
       }
 
@@ -288,7 +288,7 @@ export default class SelectHandler {
   selectByProperty(propertyName: string, propertyValue: any, options?: ProgrammaticSelectOptions): this {
     try {
       if (!this.selectInteraction) {
-        console.warn('选择交互未启用，无法选择要素');
+        this.errorHandler.warn('选择交互未启用，无法选择要素');
         return this;
       }
 
@@ -417,7 +417,7 @@ export default class SelectHandler {
         });
       }
     } catch (error) {
-      console.error('定位至要素失败:', error);
+      this.errorHandler.error('定位至要素失败:', error);
     }
   }
 
@@ -427,7 +427,7 @@ export default class SelectHandler {
   destroy(): void {
     try {
       this.disableSelect();
-      console.debug('选择处理器已销毁');
+      this.errorHandler.debug('选择处理器已销毁');
     } catch (error) {
       this.errorHandler.handleError(
         new MyOpenLayersError(
@@ -554,7 +554,7 @@ export default class SelectHandler {
    */
   updateSelectStyle(selectStyle: Style | Style[] | ((feature: FeatureLike) => Style | Style[])): this {
     if (!this.selectInteraction) {
-      console.warn('选择交互未启用，无法更新样式');
+      this.errorHandler.warn('选择交互未启用，无法更新样式');
       return this;
     }
 
@@ -606,7 +606,7 @@ export default class SelectHandler {
         try {
           options.onSelect(callbackEvent);
         } catch (error) {
-          console.error('选择回调执行失败:', error);
+          this.errorHandler.error('选择回调执行失败:', error);
         }
       }
 
@@ -615,7 +615,7 @@ export default class SelectHandler {
         try {
           options.onDeselect(callbackEvent);
         } catch (error) {
-          console.error('取消选择回调执行失败:', error);
+          this.errorHandler.error('取消选择回调执行失败:', error);
         }
       }
     });

@@ -33,7 +33,9 @@ export interface MapInitType {
   extent?: number[],
   mapClipData?: MapJSONData,
   token?: string,
-  annotation?: boolean //注记
+  annotation?: boolean,
+  enableLog?: boolean,
+  logLevel?: 'debug' | 'info' | 'warn' | 'error'
 }
 
 export type AnnotationType = 'cva_c' | 'cia_c' | 'cta_c'

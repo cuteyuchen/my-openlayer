@@ -23,7 +23,7 @@ async function detectAndImportVue() {
       isVue3 = false;
     }
   } catch (e) {
-    console.warn('Vue not found. Please ensure Vue is installed in your project.');
+    ErrorHandler.getInstance().warn('Vue not found. Please ensure Vue is installed in your project.');
     Vue = null;
   }
 }
@@ -46,12 +46,12 @@ function detectVueSync() {
           Vue = requireFunc('vue');
           isVue3 = !!(Vue.version?.startsWith('3') || Vue.createApp);
         } catch (e) {
-          console.warn('Vue not found. Please ensure Vue is installed in your project.');
+          ErrorHandler.getInstance().warn('Vue not found. Please ensure Vue is installed in your project.');
           Vue = null;
         }
       }
   } catch (e) {
-    console.warn('Failed to detect Vue:', e);
+    ErrorHandler.getInstance().warn('Failed to detect Vue:', e);
   }
 }
 
@@ -530,7 +530,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
    */
   remove(): void {
     if (this.state === VueTemplatePointState.DESTROYED) {
-      console.warn('DOM point already destroyed');
+      this.errorHandler.warn('DOM point already destroyed');
       return;
     }
     

@@ -42,6 +42,7 @@ export class ErrorHandler {
   private static instance: ErrorHandler;
   private errorCallbacks: Array<(error: MyOpenLayersError) => void> = [];
   private logLevel: 'debug' | 'info' | 'warn' | 'error' = 'error';
+  private enabled: boolean = false;
 
   private constructor() {}
 
@@ -61,6 +62,51 @@ export class ErrorHandler {
    */
   setLogLevel(level: 'debug' | 'info' | 'warn' | 'error'): void {
     this.logLevel = level;
+  }
+
+  /**
+   * 设置日志开关
+   * @param enabled 是否启用日志输出
+   */
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+
+  /**
+   * 日志门槛判断
+   */
+  private shouldLog(target: 'debug' | 'info' | 'warn' | 'error'): boolean {
+    const levelOrder: Record<'debug' | 'info' | 'warn' | 'error', number> = {
+      debug: 0,
+      info: 1,
+      warn: 2,
+      error: 3
+    };
+    return this.enabled && levelOrder[target] >= levelOrder[this.logLevel];
+  }
+
+  debug(...args: any[]): void {
+    if (this.shouldLog('debug')) {
+      console.debug(...args);
+    }
+  }
+
+  info(...args: any[]): void {
+    if (this.shouldLog('info')) {
+      console.info(...args);
+    }
+  }
+
+  warn(...args: any[]): void {
+    if (this.shouldLog('warn')) {
+      console.warn(...args);
+    }
+  }
+
+  error(...args: any[]): void {
+    if (this.shouldLog('error')) {
+      console.error(...args);
+    }
   }
 
   /**
@@ -125,22 +171,7 @@ export class ErrorHandler {
       context: error.context,
       stack: error.stack
     };
-
-    switch (this.logLevel) {
-      case 'debug':
-        console.debug(logMessage, logData);
-        break;
-      case 'info':
-        console.info(logMessage, logData);
-        break;
-      case 'warn':
-        console.warn(logMessage, logData);
-        break;
-      case 'error':
-      default:
-        console.error(logMessage, logData);
-        break;
-    }
+    this.error(logMessage, logData);
   }
 
   /**

@@ -16,6 +16,7 @@ import MapTools from "./MapTools";
 import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
 import { ValidationUtils } from '../utils/ValidationUtils';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
 
 export default class Point {
@@ -332,7 +333,7 @@ export default class Point {
       this.map.getView().animate({ center: [lgtd, lttd], zoom, duration });
       return true;
     } catch (error) {
-      console.error('[地图定位]', '定位失败:', error);
+      ErrorHandler.getInstance().error('[地图定位]', '定位失败:', error);
       return false;
     }
   }
@@ -342,7 +343,7 @@ export default class Point {
    */
   addDomPoint(id: string, lgtd: number, lttd: number): boolean {
     if (!id) {
-      console.error('Element ID is required');
+      ErrorHandler.getInstance().error('Element ID is required');
       return false;
     }
     
@@ -352,7 +353,7 @@ export default class Point {
     
     const el = document.getElementById(id);
     if (!el) {
-      console.error(`Element with id '${id}' not found`);
+      ErrorHandler.getInstance().error(`Element with id '${id}' not found`);
       return false;
     }
     
@@ -367,7 +368,7 @@ export default class Point {
       this.map.addOverlay(anchor);
       return true;
     } catch (error) {
-      console.error('Failed to set DOM point:', error);
+      ErrorHandler.getInstance().error('Failed to set DOM point:', error);
       return false;
     }
   }
