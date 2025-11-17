@@ -89,7 +89,7 @@ export default class MyOl {
       this.validateConstructorParams(id, this.options);
 
       // 初始化坐标系
-      MyOl.initializeProjections();
+      MyOl.initializeProjections(this.options);
 
       // 准备图层
       const layers: BaseLayer[] = Array.isArray(this.options.layers) ? this.options.layers : [];
@@ -149,7 +149,7 @@ export default class MyOl {
    * 初始化坐标系
    * @private
    */
-  private static initializeProjections(): void {
+  private static initializeProjections(options: MapInitType): void {
     // 定义 CGCS2000 坐标系
     proj4.defs(MyOl.PROJECTIONS.CGCS2000, "+proj=longlat +ellps=GRS80 +no_defs");
     proj4.defs(MyOl.PROJECTIONS.CGCS2000_3_DEGREE, "+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs");
@@ -165,6 +165,20 @@ export default class MyOl {
       units: "degrees"
     });
     olProjAddProjection(cgsc2000);
+
+    if (options.projection?.code) {
+      const code = options.projection.code;
+      if (options.projection.def) {
+        proj4.defs(code, options.projection.def);
+      }
+      const customProj = new olProjProjection({
+        code,
+        extent: options.projection.extent ?? cgsc2000.getExtent(),
+        worldExtent: options.projection.worldExtent ?? cgsc2000.getWorldExtent(),
+        units: options.projection.units ?? cgsc2000.getUnits()
+      });
+      olProjAddProjection(customProj);
+    }
   }
 
   /**
@@ -206,11 +220,12 @@ export default class MyOl {
    */
   static createView(options: MapInitType = MyOl.DefaultOptions): View {
     try {
+      const code = options.projection?.code ?? MyOl.PROJECTIONS.CGCS2000;
       const projection = new olProjProjection({
-        code: MyOl.PROJECTIONS.CGCS2000,
-        extent: [-180, -90, 180, 90],
-        worldExtent: [-180, -90, 180, 90],
-        units: "degrees"
+        code,
+        extent: options.projection?.extent ?? [-180, -90, 180, 90],
+        worldExtent: options.projection?.worldExtent ?? [-180, -90, 180, 90],
+        units: options.projection?.units ?? "degrees"
       });
 
       const viewOptions = {

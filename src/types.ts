@@ -5,6 +5,7 @@ import View from "ol/View";
 import Feature, { FeatureLike } from "ol/Feature";
 import { Style } from "ol/style";
 import MapBrowserEvent from "ol/MapBrowserEvent";
+import { Units } from "ol/proj/Units";
 
 export interface FeatureData {
   type: string;
@@ -35,7 +36,14 @@ export interface MapInitType {
   token?: string,
   annotation?: boolean,
   enableLog?: boolean,
-  logLevel?: 'debug' | 'info' | 'warn' | 'error'
+  logLevel?: 'debug' | 'info' | 'warn' | 'error',
+  projection?: {
+    code: string,
+    def?: string,
+    extent?: number[],
+    worldExtent?: number[],
+    units?: Units
+  }
 }
 
 export type AnnotationType = 'cva_c' | 'cia_c' | 'cta_c'
