@@ -8,6 +8,60 @@ my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地�
 
 ---
 
+## 项目概述
+
+- 项目名称：`my-openlayer`
+- 用途：基于 OpenLayers 的 TypeScript 地图组件库，提供点/线/面要素、底图切换、热力图、事件与配置管理等能力，面向 Web GIS 开发者
+- 目标用户：Web GIS 开发者、可视化工程师、前端开发者
+- 状态徽章：
+  - [![npm](https://img.shields.io/npm/v/my-openlayer.svg)](https://www.npmjs.com/package/my-openlayer)
+  - ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)
+  - ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+  - ![Build](https://img.shields.io/badge/build-local%20(vite)-blue.svg)
+  - ![Coverage](https://img.shields.io/badge/coverage-not%20configured-lightgrey.svg)
+  - ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-6DA55F.svg)
+  - ![ol](https://img.shields.io/badge/ol-^10.6.1-blue.svg)
+
+## 环境要求
+
+- Node.js >= 18（Vite 5 要求）
+- 包管理器：npm / yarn / pnpm
+- 运行时依赖：`ol@^10.6.1`、`proj4@^2.7.5`、`@turf/turf@^7.2.0`
+- 开发依赖：`vite@^5.4.10`、`@vitejs/plugin-vue@^5.0.4`、`typescript@~5.6.2`、`vue-tsc@^2.0.6`
+
+## 安装指南
+
+- 安装库：`npm i my-openlayer` 或 `yarn add my-openlayer` 或 `pnpm add my-openlayer`
+- 示例与开发：
+  - 安装依赖：`npm i`
+  - 开发示例：`npm run dev`
+  - 构建库：`npm run build`
+- 配置文件：
+  - TypeScript：`tsconfig.json`（声明输出 `dist/`）
+  - Vite：`vite.config.ts`（插件：@vitejs/plugin-vue、vite-plugin-libcss）
+  - 环境变量：`.env` 设置 `VITE_TIANDITU_TOKEN=your_token`
+
+## 使用说明
+
+- 主要功能的使用参考下文「详细用法」与「API 文档与示例」
+- 示例代码与截图：运行 `npm run dev` 后查看 `examples/App.vue` 渲染效果（截图略）
+- FAQ：见下文「常见问题」
+
+## 开发指南
+
+- 项目结构：
+  - `src/` 核心库源码；`src/core` 包含 BaseLayers/Tools/Point/Line/Polygon/Select 等模块
+  - `examples/` Vue3 + Vite 示例；入口 `index.html` → `examples/main.ts`
+  - `dist/` 构建输出；`temp-publish/` 发布前整理产物
+  - 配置与脚本：`package.json`、`tsconfig.json`、`vite.config.ts`、`scripts/prepare-publish.cjs`
+- 开发环境搭建：Node 18+，`npm i` 安装依赖，`npm run dev` 启动示例，`.env` 设置 `VITE_TIANDITU_TOKEN`
+- 代码贡献规范：分支 `feature/xxx`、`fix/xxx`；`type(scope): subject` 提交信息；TypeScript 严格类型，2 空格缩进
+
+## 许可证信息
+
+- 许可证：MIT（见 `LICENSE`）
+- 版权声明：Copyright (c) 2025 cuteyuchen
+
 ## 目录
 
 - [功能亮点](#功能亮点)
@@ -86,13 +140,13 @@ pnpm add my-openlayer
 使用天地图服务需要配置API Token：
 
 ```bash
-# 在项目根目录创建 .env 文件
-VUE_APP_TIANDITU_TOKEN=your_tianditu_token_here
+# 在项目根目录创建 .env 文件（Vite）
+VITE_TIANDITU_TOKEN=your_tianditu_token_here
 
-# 其他可选配置
-VUE_APP_MAP_CENTER_LON=119.81
-VUE_APP_MAP_CENTER_LAT=29.969
-VUE_APP_MAP_ZOOM=10
+# 其他可选配置（示例）
+VITE_MAP_CENTER_LON=119.81
+VITE_MAP_CENTER_LAT=29.969
+VITE_MAP_ZOOM=10
 ```
 
 ### 配置选项
@@ -131,7 +185,7 @@ const mapConfig: MapInitType = {
   zoom: 10,
   minZoom: 8,
   maxZoom: 20,
-  token: process.env.VUE_APP_TIANDITU_TOKEN, // 从环境变量获取天地图token
+  token: import.meta.env.VITE_TIANDITU_TOKEN, // 从环境变量获取天地图 token（Vite）
   annotation: true,
   layers: {
     vec_c: [],
@@ -148,6 +202,29 @@ const map = new MyOl('map-container', mapConfig);
 
 ```html
 <div id="map-container" style="width: 100vw; height: 100vh;"></div>
+```
+
+### 模块获取与使用模式
+
+```typescript
+// 1) 链式调用（推荐）：通过 MyOl 获取模块并直接使用
+const myOl = new MyOl('map-container', mapConfig);
+myOl.getPoint().addPoint(pointData, { layerName: 'p', textKey: 'name', img: 'marker.png' });
+myOl.getLine().addLine(lineGeoJSON, { layerName: 'line', strokeColor: '#037AFF', strokeWidth: 3 });
+myOl.getPolygon().addPolygon(zoneGeoJSON, { layerName: 'zone', textKey: 'name', textVisible: true });
+
+// 2) 独立实例化：直接传入原生 ol.Map 创建模块实例
+const olMap = myOl.map; // MyOl 暴露原生 Map 实例
+import { Point, Line, Polygon } from 'my-openlayer';
+
+const point = new Point(olMap);
+point.addPoint(pointData, { layerName: 'p', textKey: 'name', img: 'marker.png' });
+
+const line = new Line(olMap);
+line.addLine(lineGeoJSON, { layerName: 'line' });
+
+const polygon = new Polygon(olMap);
+polygon.addPolygon(zoneGeoJSON, { layerName: 'zone', textKey: 'name' });
 ```
 
 ---
@@ -187,9 +264,8 @@ const pointData: PointData[] = [
 // 添加普通点位
 const pointOptions: PointOptions = {
   layerName: 'test-point',
-  nameKey: 'name',
+  textKey: 'name',
   img: 'marker.png',
-  hasImg: true,
   scale: 1.2,
   textFont: '12px sans-serif',
   textFillColor: '#FFF',
@@ -208,7 +284,7 @@ const clusterData: PointData[] = [
 ];
 const clusterOptions: ClusterOptions = {
   layerName: 'cluster-point',
-  nameKey: 'name',
+  textKey: 'name',
   img: 'cluster.png',
   distance: 50,
   minDistance: 20,
@@ -217,10 +293,10 @@ const clusterOptions: ClusterOptions = {
 point.addClusterPoint(clusterData, clusterOptions);
 
 // 添加 Vue 组件点位
-const domPoints = point.setDomPointVue(
+const domPoints = point.addVueTemplatePoint(
   [{ lgtd: 119.81, lttd: 29.969 }],
   YourVueComponent,
-  Vue
+  { positioning: 'center-center' }
 );
 
 // 控制组件点位显隐
@@ -323,7 +399,7 @@ const zoneOptions: PolygonOptions = {
   strokeColor: '#037AFF',
   strokeWidth: 2,
   textVisible: true,
-  nameKey: 'name',
+  textKey: 'name',
   textFont: '14px Calibri,sans-serif',
   textFillColor: '#FFF',
   textStrokeColor: '#409EFF',
@@ -334,13 +410,13 @@ polygon.addPolygon(zoneGeoJSON, zoneOptions);
 
 // 更新面颜色
 const colorUpdateOptions: FeatureColorUpdateOptions = {
-  nameKey: 'name'
+  textKey: 'name'
 };
 polygon.updateFeatureColor('zone', { 'A区': 'rgba(255,0,0,0.6)' }, colorUpdateOptions);
 
 // 添加图片图层
-const extent = [119.8, 29.96, 119.82, 29.98]; // [minx, miny, maxx, maxy]
-polygon.addImage('imgLayer', 'img.png', extent, { zIndex: 10 });
+const extent = [119.8, 29.96, 119.82, 29.98]; // [minx, miny, maxy]
+polygon.addImageLayer({ img: 'img.png', extent }, { layerName: 'imgLayer', zIndex: 10 });
 
 // 添加热力图
 const heatData: PointData[] = [
@@ -410,10 +486,10 @@ try {
 ### 事件管理系统
 
 ```typescript
-import { MyOl, EventManager, MapEventType, EventCallback, MapEventData } from 'my-openlayer';
+import { MapEventType, EventCallback, MapEventData } from 'my-openlayer';
 
-// 创建事件管理器
-const eventManager = new EventManager(map.map); // 传入原生 ol.Map
+// 获取事件管理器
+const eventManager = map.getEventManager();
 
 // 监听点击事件
 const clickCallback: EventCallback = (eventData: MapEventData) => {
@@ -517,12 +593,11 @@ tools.removeLayer('layerName');
 // 设置图层可见性
 tools.setLayerVisible('layerName', true);
 
-// 事件监听
-map.mapOnEvent('click', (feature, event) => {
-  console.log('点击要素:', feature);
+// 事件监听（使用 EventManager）
+const em = map.getEventManager();
+em.on('click', (eventData) => {
+  console.log('点击要素:', eventData.feature);
 });
-
-// 支持事件类型：click、moveend、hover
 ```
 
 ### 测量工具
@@ -610,11 +685,7 @@ new MyOl(id: string, options: MapInitType)
   const configManager = map.getConfigManager();
   ```
 
-- **getMap()**
-  > 获取原生 OpenLayers 地图实例。
-  ```javascript
-  const olMap = map.getMap();
-  ```
+- 不直接暴露原生地图实例；推荐通过模块实例（如 `MapTools`）与 `EventManager` 完成操作
 
 - **resetPosition(duration?: number)**
   > 重置地图位置。
@@ -628,13 +699,9 @@ new MyOl(id: string, options: MapInitType)
   map.locationAction(119.81, 29.969, 15, 1000);
   ```
 
-- **mapOnEvent(eventType: string, callback: Function, clickType?: string)**
-  > 地图事件监听。
-  ```javascript
-  map.mapOnEvent('click', (feature, event) => {
-    console.log('点击要素:', feature);
-  });
-  ```
+// 事件监听：使用 EventManager 统一管理
+// const eventManager = map.getEventManager();
+// eventManager.on('click', (eventData) => { ... })
 
 ---
 
@@ -679,20 +746,19 @@ new MyOl(id: string, options: MapInitType)
 
 ### Point
 
-- **addPoint(pointData: PointData[], options: OptionsType)**
-  > 添加普通点位到指定图层，支持自定义样式和图标。
+- **addPoint(pointData: PointData[], options: PointOptions)**
+  > 添加普通点位到指定图层，支持文本与图标样式。
   ```javascript
   point.addPoint([
     { lgtd: 119.81, lttd: 29.969, name: '测试点位' }
   ], {
     layerName: 'test-point',
-    nameKey: 'name',
-    img: 'marker.png',
-    hasImg: true
+    textKey: 'name',
+    img: 'marker.png'
   });
   ```
 
-- **addClusterPoint(pointData: PointData[], options: OptionsType)**
+- **addClusterPoint(pointData: PointData[], options: ClusterOptions)**
   > 添加聚合点位，自动根据缩放级别聚合显示。
   ```javascript
   point.addClusterPoint([
@@ -700,36 +766,26 @@ new MyOl(id: string, options: MapInitType)
     { lgtd: 119.82, lttd: 29.97, name: 'B' }
   ], {
     layerName: 'cluster-point',
-    nameKey: 'name',
+    textKey: 'name',
     img: 'cluster.png',
     zIndex: 4
   });
   ```
 
-- **addTwinklePoint(pointData: PointData[], options: OptionsType)**
-  > 添加闪烁点位，具有动画效果。
-  ```javascript
-  point.addTwinklePoint([
-    { lgtd: 119.81, lttd: 29.969, name: '闪烁点位' }
-  ], {
-    layerName: 'twinkle-point',
-    nameKey: 'name',
-    img: 'twinkle.png',
-    hasImg: true
-  });
-  ```
-
-- **setDomPointVue(pointInfoList: any[], template: any, Vue: any)**
+- **addVueTemplatePoint(pointDataList: PointData[], template: any, options?)**
   > 添加 Vue 组件点位。
   ```javascript
-  const domPoints = point.setDomPointVue(
+  const domPoints = point.addVueTemplatePoint(
     [{ lgtd: 119.81, lttd: 29.969 }],
     YourVueComponent,
-    Vue
+    { positioning: 'center-center' }
   );
   domPoints.setVisible(true);
   domPoints.remove();
   ```
+
+- **addTwinkleLayer(twinkleList: any[], className?: string, key: string, callback?)**
+  > 添加闪烁点覆盖物。
 
 - **locationAction(lgtd: number, lttd: number, zoom?: number, duration?: number)**
   > 地图定位。
@@ -796,7 +852,7 @@ new MyOl(id: string, options: MapInitType)
     strokeColor: '#037AFF',
     strokeWidth: 2,
     textVisible: true,
-    nameKey: 'name',
+    textKey: 'name',
     textFont: '14px Calibri,sans-serif',
     textFillColor: '#FFF',
     textStrokeColor: '#409EFF',
@@ -804,16 +860,16 @@ new MyOl(id: string, options: MapInitType)
   });
   ```
 
-- **updateFeatureColor(layerName: string, colorObj?: { [propName: string]: string }, options?: OptionsType)**
+- **updateFeatureColor(layerName: string, colorObj?: { [propName: string]: string }, options?: FeatureColorUpdateOptions)**
   > 更新面颜色。
   ```javascript
-  polygon.updateFeatureColor('zone', { 'A区': 'rgba(255,0,0,0.6)' }, { nameKey: 'name' });
+  polygon.updateFeatureColor('zone', { 'A区': 'rgba(255,0,0,0.6)' }, { textKey: 'name' });
   ```
 
-- **addImage(layerName: string, img?: string, extent?: number[], options?: OptionsType)**
+- **addImageLayer(imageData: ImageLayerData, options?: PolygonOptions)**
   > 添加图片图层。
   ```javascript
-  polygon.addImage('imgLayer', 'img.png', [minx, miny, maxx, maxy], { zIndex: 10 });
+  polygon.addImageLayer({ img: 'img.png', extent: [minx, miny, maxx, maxy] }, { layerName: 'imgLayer', zIndex: 10 });
   ```
 
 - **addHeatmap(layerName: string, pointData: PointData[], options: HeatMapOptions)**
@@ -857,13 +913,9 @@ new MyOl(id: string, options: MapInitType)
   tools.setLayerVisible('myLayer', true);
   ```
 
-- **mapOnEvent(eventType: string, callback: Function, clickType?: string)**
-  > 地图事件监听。
-  ```javascript
-  tools.mapOnEvent('click', (feature, event) => {
-    console.log('点击要素:', feature);
-  });
-  ```
+// 事件监听请使用 EventManager：
+// const em = map.getEventManager();
+// em.on('click', (eventData) => { console.log(eventData.feature) })
 
 - **static setMapClip(baseLayer: any, data: MapJSONData)**
   > 设置地图裁剪。
@@ -1036,14 +1088,12 @@ interface TextOptions {
 
 // 点位选项 - 点位图层专用配置
 interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
-  /** 名称字段键 */
-  nameKey?: string;
+  /** 文本字段键 */
+  textKey?: string;
   /** 图标图片 */
   img?: string;
   /** 图标缩放比例 */
   scale?: number;
-  /** 是否有图标 */
-  hasImg?: boolean;
   /** 图标颜色 */
   iconColor?: string;
 }
@@ -1056,8 +1106,8 @@ interface LineOptions extends BaseOptions, StyleOptions, TextOptions {
 
 // 多边形选项 - 多边形图层专用配置
 interface PolygonOptions extends BaseOptions, StyleOptions, TextOptions {
-  /** 名称字段键 */
-  nameKey?: string;
+  /** 文本字段键 */
+  textKey?: string;
   /** 是否为蒙版 */
   mask?: boolean;
 }
@@ -1135,10 +1185,9 @@ class MyOpenLayersError extends Error {
  * @deprecated 请使用具体的选项接口：PointOptions, LineOptions, PolygonOptions
  */
 type OptionsType = BaseOptions & StyleOptions & TextOptions & {
-  nameKey?: string;
+  textKey?: string;
   img?: string;
   scale?: number;
-  hasImg?: boolean;
   iconColor?: string;
   type?: string;
   mask?: boolean;
@@ -1180,25 +1229,20 @@ const options: PointOptions = {
 
 ### 运行时依赖
 
-- **ol**: ^7.5.2 - OpenLayers 地图库
-- **proj4**: ^2.9.2 - 坐标系转换库
-- **@turf/turf**: ^6.5.0 - 地理空间分析库
+- **ol**: ^10.6.1 - OpenLayers 地图库
+- **proj4**: ^2.7.5 - 坐标系转换库
+- **@turf/turf**: ^7.2.0 - 地理空间分析库
 
 ### 开发依赖
 
-- **@types/ol**: ^6.5.3 - OpenLayers TypeScript 类型定义
-- **typescript**: ^5.0.0 - TypeScript 编译器
-- **vite**: ^4.4.5 - 构建工具
-- **@vitejs/plugin-vue**: ^4.2.3 - Vue 插件支持
-- **vue-tsc**: ^1.8.5 - Vue TypeScript 编译器
+- **typescript**: ~5.6.2 - TypeScript 编译器
+- **vite**: ^5.4.10 - 构建工具
+- **@vitejs/plugin-vue**: ^5.0.4 - Vue 插件支持
+- **vue-tsc**: ^2.0.6 - Vue 类型检查
 
 ### 对等依赖
 
-- **vue**: ^2.6.0 || ^3.0.0 - Vue.js 框架（可选，用于 Vue 组件支持）
-- **element-ui**: ^2.15.0 - Element UI 组件库（Vue 2）
-- **element-plus**: ^2.0.0 - Element Plus 组件库（Vue 3）
-
-> **注意**：本库与 OpenLayers 6.15.1 完全兼容，建议使用相同版本以获得最佳体验。
+- 无强制对等依赖；推荐 `ol` 与库版本保持一致（^10.6.1）。
 
 ---
 
@@ -1259,17 +1303,11 @@ const options: PointOptions = {
 
 **Q: 如何监听地图事件？**
 
-A: 使用 `EventManager` 或 `mapOnEvent` 方法：
+A: 使用 `EventManager`：
 ```typescript
-// 使用 EventManager
-const eventManager = new EventManager(map.map);
+const eventManager = map.getEventManager();
 eventManager.on('click', (eventData) => {
   console.log('点击位置:', eventData.coordinate);
-});
-
-// 使用 mapOnEvent
-map.mapOnEvent('click', (feature, event) => {
-  console.log('点击要素:', feature);
 });
 ```
 

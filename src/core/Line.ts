@@ -9,7 +9,7 @@ import { LineOptions, MapJSONData } from "../types";
 import MapTools from "./MapTools";
 import { ValidationUtils } from "../utils/ValidationUtils";
 import { EventManager } from "./EventManager";
-import { ErrorHandler } from "src/utils/ErrorHandler";
+import { ErrorHandler } from "../utils/ErrorHandler";
 
 
 /**
