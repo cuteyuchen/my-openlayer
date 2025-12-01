@@ -113,7 +113,7 @@ export default class Line {
       style: (feature: FeatureLike) => {
         if (feature instanceof Feature) {
           feature.set('type', mergedOptions.type);
-          feature.set('layerName', mergedOptions.type);
+          feature.set('layerName', mergedOptions.layerName);
         }
         
         // 如果传入了自定义样式，直接使用
@@ -175,7 +175,7 @@ export default class Line {
       style: (feature: FeatureLike) => {
         if (feature instanceof Feature) {
           feature.set('type', mergedOptions.type);
-          feature.set('layerName', mergedOptions.type);
+          feature.set('layerName', mergedOptions.layerName);
         }
         
         // 如果传入了自定义样式，直接使用
