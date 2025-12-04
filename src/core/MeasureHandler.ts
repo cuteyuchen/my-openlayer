@@ -39,6 +39,7 @@ export default class MeasureHandler {
    */
   constructor(map: Map) {
     ValidationUtils.validateMap(map);
+    this.initStyles();
     
     this._map = map;
     this.source = new VectorSource();
@@ -353,4 +354,57 @@ export default class MeasureHandler {
     this._tipsCollection = [];
   }
 
+  /**
+   * 初始化样式
+   * @private
+   */
+  private initStyles() {
+    const styleId = 'ol-measure-tooltip-styles';
+    if (document.getElementById(styleId)) {
+      return;
+    }
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.innerHTML = `
+      .ol-tooltip {
+        position: relative;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 4px;
+        color: white;
+        padding: 4px 8px;
+        opacity: 0.7;
+        white-space: nowrap;
+        font-size: 12px;
+        cursor: default;
+        user-select: none;
+        border: 1px solid #cccccc;
+        text-shadow: 1px 1px 2px #000;
+      }
+      .ol-tooltip-measure {
+        opacity: 1;
+        font-weight: bold;
+      }
+      .ol-tooltip-static {
+        background-color: #ffcc33;
+        color: black;
+        border: 1px solid white;
+        text-shadow: none;
+      }
+      .ol-tooltip-measure:before,
+      .ol-tooltip-static:before {
+        border-top: 6px solid rgba(0, 0, 0, 0.5);
+        border-right: 6px solid transparent;
+        border-left: 6px solid transparent;
+        content: "";
+        position: absolute;
+        bottom: -6px;
+        margin-left: -7px;
+        left: 50%;
+      }
+      .ol-tooltip-static:before {
+        border-top-color: #ffcc33;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 }
