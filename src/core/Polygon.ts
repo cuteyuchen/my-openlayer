@@ -424,34 +424,30 @@ export default class Polygon {
       return group
     }
 
-    /** 擦除操作 **/
-    function erase(geom: any, view: any) {
-      const part = getCoordsGroup(geom)
-      if (!part) {
-        return
+    /** 擦除操作 - 创建遮罩多边形 **/
+    function erase(geometries: Geometry[], view: any) {
+      // 收集所有几何图形的坐标环
+      let allParts: any[] = [];
+      geometries.forEach(geom => {
+        const parts = getCoordsGroup(geom);
+        if (parts && parts.length > 0) {
+          allParts = allParts.concat(parts);
+        }
+      });
+
+      if (allParts.length === 0) {
+        return null;
       }
-      const extent = view.getProjection().getExtent()
+
+      const extent = view.getProjection().getExtent();
       const polygonRing = fromExtent(extent);
-      part.forEach((item) => {
+      
+      allParts.forEach((item) => {
         const linearRing = new LinearRing(item);
         polygonRing.appendLinearRing(linearRing);
-      })
-      return polygonRing
-    }
-
-    /** 添加遮罩 **/
-    function createShade(geom: any, view: any) {
-      if (geom instanceof Geometry) {
-        const source = geom.clone()
-        const polygon = erase(source, view)
-        const feature = new Feature({
-          geometry: polygon
-        })
-        return {
-          feature,
-          shade: source
-        }
-      }
+      });
+      
+      return polygonRing;
     }
 
     // 遮罩样式
@@ -478,14 +474,43 @@ export default class Polygon {
 
 
     const features = new GeoJSON().readFeatures(data)
-    const ft = features[0]
-    const bound = ft.getGeometry()
-    const result = createShade(bound, this.map.getView())
-    if (result) {
-      vtSource.addFeature(result.feature)
-      if (options?.extent) this.map.getView().fit(<any>result.shade)
-    }
+    
+    // 收集所有要素的几何图形
+    const geometries: Geometry[] = [];
+    features.forEach(feature => {
+      const geometry = feature.getGeometry();
+      if (geometry) {
+        geometries.push(geometry);
+      }
+    });
 
+    if (geometries.length > 0) {
+      // 创建遮罩
+      const polygon = erase(geometries, this.map.getView());
+      if (polygon) {
+        const feature = new Feature({
+          geometry: polygon
+        });
+        vtSource.addFeature(feature);
+
+        // 如果需要适应视图，计算所有几何图形的合并范围
+        if (options?.extent) {
+          let totalExtent = geometries[0].getExtent();
+          for (let i = 1; i < geometries.length; i++) {
+            // 注意：这里需要导入 extend 函数，或者使用简单的 extent 合并逻辑
+            // 由于 openlayers 的 extent 是 [minx, miny, maxx, maxy]
+            const ext = geometries[i].getExtent();
+            totalExtent = [
+              Math.min(totalExtent[0], ext[0]),
+              Math.min(totalExtent[1], ext[1]),
+              Math.max(totalExtent[2], ext[2]),
+              Math.max(totalExtent[3], ext[3])
+            ];
+          }
+          this.map.getView().fit(totalExtent);
+        }
+      }
+    }
   }
 
   /**

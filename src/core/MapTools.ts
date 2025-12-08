@@ -5,8 +5,8 @@ import { MapJSONData } from "../types";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
-import { Fill, Style } from "ol/style";
-import { getVectorContext } from "ol/render";
+// import { Fill, Style } from "ol/style";
+// import { getVectorContext } from "ol/render";
 import BaseLayer from "ol/layer/Base";
 import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
@@ -89,37 +89,74 @@ export default class MapTools {
 
   /**
    * 设置地图裁剪
+   * 使用 Canvas clip 实现裁剪，支持多个闭合区域
+   * 注意：此方法会修改 baseLayer 的 prerender 和 postrender 事件
    */
   static setMapClip(baseLayer: any, data: MapJSONData) {
-    const clipLayer = new VectorLayer({
-      style: null,
-      source: new VectorSource({
-        features: new GeoJSON().readFeatures(data)
-      })
-    });
-    const style = new Style({
-      fill: new Fill({
-        color: 'transparent'
-      })
-    });
+    const features = new GeoJSON().readFeatures(data);
+
     baseLayer.on("prerender", (event: any) => {
-      const vectorContext = getVectorContext(event);
-      event.context.globalCompositeOperation = 'source-over';
       const ctx = event.context;
+      // 获取坐标转换矩阵 (pixel = coordinate * transform)
+      // 注意：OpenLayers 的 transform 可能包含 pixelRatio，也可能不包含，取决于版本
+      // 在现代版本中，event.frameState.coordinateToPixelTransform 通常用于将地理坐标转换为 Canvas 像素坐标
+      const transform = event.frameState.coordinateToPixelTransform;
+      
       ctx.save();
-      clipLayer.getSource()?.forEachFeature(function (feature) {
-        vectorContext.drawFeature(feature, style);
+      ctx.beginPath();
+
+      features.forEach((feature: any) => {
+        const geometry = feature.getGeometry();
+        if (!geometry) return;
+
+        const type = geometry.getType();
+        const coordinates = geometry.getCoordinates();
+
+        // 辅助函数：绘制单个线性环
+        const drawRing = (ringCoords: any[]) => {
+          if (!ringCoords || ringCoords.length === 0) return;
+          
+          for (let i = 0; i < ringCoords.length; i++) {
+            const coord = ringCoords[i];
+            // 手动应用变换: pixelX = x * m0 + y * m1 + m4
+            //               pixelY = x * m2 + y * m3 + m5
+            // transform 数组结构: [m0, m1, m2, m3, m4, m5]
+            const pixelX = coord[0] * transform[0] + coord[1] * transform[1] + transform[4];
+            const pixelY = coord[0] * transform[2] + coord[1] * transform[3] + transform[5];
+            
+            if (i === 0) {
+              ctx.moveTo(pixelX, pixelY);
+            } else {
+              ctx.lineTo(pixelX, pixelY);
+            }
+          }
+          ctx.closePath();
+        };
+
+        if (type === 'MultiPolygon') {
+          // MultiPolygon: [Polygon, Polygon] -> Polygon: [OuterRing, InnerRing, ...]
+          coordinates.forEach((polygonCoords: any[]) => {
+            polygonCoords.forEach((ringCoords: any[]) => {
+              drawRing(ringCoords);
+            });
+          });
+        } else if (type === 'Polygon') {
+          // Polygon: [OuterRing, InnerRing, ...]
+          coordinates.forEach((ringCoords: any[]) => {
+            drawRing(ringCoords);
+          });
+        }
       });
+
       ctx.clip();
-    })
+    });
+
     baseLayer.on("postrender", (event: any) => {
       const ctx = event.context;
       ctx.restore();
-    })
-    clipLayer.getSource()?.on('addfeature', function () {
-      baseLayer.setExtent(clipLayer.getSource()?.getExtent());
     });
-    return baseLayer
+
+    return baseLayer;
   }
 
   /**
