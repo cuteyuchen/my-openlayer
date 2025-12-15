@@ -145,6 +145,7 @@ export default class Point {
       const pointFeature = new Feature({
         rawData: item,
         type: options.layerName,
+        layerName: options.layerName,
         geometry: new olPoint([item.lgtd, item.lttd])
       });
       
