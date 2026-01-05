@@ -117,10 +117,10 @@ export default class VueTemplatePoint {
           lgtd: pointData.lgtd,
           lttd: pointData.lttd,
           props: {
-            pointData: {
+            pointData: isVue3 ? {
               type: Object,
               default: pointData
-            }
+            } : pointData
           },
           positioning: options?.positioning,
           stopEvent: options?.stopEvent,
