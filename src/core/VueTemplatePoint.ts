@@ -1,3 +1,4 @@
+import { PointData } from './../../temp-publish/types.d';
 import { Map as OLMap } from 'ol'
 import Overlay from 'ol/Overlay'
 import { Coordinate } from 'ol/coordinate'
@@ -93,6 +94,7 @@ export default class VueTemplatePoint {
     stopEvent?: boolean
   }): {
     setVisible: (visible: boolean) => void,
+    setOneVisibleByProp: (propName: string, propValue: any, visible: boolean) => void,
     remove: () => void,
     getPoints: () => VueTemplatePointInstance[]
   } {
@@ -135,6 +137,14 @@ export default class VueTemplatePoint {
         setVisible: (visible: boolean) => {
           instances.forEach((instance: VueTemplatePointInstance) => {
             instance.setVisible(visible);
+          });
+        },
+        setOneVisibleByProp: (propName: string, propValue: any, visible: boolean) => {
+          instances.forEach((instance: VueTemplatePointInstance) => {
+            const pointData = isVue3 ? instance.options.props.pointData.default : instance.options.props.pointData;
+            if (pointData[propName] === propValue) {
+              instance.setVisible(visible);
+            }
           });
         },
         remove: () => {
@@ -311,6 +321,9 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
       throw new Error('Vue is not available. Please ensure Vue is installed in your project.');
     }
     
+    // 清空DOM内容，确保没有残留
+    this.dom.innerHTML = '';
+    
     try {
       if (isVue3) {
         // Vue 3
@@ -321,8 +334,12 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
         (this.app as VueApp).mount(this.dom);
       } else {
         // Vue 2
+        // 创建一个临时容器挂载 Vue，避免 this.dom 被替换
+        const mountPoint = document.createElement('div');
+        this.dom.appendChild(mountPoint);
+        
         this.app = new Vue({
-          el: this.dom,
+          el: mountPoint,
           render: (h: any) => h(Template, { props: props || {} })
         }) as VueLegacyInstance;
       }

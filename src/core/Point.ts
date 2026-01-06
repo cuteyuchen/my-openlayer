@@ -387,6 +387,7 @@ export default class Point {
     stopEvent?: boolean
   }): {
     setVisible: (visible: boolean) => void,
+    setOneVisibleByProp: (propName: string, propValue: any, visible: boolean) => void,
     remove: () => void,
     getPoints: () => VueTemplatePointInstance[]
   } {
