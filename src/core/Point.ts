@@ -149,7 +149,15 @@ export default class Point {
         geometry: new olPoint([item.lgtd, item.lttd])
       });
       
-      pointFeature.setStyle(this.createPointStyle(options, item));
+      if (options.style) {
+        if (typeof options.style === 'function') {
+          pointFeature.setStyle(options.style(pointFeature));
+        } else {
+          pointFeature.setStyle(options.style);
+        }
+      } else {
+        pointFeature.setStyle(this.createPointStyle(options, item));
+      }
       pointFeatureList.push(pointFeature);
     });
 

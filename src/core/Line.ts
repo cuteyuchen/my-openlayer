@@ -120,7 +120,7 @@ export default class Line {
         if (mergedOptions.style) {
           if (typeof mergedOptions.style === 'function') {
             return mergedOptions.style(feature);
-          }else {
+          } else {
             return mergedOptions.style;
           }
         }
@@ -182,7 +182,7 @@ export default class Line {
         if (mergedOptions.style) {
           if (typeof mergedOptions.style === 'function') {
             return mergedOptions.style(feature);
-          }else {
+          } else {
             return mergedOptions.style;
           }
         }
@@ -278,12 +278,12 @@ export default class Line {
           
           // 如果传入了自定义样式，直接使用
           if (mergedOptions.style) {
-          if (typeof mergedOptions.style === 'function') {
-            return mergedOptions.style(feature);
-          }else {
-            return mergedOptions.style;
+            if (typeof mergedOptions.style === 'function') {
+              return mergedOptions.style(feature);
+            } else {
+              return mergedOptions.style;
+            }
           }
-        }
           
           return new Style({
             stroke: new Stroke({
@@ -492,10 +492,10 @@ export default class Line {
       source: new VectorSource({ features }),
       style: (feature: FeatureLike) => {
         // 如果传入了自定义样式，直接使用
-         if (mergedOptions.style) {
+        if (mergedOptions.style) {
           if (typeof mergedOptions.style === 'function') {
             return mergedOptions.style(feature);
-          }else {
+          } else {
             return mergedOptions.style;
           }
         }
