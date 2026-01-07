@@ -397,6 +397,7 @@ export default class Polygon {
    * @param options
    */
   setOutLayer(data: MapJSONData, options?: {
+    layerName?: string,
     extent?: any,
     fillColor?: string,
     strokeWidth?: number,
@@ -469,9 +470,7 @@ export default class Polygon {
       style: shadeStyle,
       zIndex: options?.zIndex ?? 12
     })
-
-    this.map.addLayer(vtLayer)
-
+    vtLayer.set('layerName', options?.layerName ?? 'outLayer')
 
     const features = new GeoJSON().readFeatures(data)
     
@@ -511,6 +510,8 @@ export default class Polygon {
         }
       }
     }
+    this.map.addLayer(vtLayer)
+    return vtLayer
   }
 
   /**
