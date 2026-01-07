@@ -261,6 +261,14 @@ export interface ClusterOptions extends PointOptions {
 }
 
 /**
+ * 闪烁点数据接口
+ */
+export interface TwinkleItem extends PointData {
+  className?: string;
+  [key: string]: any;
+}
+
+/**
  * 测量处理器类型
  */
 export type MeasureHandlerType = 'LineString' | 'Polygon';

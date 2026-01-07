@@ -8,11 +8,8 @@ import { Text, Style, Fill, Stroke, Icon } from "ol/style";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Cluster } from 'ol/source';
-import * as turf from '@turf/turf';
-import GeoJSON from "ol/format/GeoJSON";
-import { MapJSONData, PointOptions, ClusterOptions, PointData,VueTemplatePointInstance } from '../types'
+import { PointOptions, ClusterOptions, PointData,VueTemplatePointInstance,TwinkleItem } from '../types'
 import VueTemplatePoint from './VueTemplatePoint';
-import MapTools from "./MapTools";
 import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
 import { ValidationUtils } from '../utils/ValidationUtils';
@@ -217,113 +214,132 @@ export default class Point {
   }
 
 
-  // 在流域中心添加闪烁点位
-  addTwinkleLayerFromPolygon(twinkleList: any[], className: string, key: string, json: MapJSONData) {
-    new MapTools(this.map).removeLayer('twinklePoint')
-    // 计算多边形的中心点坐标
-    const calculatePolygonCenter = (polygonCoordinates: any) => {
-      const polygon = turf.polygon(polygonCoordinates[0]);
+  // // 在流域中心添加闪烁点位
+  // addTwinkleLayerFromPolygon(twinkleList: any[], className: string, key: string, json: MapJSONData, options?: PolygonOptions) {
+  //   new MapTools(this.map).removeLayer('twinklePoint')
+  //   // 计算多边形的中心点坐标
+  //   const calculatePolygonCenter = (polygonCoordinates: any) => {
+  //     const polygon = turf.polygon(polygonCoordinates[0]);
 
-      const centroid = turf.centroid(polygon);
-      return centroid.geometry.coordinates;
-    };
+  //     const centroid = turf.centroid(polygon);
+  //     return centroid.geometry.coordinates;
+  //   };
 
-    const features: any[] = json.features
-    const vectorSource = new VectorSource({
-      format: new GeoJSON(),
-    });
-    twinkleList.forEach(item => {
-      const feature = features.find((ele: any) => {
-        return ele.properties.BASIN === item.idx
-      })
-      if (!feature) return
-      feature.properties.level = item.lev
-      const geojson = new GeoJSON();
-      const olFeature = geojson.readFeature(feature);
-      if (Array.isArray(olFeature)) {
-        vectorSource.addFeatures(olFeature);
-      } else {
-        vectorSource.addFeature(olFeature);
-      }
-      if (feature) {
-        const polygonCenter = calculatePolygonCenter(feature.geometry.coordinates)
-        item.lgtd = polygonCenter[0]
-        item.lttd = polygonCenter[1]
-      }
-    })
-    const basinLayer = new VectorLayer({
-      name: 'twinklePoint',
-      layerName: 'twinklePoint',
-      source: vectorSource,
-      style: function (feature: any) {
-        return new Style({
-          stroke: new Stroke({
-            color: 'rgb(139,188,245)',
-            width: 3
-          }),
-          fill: new Fill({ color: 'rgba(255, 255, 255, 0)' }),
-          text: new Text({
-            text: feature.values_['BASIN'] || "",
-            font: '14px Calibri,sans-serif',
-            fill: new Fill({ color: '#FFF' }),
-            stroke: new Stroke({
-              color: '#409EFF', width: 2
-            }),
-          })
-        })
-      },
-      zIndex: 21
-    } as any)
-    this.map.addLayer(basinLayer)
-    this.addTwinkleLayer(twinkleList, className, key, (twinkleItem: any) => {
-
-    })
-  }
+  //   const features: any[] = json.features
+  //   const vectorSource = new VectorSource({
+  //     format: new GeoJSON(),
+  //   });
+  //   twinkleList.forEach(item => {
+  //     const feature = features.find((ele: any) => {
+  //       return ele.properties.BASIN === item.idx
+  //     })
+  //     if (!feature) return
+  //     feature.properties.level = item.lev
+  //     const geojson = new GeoJSON();
+  //     const olFeature = geojson.readFeature(feature);
+  //     if (Array.isArray(olFeature)) {
+  //       vectorSource.addFeatures(olFeature);
+  //     } else {
+  //       vectorSource.addFeature(olFeature);
+  //     }
+  //     if (feature) {
+  //       const polygonCenter = calculatePolygonCenter(feature.geometry.coordinates)
+  //       item.lgtd = polygonCenter[0]
+  //       item.lttd = polygonCenter[1]
+  //     }
+  //   })
+  //   const basinLayer = new VectorLayer({
+  //     name: 'twinklePoint',
+  //     layerName: 'twinklePoint',
+  //     source: vectorSource,
+  //     style: function (feature: any) {
+  //       if (options?.style) {
+  //         if (typeof options.style === 'function') {
+  //           return options.style(feature);
+  //         } else {
+  //           return options.style;
+  //         }
+  //       }
+  //       return new Style({
+  //         stroke: new Stroke({
+  //           color: 'rgb(139,188,245)',
+  //           width: 3
+  //         }),
+  //         fill: new Fill({ color: 'rgba(255, 255, 255, 0)' }),
+  //         text: new Text({
+  //           text: feature.values_['BASIN'] || "",
+  //           font: '14px Calibri,sans-serif',
+  //           fill: new Fill({ color: '#FFF' }),
+  //           stroke: new Stroke({
+  //             color: '#409EFF', width: 2
+  //           }),
+  //         })
+  //       })
+  //     },
+  //     zIndex: 21
+  //   } as any)
+  //   this.map.addLayer(basinLayer)
+  //   this.addTwinkleLayer(twinkleList.map(item => ({...item, className: item[key]})), className, key)
+  // }
 
   /**
    * 添加闪烁点
-   * @param twinkleList 闪烁点数据 - 二维数组 [[]，[]]
-   * @param className 闪烁点样式,需要和id保持一致
-   * @param key 闪烁点索引
+   * @param twinkleList 闪烁点数据 
    * @param callback
    */
-  addTwinkleLayer(twinkleList: any[], className: string = 'marker_warning', key: string, callback?: Function) {
-    // 查找class是warn-points的dom，并删除
-    const arr = document.getElementsByClassName(className)
-    const l = arr.length;
-    for (let i = l - 1; i >= 0; i--) {
-      if (arr[i] !== null) {
-        arr[i].parentNode?.removeChild(arr[i]);
+  addTwinkleLayer(twinkleList: TwinkleItem[], callback?: Function): {
+    anchors: Overlay[],
+    remove:()=>void
+    setVisible:(visible:boolean)=>void
+  } {
+    let anchors: Overlay[] = [];
+    twinkleList.forEach(twinkleItem => {
+      // 创建DOM元素
+      const element = document.createElement('div');
+      element.className = twinkleItem.className || '';
+      
+      // 添加点击事件
+      if(callback){
+        element.addEventListener('click', () => {
+          callback(twinkleItem);
+        });
       }
-    }
-
-    const el = document.getElementById(className)
-    for (let i = 0; i < twinkleList.length; i++) {
-      const twinkleItem = twinkleList[i];
-
-      // 定义图标Dom
-      const el2 = document.createElement('div');
-      el2.id = className + i
-      el2.className = className + twinkleItem[key]
-      el2.onclick = () => {
-        callback && callback(twinkleItem)
-        // bus.emit('twinkleClick', twinkleItem)
-      }
-
-      // 插入图标
-      if (el) el.insertAdjacentElement('afterend', el2)
 
       // 创建一个覆盖物
       const anchor = new Overlay({
-        element: document.getElementById(className + i) || undefined,
+        element: element,
         positioning: 'center-center',
-        className: className
+        stopEvent: false // 允许事件穿透，但我们在上面阻止了冒泡
       })
+      
       // 关键的一点，需要设置附加到地图上的位置
       anchor.setPosition([twinkleItem.lgtd, twinkleItem.lttd])
       // 然后添加到map上
       this.map.addOverlay(anchor)
-    }
+      anchors.push(anchor)
+    })
+    return {
+      anchors,
+      remove:()=>{
+        anchors.forEach(anchor => {
+          console.log('Removing overlay:', anchor);
+          const element = anchor.getElement();
+          if (element) {
+            element.remove();
+          }
+          this.map.removeOverlay(anchor);
+        });
+        anchors = [];
+      },
+      setVisible:(visible:boolean)=>{
+        anchors.forEach(anchor => {
+          const element = anchor.getElement()
+          if (element) {
+            element.style.display = visible ? '' : 'none'
+          }
+        })
+      }
+    };
   }
 
   /**

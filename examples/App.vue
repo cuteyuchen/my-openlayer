@@ -6,10 +6,15 @@
       <button @click="clearMeasure">清除测量</button>
       <div class="divider"></div>
       <button @click="testShade">测试遮罩(Polygon.setOutLayer)</button>
+      <button @click="testTwinkle">测试闪烁点</button>
+      <button @click="hideTwinkle">隐藏闪烁点</button>
+      <button @click="removeTwinkle">删除闪烁点</button>
       <button @click="testClip">测试裁剪(MapTools.setMapClip)</button>
       <button @click="resetMap">重置地图</button>
     </div>
     <div id="map" class="map"></div>
+    <!-- 闪烁点锚点元素 -->
+    <!-- <div id="twinkle-anchor" style="display: none;"></div> -->
   </div>
 </template>
 
@@ -111,6 +116,60 @@ const testClip = () => {
   }
 }
 
+// 测试闪烁点功能
+let twinkleAnchor = undefined
+const testTwinkle = () => {
+  if (!myOl.value) return
+
+  // 清除之前的效果
+  // resetMap() // 不重置，以便看到叠加效果
+
+  const point = myOl.value.getPoint()
+  const center = myOl.value.map.getView().getCenter()
+  
+  const twinkleData = [
+    { lgtd: center[0], lttd: center[1], className: 'twinkle-point' },
+    { lgtd: center[0] + 0.1, lttd: center[1] + 0.1, className: 'twinkle-point' }
+  ]
+
+  console.log('Adding twinkle layer...', twinkleData)
+
+  twinkleAnchor = point.addTwinkleLayer( twinkleData, (item) => {
+    console.log('Twinkle point clicked:', item)
+    alert('Clicked twinkle point at: ' + item.lgtd + ',' + item.lttd)
+  })
+  
+  console.log('Twinkle layer added', twinkleAnchor)
+}
+
+const twinkleVisible = ref(true)
+// 隐藏闪烁点功能
+const hideTwinkle = () => {
+  if (!myOl.value) return
+  
+  console.log('Hiding twinkle layer...')
+
+  twinkleAnchor.setVisible(!twinkleVisible.value)
+  twinkleVisible.value = !twinkleVisible.value  
+  
+  console.log('Twinkle layer hidden', twinkleAnchor)
+}
+
+
+
+// 删除闪烁点功能
+const removeTwinkle = () => {
+  if (!myOl.value) return
+
+  console.log('Removing twinkle layer...')
+
+ twinkleAnchor.remove()
+  
+  console.log('Twinkle layer removed', twinkleAnchor)
+}
+
+
+
 const resetMap = () => {
   // 重新初始化地图以清除所有副作用（裁剪、遮罩等）
   // 实际项目中应该有更优雅的清理方法，但为了演示方便，直接重建
@@ -150,5 +209,21 @@ const resetMap = () => {
   height: 20px;
   background-color: #ccc;
   margin: 0 15px;
+}
+
+@keyframes twinkle-animation {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(2); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.twinkle-point {
+  width: 20px;
+  height: 20px;
+  background-color: red;
+  border-radius: 50%;
+  animation: twinkle-animation 1s infinite;
+  cursor: pointer;
+  border: 2px solid white;
 }
 </style>
