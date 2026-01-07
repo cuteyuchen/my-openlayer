@@ -14,6 +14,7 @@ import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
 import { ValidationUtils } from '../utils/ValidationUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
+import MapTools from './MapTools';
 
 
 export default class Point {
@@ -287,7 +288,7 @@ export default class Point {
    * @param twinkleList 闪烁点数据 
    * @param callback
    */
-  addTwinkleLayer(twinkleList: TwinkleItem[], callback?: Function): {
+  addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
     anchors: Overlay[],
     remove:()=>void
     setVisible:(visible:boolean)=>void
@@ -343,62 +344,6 @@ export default class Point {
   }
 
   /**
-   * 地图定位
-   * @param lgtd 经度
-   * @param lttd 纬度
-   * @param zoom 缩放级别
-   * @param duration 动画时长
-   */
-  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean {
-    if (!ValidationUtils.validateLngLat(lgtd, lttd)) {
-      return false;
-    }
-    
-    try {
-      this.map.getView().animate({ center: [lgtd, lttd], zoom, duration });
-      return true;
-    } catch (error) {
-      ErrorHandler.getInstance().error('[地图定位]', '定位失败:', error);
-      return false;
-    }
-  }
-
-  /**
-   * 设置dom元素为点位
-   */
-  addDomPoint(id: string, lgtd: number, lttd: number): boolean {
-    if (!id) {
-      ErrorHandler.getInstance().error('Element ID is required');
-      return false;
-    }
-    
-    if (!ValidationUtils.validateLngLat(lgtd, lttd)) {
-      return false;
-    }
-    
-    const el = document.getElementById(id);
-    if (!el) {
-      ErrorHandler.getInstance().error(`Element with id '${id}' not found`);
-      return false;
-    }
-    
-    try {
-      const anchor = new Overlay({
-        id: id,
-        element: el,
-        positioning: 'center-center',
-        stopEvent: false
-      });
-      anchor.setPosition([lgtd, lttd]);
-      this.map.addOverlay(anchor);
-      return true;
-    } catch (error) {
-      ErrorHandler.getInstance().error('Failed to set DOM point:', error);
-      return false;
-    }
-  }
-
-  /**
    * 添加vue组件为点位
    * @param pointDataList 点位信息列表
    * @param template vue组件模板
@@ -429,5 +374,17 @@ export default class Point {
     } catch (error) {
       throw new Error(`Failed to create Vue template points: ${error}`);
     }
+  }
+
+    /**
+   * 地图定位
+   * @deprecated 请使用 MapTools.locationAction 方法代替
+   * @param lgtd 经度
+   * @param lttd 纬度
+   * @param zoom 缩放级别
+   * @param duration 动画时长
+   */
+  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean {
+    return new MapTools(this.map).locationAction(lgtd, lttd, zoom, duration);
   }
 }

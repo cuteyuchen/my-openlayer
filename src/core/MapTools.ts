@@ -258,6 +258,32 @@ export default class MapTools {
 
 
   /**
+   * 地图定位
+   * @param lgtd 经度
+   * @param lttd 纬度
+   * @param zoom 缩放级别
+   * @param duration 动画时长
+   * @returns 定位是否成功
+   */
+  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean {
+    if (!this.map) {
+      throw new Error('Map instance is not available');
+    }
+    
+    if (!ValidationUtils.validateLngLat(lgtd, lttd)) {
+      return false;
+    }
+    
+    try {
+      this.map.getView().animate({ center: [lgtd, lttd], zoom, duration });
+      return true;
+    } catch (error) {
+      this.errorHandler.error('[地图定位]', '定位失败:', error);
+      return false;
+    }
+  }
+
+  /**
    * 获取地图实例
    * @returns 地图实例
    */
