@@ -16,18 +16,10 @@ import MapTools from "./MapTools";
 import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
 import { MapLayersOptions, TiandituType, AnnotationLayerOptions, MapLayers, AnnotationType } from "../types";
 import { ValidationUtils } from "../utils/ValidationUtils";
-
-/**
- * 天地图服务器配置
- */
-const TIANDITU_CONFIG = {
-  BASE_URL: '//t{0-7}.tianditu.gov.cn/DataServer',
-  PROJECTION: 'EPSG:4326',
-  DEFAULT_ZINDEX: 9,
-  ANNOTATION_ZINDEX_OFFSET: 10
-} as const;
+import { ConfigManager } from "./ConfigManager";
 
 const TIANDITU_TYPES = ['vec_c', 'img_c', 'ter_c']
+const CUSTOM_LAYER_KEY = '__custom__'
 
 /**
  * GeoServer图层选项接口
@@ -94,8 +86,12 @@ export default class MapBaseLayers {
 
       if (this.layers && Object.keys(this.layers).length > 0) {
         this.addMapLayer();
-        const firstLayerType = Object.keys(this.layers)[0];
-        this.switchBaseLayer(firstLayerType);
+        if (!Array.isArray(this.options.layers)) {
+          const defaultType = this.getDefaultBaseLayerType();
+          if (defaultType) {
+            this.switchBaseLayer(defaultType);
+          }
+        }
       }
 
     } catch (error) {
@@ -126,14 +122,7 @@ export default class MapBaseLayers {
    * @private
    */
   private mergeDefaultOptions(options: MapLayersOptions): MapLayersOptions {
-    const defaultOptions: MapLayersOptions = {
-      zIndex: TIANDITU_CONFIG.DEFAULT_ZINDEX,
-      annotation: false,
-      mapClip: false,
-      mapClipData: undefined,
-    };
-
-    return { ...defaultOptions, ...options };
+    return { ...ConfigManager.DEFAULT_MAP_LAYERS_OPTIONS, ...options };
   }
 
   /**
@@ -141,19 +130,25 @@ export default class MapBaseLayers {
    * @private
    */
   private initializeLayers(): void {
-    // 如果没有配置底图，则默认使用天地图底图
-    if (!Array.isArray(this.options.layers)) {
-      this.layers = this.options.layers || {};
-      if (this.options.token) {
+    const { layers, token } = this.options;
+
+    if (Array.isArray(layers)) {
+      this.layers = { [CUSTOM_LAYER_KEY]: layers };
+    } else if (layers && Object.keys(layers).length > 0) {
+      this.layers = layers;
+    } else {
+      this.layers = {};
+      if (token) {
         this.initTiandituLayers();
       }
     }
+
     // 添加注记图层
     if (this.options.annotation) {
       if (!this.options.token) {
         throw new Error('请配置token后才能使用天地图注记');
       }
-      const { token, zIndex = TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
+      const { token, zIndex = ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
       this.loadDefaultAnnotationLayer(token, zIndex);
     }
   }
@@ -167,7 +162,7 @@ export default class MapBaseLayers {
       throw new Error('Token is required for Tianditu layers');
     }
 
-    const { token, zIndex = TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
+    const { token, zIndex = ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
 
     try {
       // 创建基础图层
@@ -182,6 +177,17 @@ export default class MapBaseLayers {
       );
       throw error;
     }
+  }
+
+  private getDefaultBaseLayerType(): string | null {
+    const types = Object.keys(this.layers);
+    if (types.length === 0) {
+      return null;
+    }
+    if (this.layers.vec_c) {
+      return 'vec_c';
+    }
+    return types[0];
   }
 
   /**
@@ -208,7 +214,7 @@ export default class MapBaseLayers {
         throw new Error('Annotation is not enabled in options');
       }
 
-      const baseZIndex = this.options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX;
+      const baseZIndex = this.options.zIndex ?? ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX;
       this.setAnnotationLayer(annotationType, this.options.token, baseZIndex);
 
     } catch (error) {
@@ -234,7 +240,7 @@ export default class MapBaseLayers {
     }
 
     // 创建新的注记图层，确保层级在基本图层之上
-    const annotationZIndex = baseZIndex + TIANDITU_CONFIG.ANNOTATION_ZINDEX_OFFSET;
+    const annotationZIndex = baseZIndex + ConfigManager.TIANDITU_CONFIG.ANNOTATION_ZINDEX_OFFSET;
 
     let annotationLayer = this.createAnnotationLayer({
       type: annotationType,
@@ -326,8 +332,8 @@ export default class MapBaseLayers {
 
       // 如果存在注记图层，更新其层级确保在新的基本图层之上
       if (this.currentAnnotationLayer && this.currentAnnotationType) {
-        const baseZIndex = this.options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX;
-        const annotationZIndex = baseZIndex + TIANDITU_CONFIG.ANNOTATION_ZINDEX_OFFSET;
+      const baseZIndex = this.options.zIndex ?? ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX;
+      const annotationZIndex = baseZIndex + ConfigManager.TIANDITU_CONFIG.ANNOTATION_ZINDEX_OFFSET;
         this.currentAnnotationLayer.setZIndex(annotationZIndex);
       }
 
@@ -407,7 +413,7 @@ export default class MapBaseLayers {
       const layer = MapBaseLayers.createAnnotationLayer({
         type: options.type,
         token: options.token,
-        zIndex: options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX,
+        zIndex: options.zIndex ?? ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX,
         visible: options.visible ?? true
       });
 
@@ -435,9 +441,14 @@ export default class MapBaseLayers {
       }
 
       for (const key in this.layers) {
-        this.layers[key]?.forEach((layer: BaseLayer) => {
-          const processedLayer = this.processLayer(layer);
-          this.map.addLayer(processedLayer);
+        const layerList = this.layers[key];
+        if (!layerList || layerList.length === 0) {
+          continue;
+        }
+        const processedLayerList = layerList.map(layer => this.processLayer(layer));
+        this.layers[key] = processedLayerList;
+        processedLayerList.forEach((layer: BaseLayer) => {
+          this.map.addLayer(layer);
         });
       }
     } catch (error) {
@@ -499,7 +510,7 @@ export default class MapBaseLayers {
           serverType: 'geoserver',
           crossOrigin: options.crossOrigin || 'anonymous',
         }),
-        zIndex: options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX,
+        zIndex: options.zIndex ?? ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX,
         visible: options.visible ?? true,
       });
 
@@ -553,10 +564,10 @@ export default class MapBaseLayers {
 
       return new TileLayer({
         source: new XYZ({
-          url: `//t{0-7}.tianditu.gov.cn/DataServer?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
+          url: `${ConfigManager.TIANDITU_CONFIG.BASE_URL}?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
           projection: 'EPSG:4326'
         }),
-        zIndex: options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX,
+        zIndex: options.zIndex ?? ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX,
         visible: options.visible ?? false
       });
     } catch (error) {
@@ -587,10 +598,10 @@ export default class MapBaseLayers {
 
       return new TileLayer({
         source: new XYZ({
-          url: `//t{0-7}.tianditu.gov.cn/DataServer?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
+          url: `${ConfigManager.TIANDITU_CONFIG.BASE_URL}?T=${ options.type }&tk=${ options.token }&x={x}&y={y}&l={z}`,
           projection: 'EPSG:4326'
         }),
-        zIndex: options.zIndex ?? TIANDITU_CONFIG.DEFAULT_ZINDEX,
+        zIndex: options.zIndex ?? ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX,
         visible: options.visible ?? false
       });
     } catch (error) {

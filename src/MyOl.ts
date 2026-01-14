@@ -52,12 +52,7 @@ export default class MyOl {
   private readonly options: MapInitType;
 
   // 默认配置
-  static readonly DefaultOptions: MapInitType = {
-    layers: undefined,
-    zoom: 10,
-    center: [119.81, 29.969],
-    extent: undefined
-  };
+  static readonly DefaultOptions: MapInitType = ConfigManager.DEFAULT_MYOL_OPTIONS;
 
   // 坐标系配置
   private static readonly PROJECTIONS = {

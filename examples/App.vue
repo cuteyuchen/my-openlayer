@@ -18,14 +18,16 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { MyOl, MeasureHandler, Polygon, MapTools } from '../src/index'
+import { MapJSONData } from '../src/types'
+
 import boundaryData from './json/boundary.json'
 
-const myOl = ref(null)
+let myOl: MyOl|null = null
 const measureHandler = ref(null)
-const polygonHandler = ref(null)
+let polygonHandler: Polygon|null = null
 let currentClipLayer = null
 
 // 使用 import.meta.env 获取 token
@@ -37,19 +39,19 @@ onMounted(() => {
 
 const initMap = () => {
   // 初始化地图
-  myOl.value = new MyOl('map', {
+  myOl = new MyOl('map', {
     token: tiandituToken,
     center: [115.534629, 38.929090],
     zoom: 8, // 调整缩放级别以便看到更大的区域
     annotation: true, // 启用注记
-    mapClipData: boundaryData
+    mapClipData: boundaryData as MapJSONData
   })
 
   // 初始化测量工具
-  measureHandler.value = new MeasureHandler(myOl.value.map)
+  measureHandler.value = new MeasureHandler(myOl.map)
   
   // 初始化 Polygon 工具
-  polygonHandler.value = new Polygon(myOl.value.map)
+  polygonHandler = new Polygon(myOl.map)
 }
 
 const measureDistance = () => {
@@ -72,14 +74,14 @@ const clearMeasure = () => {
 
 // 测试遮罩功能 (setOutLayer)
 const testShade = () => {
-  if (!polygonHandler.value) return
+  if (!polygonHandler) return
   
   // 清除之前的效果
   resetMap()
   
   console.log('Testing setOutLayer with multi-feature GeoJSON...')
   
-  polygonHandler.value.setOutLayer(boundaryData, {
+  polygonHandler.setOutLayer(boundaryData as MapJSONData, {
     extent: true,
     fillColor: 'rgba(0, 0, 0, 0.5)',
     strokeWidth: 2,
@@ -90,7 +92,7 @@ const testShade = () => {
 
 // 测试裁剪功能 (setMapClip)
 const testClip = () => {
-  if (!myOl.value || !myOl.value.map) return
+  if (!myOl || !myOl.map) return
   
   // 清除之前的效果
   resetMap()
@@ -98,12 +100,12 @@ const testClip = () => {
   console.log('Testing setMapClip with multi-feature GeoJSON...')
   
   // 获取底图图层（通常是第一个图层，天地图矢量底图）
-  const layers = myOl.value.map.getLayers().getArray()
+  const layers = myOl.map.getLayers().getArray()
   const baseLayer = layers[0] 
   
   if (baseLayer) {
     // 应用裁剪
-    MapTools.setMapClip(baseLayer, boundaryData)
+    MapTools.setMapClip(baseLayer, boundaryData as MapJSONData)
     
     // 调整视图以适应裁剪区域
     // 注意：MapTools.setMapClip 内部已经尝试设置 extent，但我们手动再 fit 一下确保视觉效果
@@ -112,20 +114,20 @@ const testClip = () => {
     // 为了简单起见，我们暂时手动设置一个近似的 center/zoom 或者让 setMapClip 内部生效
     
     // 强制刷新地图以触发 postrender
-    myOl.value.map.render()
+    myOl.map.render()
   }
 }
 
 // 测试闪烁点功能
-let twinkleAnchor = undefined
+let twinkleAnchor: any = undefined
 const testTwinkle = () => {
-  if (!myOl.value) return
+  if (!myOl) return
 
   // 清除之前的效果
   // resetMap() // 不重置，以便看到叠加效果
 
-  const point = myOl.value.getPoint()
-  const center = myOl.value.map.getView().getCenter()
+  const point = myOl.getPoint()
+  const center = myOl.map.getView().getCenter()
   
   const twinkleData = [
     { lgtd: center[0], lttd: center[1], className: 'twinkle-point' },
@@ -134,7 +136,7 @@ const testTwinkle = () => {
 
   console.log('Adding twinkle layer...', twinkleData)
 
-  twinkleAnchor = point.addTwinkleLayer( twinkleData, (item) => {
+  twinkleAnchor = point.addDomPoint( twinkleData, (item) => {
     console.log('Twinkle point clicked:', item)
     alert('Clicked twinkle point at: ' + item.lgtd + ',' + item.lttd)
   })
@@ -145,7 +147,7 @@ const testTwinkle = () => {
 const twinkleVisible = ref(true)
 // 隐藏闪烁点功能
 const hideTwinkle = () => {
-  if (!myOl.value) return
+  if (!myOl) return
   
   console.log('Hiding twinkle layer...')
 
@@ -159,7 +161,7 @@ const hideTwinkle = () => {
 
 // 删除闪烁点功能
 const removeTwinkle = () => {
-  if (!myOl.value) return
+  if (!myOl) return
 
   console.log('Removing twinkle layer...')
 
@@ -171,9 +173,6 @@ const removeTwinkle = () => {
 
 
 const resetMap = () => {
-  // 重新初始化地图以清除所有副作用（裁剪、遮罩等）
-  // 实际项目中应该有更优雅的清理方法，但为了演示方便，直接重建
-  document.getElementById('map').innerHTML = ''
   initMap()
 }
 

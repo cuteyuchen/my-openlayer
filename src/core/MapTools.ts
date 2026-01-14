@@ -12,6 +12,7 @@ import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
 import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
 import { ValidationUtils } from "../utils/ValidationUtils";
+import { createEmpty, extend, isEmpty } from "ol/extent";
 
 /**
  * 地图工具类
@@ -168,16 +169,7 @@ export default class MapTools {
     if (!this.map) {
       throw new Error('Map instance is not available');
     }
-    
-    try {
-      const layers = this.getLayerByLayerName(layerName);
-      layers.forEach(layer => {
-        this.map.removeLayer(layer);
-      });
-    } catch (error) {
-      ErrorHandler.getInstance().error('Error removing layers:', error);
-      throw new Error('Failed to remove layers from map');
-    }
+    MapTools.removeLayer(this.map, layerName);
   }
 
   /**
@@ -212,16 +204,7 @@ export default class MapTools {
     if (!this.map) {
       throw new Error('Map instance is not available');
     }
-    
-    try {
-      const layers = this.getLayerByLayerName(layerName);
-      layers.forEach(layer => {
-        layer.setVisible(visible);
-      });
-    } catch (error) {
-      ErrorHandler.getInstance().error('Error setting layer visibility:', error);
-      throw new Error('Failed to set layer visibility');
-    }
+    MapTools.setLayerVisible(this.map, layerName, visible);
   }
 
   /**
@@ -290,4 +273,96 @@ export default class MapTools {
   getMap(): Map {
     return this.map;
   }
+
+  /**
+   * 视图自适应到指定图层集合的整体范围（overallExtent）
+   * @param layerNameOrLayers 图层名称（单个/数组）或图层对象数组
+   * @param fitOptions fit 参数（可选）
+   * @returns true 表示已触发 fit；false 表示未得到有效范围或图层为空
+   */
+  fitToLayers(
+    layerNameOrLayers:
+      | string
+      | string[]
+      | (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[],
+    fitOptions?: {
+      padding?: [number, number, number, number];
+      maxZoom?: number;
+      duration?: number;
+    }
+  ): boolean {
+    return MapTools.fitToLayers(this.map, layerNameOrLayers, fitOptions);
+  }
+
+  /**
+   * 视图自适应到指定图层集合的整体范围（overallExtent）
+   * 说明：会取每个图层 source 的 extent，合并后执行 view.fit
+   * @param map 地图实例
+   * @param layerNameOrLayers 图层名称（单个/数组）或图层对象数组
+   * @param fitOptions fit 参数（可选）
+   * @returns true 表示已触发 fit；false 表示未得到有效范围或图层为空
+   */
+  static fitToLayers(
+    map: Map,
+    layerNameOrLayers:
+      | string
+      | string[]
+      | (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[],
+    fitOptions?: {
+      padding?: [number, number, number, number];
+      maxZoom?: number;
+      duration?: number;
+    }
+  ): boolean {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+
+    const layers: (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] =
+      typeof layerNameOrLayers === "string"
+        ? MapTools.getLayerByLayerName(map, layerNameOrLayers)
+        : Array.isArray(layerNameOrLayers)
+          ? (layerNameOrLayers.length > 0 && typeof layerNameOrLayers[0] === "string"
+              ? MapTools.getLayerByLayerName(map, layerNameOrLayers as string[])
+              : (layerNameOrLayers as (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[]))
+          : [];
+
+    if (!layers || layers.length === 0) {
+      return false;
+    }
+
+    const overallExtent = createEmpty();
+    let hasValidExtent = false;
+
+    layers.forEach((layer: any) => {
+      try {
+        const source = layer?.getSource?.();
+        const extent = source?.getExtent?.();
+        if (extent && !isEmpty(extent)) {
+          extend(overallExtent, extent);
+          hasValidExtent = true;
+        }
+      } catch (error) {
+        ErrorHandler.getInstance().error('Error calculating layer extent:', error);
+      }
+    });
+
+    if (!hasValidExtent || isEmpty(overallExtent)) {
+      return false;
+    }
+
+    try {
+      map.getView().fit(overallExtent, {
+        padding: fitOptions?.padding ?? [200, 200, 200, 200],
+        maxZoom: fitOptions?.maxZoom ?? 14,
+        duration: fitOptions?.duration ?? 1500,
+      });
+      return true;
+    } catch (error) {
+      ErrorHandler.getInstance().error('Error fitting view to extent:', error);
+      return false;
+    }
+  }
+
+  
 }

@@ -5,6 +5,7 @@ import { Coordinate } from 'ol/coordinate'
 import { VueTemplatePointOptions, VueApp, VueLegacyInstance, VueTemplatePointState, VueTemplatePointInstance } from '../types'
 import { ErrorHandler, ErrorType } from '../utils/ErrorHandler'
 import { ValidationUtils } from '../utils/ValidationUtils'
+import { ConfigManager } from './ConfigManager'
 
 // 动态导入Vue
 let Vue: any = null;
@@ -273,10 +274,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
    */
   private mergeDefaultOptions(options: VueTemplatePointOptions): VueTemplatePointOptions {
     return {
-      positioning: 'center-center',
-      stopEvent: false,
-      visible: true,
-      zIndex: 1,
+      ...ConfigManager.DEFAULT_VUE_TEMPLATE_POINT_OPTIONS,
       ...options
     };
   }

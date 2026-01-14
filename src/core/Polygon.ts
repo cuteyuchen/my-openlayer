@@ -17,12 +17,12 @@ import {
   HeatMapOptions,
   ImageLayerData,
   MaskLayerOptions,
-  ColorMap,
   FeatureColorUpdateOptions
 } from '../types'
 import MapTools from "./MapTools";
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { ValidationUtils } from '../utils/ValidationUtils';
+import { ConfigManager } from "./ConfigManager";
 
 /**
  * Polygon 类用于处理地图上的面要素操作
@@ -30,12 +30,6 @@ import { ValidationUtils } from '../utils/ValidationUtils';
  */
 export default class Polygon {
   private map: Map;
-  private colorMap: ColorMap = {
-    '0': 'rgba(255, 0, 0, 0.6)',
-    '1': 'rgba(245, 154, 35, 0.6)',
-    '2': 'rgba(255, 238, 0, 0.6)',
-    '3': 'rgba(1, 111, 255, 0.6)'
-  };
 
   [key: string]: any;
 
@@ -50,15 +44,6 @@ export default class Polygon {
     this.map = map;
   }
 
-  /**
-   * 获取等级颜色
-   * @param lev 等级值，支持字符串或数字
-   * @returns 对应等级的颜色值，如果等级不存在则返回默认颜色
-   */
-  getLevColor(lev: string | number): string {
-    const key = lev.toString();
-    return this.colorMap[key] || 'rgba(128, 128, 128, 0.6)';
-  }
 
 
   /**
@@ -116,15 +101,7 @@ export default class Polygon {
     ValidationUtils.validateGeoJSONData(dataJSON);
 
     const mergedOptions: PolygonOptions = {
-      zIndex: 11,
-      visible: true,
-      strokeColor: '#EBEEF5',
-      strokeWidth: 2,
-      fillColor: 'rgba(255, 255, 255, 0)',
-      textFont: '14px Calibri,sans-serif',
-      textFillColor: '#FFF',
-      textStrokeColor: '#409EFF',
-      textStrokeWidth: 2,
+      ...ConfigManager.DEFAULT_POLYGON_OPTIONS,
       ...options
     };
 
@@ -172,15 +149,7 @@ export default class Polygon {
    */
   addPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource> {
     const mergedOptions: PolygonOptions = {
-      zIndex: 11,
-      visible: true,
-      strokeColor: '#EBEEF5',
-      strokeWidth: 2,
-      fillColor: 'rgba(255, 255, 255, 0)',
-      textFont: '14px Calibri,sans-serif',
-      textFillColor: '#FFF',
-      textStrokeColor: '#409EFF',
-      textStrokeWidth: 2,
+      ...ConfigManager.DEFAULT_POLYGON_OPTIONS,
       ...options
     };
 
@@ -527,10 +496,7 @@ export default class Polygon {
     ValidationUtils.validateImageData(imageData, allowEmptyImg);
 
     const mergedOptions: PolygonOptions = {
-      opacity: 1,
-      visible: true,
-      zIndex: 11,
-      layerName: 'imageLayer',
+      ...ConfigManager.DEFAULT_IMAGE_OPTIONS,
       ...options
     };
 
@@ -654,25 +620,35 @@ export default class Polygon {
       new MapTools(this.map).removeLayer(options.layerName)
     }
 
+    const mergedOptions: HeatMapOptions = {
+      ...ConfigManager.DEFAULT_HEATMAP_OPTIONS,
+      ...options
+    };
+
+    const blur = mergedOptions.blur ?? ConfigManager.DEFAULT_HEATMAP_OPTIONS.blur;
+    const radius = mergedOptions.radius ?? ConfigManager.DEFAULT_HEATMAP_OPTIONS.radius;
+    const zIndex = mergedOptions.zIndex ?? ConfigManager.DEFAULT_HEATMAP_OPTIONS.zIndex;
+    const opacity = mergedOptions.opacity ?? ConfigManager.DEFAULT_HEATMAP_OPTIONS.opacity;
+
     const heatmapLayer = new Heatmap({
       source: new VectorSource(),
       weight: function (fea: Feature) {
         return fea.get('weight');
       },
-      blur: options?.blur ?? 15,
-      radius: options?.radius ?? 10,
-      zIndex: options?.zIndex ?? 11,
-      opacity: options?.opacity ?? 1,
+      blur,
+      radius,
+      zIndex,
+      opacity,
     });
 
     // 只有在指定layerName时才设置layerName
-    if (options?.layerName) {
-      heatmapLayer.set('layerName', options.layerName)
+    if (mergedOptions.layerName) {
+      heatmapLayer.set('layerName', mergedOptions.layerName)
     }
 
     this.map.addLayer(heatmapLayer);
 
-    const valueKey = options?.valueKey || 'value'
+    const valueKey = mergedOptions.valueKey || ConfigManager.DEFAULT_HEATMAP_VALUE_KEY
     const max = Math.max(...pointData.map(item => item[valueKey]))
     pointData.forEach((item) => {
       heatmapLayer?.getSource()!.addFeature(
@@ -697,10 +673,7 @@ export default class Polygon {
     ValidationUtils.validateMaskData(data);
 
     const mergedOptions: MaskLayerOptions = {
-      fillColor: 'rgba(0, 0, 0, 0.5)',
-      opacity: 1,
-      visible: true,
-      layerName: 'maskLayer',
+      ...ConfigManager.DEFAULT_MASK_OPTIONS,
       ...options
     };
 

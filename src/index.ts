@@ -9,6 +9,8 @@ export { default as MapTools } from './core/MapTools'
 export { default as MeasureHandler } from './core/MeasureHandler'
 export { default as VueTemplatePoint } from './core/VueTemplatePoint'
 export { default as SelectHandler } from './core/SelectHandler'
+export { default as RiverLayerManager } from './core/RiverLayerManager'
+export type { RiverLayerOptions, RiverLevelWidthMap } from './core/RiverLayerManager'
 
 // 新增工具类
 export { ConfigManager } from './core/ConfigManager'
@@ -37,7 +39,6 @@ export type {
   HeatMapOptions,
   ImageLayerData,
   MaskLayerOptions,
-  ColorMap,
   FeatureColorUpdateOptions,
   PointData,
   LineData,

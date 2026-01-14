@@ -216,13 +216,6 @@ export interface MaskLayerOptions {
 }
 
 /**
- * 颜色映射接口
- */
-export interface ColorMap {
-  [level: string]: string;
-}
-
-/**
  * 要素颜色更新选项接口
  */
 export interface FeatureColorUpdateOptions extends BaseOptions, StyleOptions, TextOptions {

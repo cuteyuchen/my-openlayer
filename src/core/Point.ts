@@ -15,6 +15,7 @@ import { Options as StyleOptions } from "ol/style/Style";
 import { ValidationUtils } from '../utils/ValidationUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import MapTools from './MapTools';
+import { ConfigManager } from "./ConfigManager";
 
 
 export default class Point {
@@ -34,17 +35,18 @@ export default class Point {
    * @returns 文本样式
    */
   private createTextStyle(options: PointOptions | ClusterOptions, text: string): Text {
+    const defaultTextOptions = ConfigManager.DEFAULT_POINT_TEXT_OPTIONS;
     return new Text({
       text: text,
-      font: options.textFont || '12px Calibri,sans-serif',
+      font: options.textFont || defaultTextOptions.textFont,
       fill: new Fill({
-        color: options.textFillColor || '#FFF'
+        color: options.textFillColor || defaultTextOptions.textFillColor
       }),
       stroke: new Stroke({
-        color: options.textStrokeColor || '#000',
-        width: options.textStrokeWidth || 3
+        color: options.textStrokeColor || defaultTextOptions.textStrokeColor,
+        width: options.textStrokeWidth || defaultTextOptions.textStrokeWidth
       }),
-      offsetY: options.textOffsetY || 20,
+      offsetY: options.textOffsetY || defaultTextOptions.textOffsetY,
     });
   }
 
@@ -57,7 +59,7 @@ export default class Point {
   private createIconStyle(options: PointOptions | ClusterOptions): Icon {
     const iconOptions: IconOptions = {
       src: options.img,
-      scale: options.scale ?? 1,
+      scale: options.scale ?? ConfigManager.DEFAULT_POINT_ICON_SCALE,
     };
     if (options.iconColor) {
       iconOptions.color = options.iconColor;
@@ -164,7 +166,7 @@ export default class Point {
       source: new VectorSource({
         features: pointFeatureList
       }),
-      zIndex: options.zIndex || 21,
+      zIndex: options.zIndex || ConfigManager.DEFAULT_POINT_OPTIONS.zIndex,
     } as any);
     
     this.configureLayer(PointVectorLayer, options);
@@ -195,8 +197,8 @@ export default class Point {
     });
 
     const clusterSource = new Cluster({
-      distance: options.distance || 40, // The distance for clustering in pixels
-      minDistance: options.minDistance || 0,
+      distance: options.distance || ConfigManager.DEFAULT_CLUSTER_OPTIONS.distance, // The distance for clustering in pixels
+      minDistance: options.minDistance || ConfigManager.DEFAULT_CLUSTER_OPTIONS.minDistance,
       source: source,
     });
 
@@ -207,7 +209,7 @@ export default class Point {
         const name = feature.get('features')[0].get(options.textKey);
         return this.createClusterStyle(options, name);
       },
-      zIndex: options.zIndex || 21,
+      zIndex: options.zIndex || ConfigManager.DEFAULT_CLUSTER_OPTIONS.zIndex,
     } as any);
     
     this.configureLayer(clusterLayer, options);
@@ -309,8 +311,8 @@ export default class Point {
       // 创建一个覆盖物
       const anchor = new Overlay({
         element: element,
-        positioning: 'center-center',
-        stopEvent: false // 允许事件穿透，但我们在上面阻止了冒泡
+        positioning: ConfigManager.DEFAULT_DOM_POINT_OVERLAY_OPTIONS.positioning,
+        stopEvent: ConfigManager.DEFAULT_DOM_POINT_OVERLAY_OPTIONS.stopEvent // 允许事件穿透，但我们在上面阻止了冒泡
       })
       
       // 关键的一点，需要设置附加到地图上的位置
