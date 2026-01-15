@@ -295,6 +295,63 @@ export default class MapTools {
   }
 
   /**
+   * 根据GeoJSON数据定位地图视图
+   * @param jsonData GeoJSON格式的数据
+   * @param fitOptions fit 参数（可选）
+   * @returns true 表示已触发定位；false 表示未得到有效范围或数据无效
+   */
+  fitByData(
+    jsonData: MapJSONData,
+    fitOptions?: {
+      padding?: [number, number, number, number];
+      maxZoom?: number;
+      duration?: number;
+    }
+  ): boolean {
+    return MapTools.fitByData(this.map, jsonData, fitOptions);
+  }
+
+  /**
+   * 根据GeoJSON数据定位地图视图（静态方法）
+   * @param map 地图实例
+   * @param jsonData GeoJSON格式的数据
+   * @param fitOptions fit 参数（可选）
+   * @returns true 表示已触发定位；false 表示未得到有效范围或数据无效
+   */
+  static fitByData(
+    map: Map,
+    jsonData: MapJSONData,
+    fitOptions?: {
+      padding?: [number, number, number, number];
+      maxZoom?: number;
+      duration?: number;
+    }
+  ): boolean {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+
+    if (!jsonData) {
+      return false;
+    }
+
+    try {
+      const features = new GeoJSON().readFeatures(jsonData);
+      if (!features || features.length === 0) {
+        return false;
+      }
+
+      const source = new VectorSource({ features });
+      const extent = source.getExtent();
+
+      return MapTools.executeFit(map, extent, fitOptions, 'Error fitting view to data');
+    } catch (error) {
+      ErrorHandler.getInstance().error('Error fitting view to data:', error);
+      return false;
+    }
+  }
+
+  /**
    * 视图自适应到指定图层集合的整体范围（overallExtent）
    * 说明：会取每个图层 source 的 extent，合并后执行 view.fit
    * @param map 地图实例
@@ -347,19 +404,39 @@ export default class MapTools {
       }
     });
 
-    if (!hasValidExtent || isEmpty(overallExtent)) {
+    if (!hasValidExtent) {
+      return false;
+    }
+
+    return MapTools.executeFit(map, overallExtent, fitOptions, 'Error fitting view to extent');
+  }
+
+  /**
+   * 执行地图定位（内部辅助方法）
+   */
+  private static executeFit(
+    map: Map,
+    extent: any,
+    fitOptions?: {
+      padding?: [number, number, number, number];
+      maxZoom?: number;
+      duration?: number;
+    },
+    errorMessage: string = 'Error fitting view'
+  ): boolean {
+    if (!extent || isEmpty(extent)) {
       return false;
     }
 
     try {
-      map.getView().fit(overallExtent, {
+      map.getView().fit(extent, {
         padding: fitOptions?.padding ?? [200, 200, 200, 200],
         maxZoom: fitOptions?.maxZoom ?? 14,
         duration: fitOptions?.duration ?? 1500,
       });
       return true;
     } catch (error) {
-      ErrorHandler.getInstance().error('Error fitting view to extent:', error);
+      ErrorHandler.getInstance().error(errorMessage, error);
       return false;
     }
   }
