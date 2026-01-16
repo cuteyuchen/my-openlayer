@@ -126,6 +126,10 @@ export interface StyleOptions {
   fillColor?: string;
   /** 填充颜色回调函数 */
   fillColorCallBack?: (feature: Feature) => string;
+  /** 是否使用默认描边 */
+  withDefaultStroke?: boolean;
+  /** 是否使用默认填充 */
+  withDefaultFill?: boolean;
 }
 
 /**

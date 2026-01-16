@@ -65,7 +65,7 @@ export default class MyOl {
    * @param id 地图容器 DOM 元素 ID
    * @param options 地图初始化配置
    */
-  constructor(id: string, options?: Partial<MapInitType>) {
+  constructor(id: string | HTMLElement, options?: Partial<MapInitType>) {
     // 初始化错误处理器（必须最先初始化）
     this.errorHandler = ErrorHandler.getInstance();
 
@@ -124,8 +124,12 @@ export default class MyOl {
    * 验证构造函数参数
    * @private
    */
-  private validateConstructorParams(id: string, options: MapInitType): void {
-    if (!id || typeof id !== 'string') {
+  private validateConstructorParams(id: string | HTMLElement, options: MapInitType): void {
+    if (!id) {
+      throw new Error('地图容器 ID 或 HTMLElement 不能为空');
+    }
+
+    if (typeof id === 'string' && id.trim() === '') {
       throw new Error('地图容器 ID 必须是非空字符串');
     }
 
@@ -134,9 +138,9 @@ export default class MyOl {
     }
 
     // 检查 DOM 元素是否存在
-    const element = document.getElementById(id);
+    const element = typeof id === 'string' ? document.getElementById(id) : id;
     if (!element) {
-      throw new Error(`找不到 ID 为 '${id}' 的 DOM 元素`);
+      throw new Error(typeof id === 'string' ? `找不到 ID 为 '${id}' 的 DOM 元素` : '提供的 DOM 元素无效');
     }
   }
 

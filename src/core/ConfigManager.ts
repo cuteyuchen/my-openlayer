@@ -50,9 +50,6 @@ export class ConfigManager {
   static readonly DEFAULT_POLYGON_OPTIONS = {
     zIndex: 11,
     visible: true,
-    strokeColor: '#EBEEF5',
-    strokeWidth: 2,
-    fillColor: 'rgba(255, 255, 255, 0)',
     textFont: '14px Calibri,sans-serif',
     textFillColor: '#FFF',
     textStrokeColor: '#409EFF',

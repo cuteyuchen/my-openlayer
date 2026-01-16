@@ -123,11 +123,9 @@ export default class Polygon {
         layerName: mergedOptions.layerName
       },
       source: new VectorSource({ features }),
+      style: this.createStyle(mergedOptions),
       zIndex: mergedOptions.zIndex
     });
-
-    // 设置要素样式
-    this.setFeatureStyles(features, mergedOptions);
 
     layer.setVisible(mergedOptions.visible!);
     this.map.addLayer(layer);
@@ -169,13 +167,8 @@ export default class Polygon {
         layerName: mergedOptions.layerName
       },
       source,
+      style: this.createStyle(mergedOptions),
       zIndex: mergedOptions.zIndex
-    });
-
-    // 在数据加载后设置样式
-    source.once('featuresloadend', () => {
-      const loadedFeatures = source.getFeatures();
-      this.setFeatureStyles(loadedFeatures, mergedOptions);
     });
 
     layer.setVisible(mergedOptions.visible!);
@@ -192,55 +185,87 @@ export default class Polygon {
   }
 
   /**
-   * 设置要素样式
-   * @param features 要素数组
-   * @param options 样式配置选项
+   * 创建样式或样式函数
+   * @param options 配置选项
+   * @returns 样式或样式函数
    */
-  private setFeatureStyles(features: Feature[], options: PolygonOptions): void {
-    features.forEach(feature => {
-      feature.set('type',  options.layerName);
-      feature.set('layerName',  options.layerName);
+  //************* 创建样式功能块 *************//
+  private createStyle(options: PolygonOptions): any {
+    // 如果传入了自定义样式，直接使用
+    if (options.style) {
+      return options.style;
+    }
 
-      // 如果传入了自定义样式，直接使用
-      if (options.style) {
-       if (typeof options.style === 'function') {
-        feature.setStyle(options.style(feature));
-       }else {
-        feature.setStyle(options.style);
-       }
-       return
+    const withDefaultStroke = options.withDefaultStroke ?? true;
+    const withDefaultFill = options.withDefaultFill ?? true;
+
+    const strokeColor = options.strokeColor ?? (withDefaultStroke ? '#EBEEF5' : undefined);
+    const strokeWidth = options.strokeWidth ?? 2;
+    const staticFillColor = options.fillColor ?? (withDefaultFill ? 'rgba(255, 255, 255, 0)' : undefined);
+
+    const stroke = strokeColor ? new Stroke({
+      color: strokeColor,
+      width: strokeWidth,
+      lineDash: options.lineDash,
+      lineDashOffset: options.lineDashOffset
+    }) : undefined;
+
+    // 预先创建基础样式（如果不需要基于feature动态计算fillColor）
+    let baseStyle: Style | undefined;
+    if (!options.fillColorCallBack) {
+      const fill = staticFillColor ? new Fill({ color: staticFillColor }) : undefined;
+      if (stroke || fill) {
+        baseStyle = new Style({
+          stroke,
+          fill
+        });
+      }
+    }
+
+    // 如果没有动态部分（没有回调且不显示文本），直接返回基础样式
+    if (baseStyle && !options.textVisible) {
+      return baseStyle;
+    }
+
+    // 返回样式函数
+    return (feature: Feature, resolution: number) => {
+      const styles: Style[] = [];
+
+      // 1. 处理几何样式
+      if (baseStyle) {
+        styles.push(baseStyle);
+      } else {
+        const fillColor = options.fillColorCallBack ? options.fillColorCallBack(feature) : staticFillColor;
+        const fill = fillColor ? new Fill({ color: fillColor }) : undefined;
+        
+        if (stroke || fill) {
+          styles.push(new Style({
+            stroke,
+            fill
+          }));
+        }
       }
 
-      const fillColor = options.fillColorCallBack ? options.fillColorCallBack(feature) : options.fillColor;
-
-      const featureStyle = new Style({
-        stroke: new Stroke({
-          color: options.strokeColor!,
-          width: options.strokeWidth!,
-          lineDash: options.lineDash,
-          lineDashOffset: options.lineDashOffset
-        }),
-        fill: new Fill({ color: fillColor! })
-      });
-
-      // 添加文本样式
+      // 2. 处理文本样式
       if (options.textVisible) {
         const text = this.getFeatureText(feature, options);
         if (text) {
-          featureStyle.setText(new Text({
-            text,
-            font: options.textFont!,
-            fill: new Fill({ color: options.textFillColor! }),
-            stroke: new Stroke({
-              color: options.textStrokeColor!,
-              width: options.textStrokeWidth!
+          styles.push(new Style({
+            text: new Text({
+              text,
+              font: options.textFont!,
+              fill: new Fill({ color: options.textFillColor! }),
+              stroke: new Stroke({
+                color: options.textStrokeColor!,
+                width: options.textStrokeWidth!
+              })
             })
           }));
         }
       }
 
-      feature.setStyle(featureStyle);
-    });
+      return styles;
+    };
   }
 
   /**
@@ -295,9 +320,6 @@ export default class Polygon {
     }
 
     const mergedOptions: FeatureColorUpdateOptions = {
-      strokeColor: '#EBEEF5',
-      strokeWidth: 2,
-      fillColor: 'rgba(255, 255, 255, 0.3)',
       textFont: '14px Calibri,sans-serif',
       textFillColor: '#FFF',
       textStrokeWidth: 2,
@@ -327,14 +349,27 @@ export default class Polygon {
     options?: FeatureColorUpdateOptions
   ): void {
     const name = options?.textKey ? feature.get(options.textKey) : '';
-    const newColor = colorObj?.[name] || options?.fillColor;
+
+    const withDefaultStroke = options?.withDefaultStroke ?? true;
+    const withDefaultFill = options?.withDefaultFill ?? true;
+
+    const strokeColor = options?.strokeColor ?? (withDefaultStroke ? '#EBEEF5' : undefined);
+    const strokeWidth = options?.strokeWidth ?? 2;
+    const defaultFillColor = 'rgba(255, 255, 255, 0.3)';
+    const resolvedFillColor = options?.fillColor ?? (withDefaultFill ? defaultFillColor : undefined);
+
+    const newColor = colorObj?.[name] || resolvedFillColor;
+
+    const stroke = strokeColor ? new Stroke({
+      color: strokeColor,
+      width: strokeWidth
+    }) : undefined;
+
+    const fill = newColor ? new Fill({ color: newColor }) : undefined;
 
     const featureStyle = new Style({
-      stroke: new Stroke({
-        color: options?.strokeColor!,
-        width: options?.strokeWidth!
-      }),
-      fill: new Fill({ color: newColor! })
+      stroke,
+      fill
     });
 
     // 添加文本样式
