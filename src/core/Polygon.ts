@@ -110,9 +110,21 @@ export default class Polygon {
       new MapTools(this.map).removeLayer(mergedOptions.layerName);
     }
 
+    const format = new GeoJSON();
+
+    // 优化：在解析 Feature 时直接注入 layerName，利用解析过程的遍历，避免解析后的二次循环
+    if (mergedOptions.layerName) {
+      const originalReadFeatureFromObject = (format as any).readFeatureFromObject;
+      (format as any).readFeatureFromObject = function (object: any, options: any) {
+        const feature = originalReadFeatureFromObject.call(this, object, options);
+        feature.set('layerName', mergedOptions.layerName, true); // true 表示静默设置，不触发事件
+        return feature;
+      };
+    }
+
     let features: Feature[];
     try {
-      features = new GeoJSON().readFeatures(dataJSON, mergedOptions.projectionOptOptions ?? {});
+      features = format.readFeatures(dataJSON, mergedOptions.projectionOptOptions ?? {});
     } catch (error) {
       throw new Error(`Failed to parse GeoJSON data: ${error}`);
     }
@@ -156,9 +168,21 @@ export default class Polygon {
       new MapTools(this.map).removeLayer(mergedOptions.layerName);
     }
 
+    const format = new GeoJSON(mergedOptions.projectionOptOptions ?? {});
+
+    // 优化：在解析 Feature 时直接注入 layerName，利用解析过程的遍历，避免解析后的二次循环
+    if (mergedOptions.layerName) {
+      const originalReadFeatureFromObject = (format as any).readFeatureFromObject;
+      (format as any).readFeatureFromObject = function (object: any, options: any) {
+        const feature = originalReadFeatureFromObject.call(this, object, options);
+        feature.set('layerName', mergedOptions.layerName, true); // true 表示静默设置，不触发事件
+        return feature;
+      };
+    }
+
     const source = new VectorSource({
       url,
-      format: new GeoJSON(mergedOptions.projectionOptOptions ?? {})
+      format
     });
 
     const layer = new VectorLayer({

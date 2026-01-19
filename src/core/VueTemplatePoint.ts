@@ -1,4 +1,3 @@
-import { PointData } from './../../temp-publish/types.d';
 import { Map as OLMap } from 'ol'
 import Overlay from 'ol/Overlay'
 import { Coordinate } from 'ol/coordinate'
