@@ -42,10 +42,14 @@ function detectVueSync() {
     // 如果在Node.js环境中，尝试require
       if (typeof window === 'undefined') {
         try {
-          // 使用eval来避免TypeScript编译时的require检查
-          const requireFunc = eval('require');
-          Vue = requireFunc('vue');
-          isVue3 = !!(Vue.version?.startsWith('3') || Vue.createApp);
+          // 尝试获取 require 函数，避免使用 eval
+          // @ts-ignore
+          const requireFunc = typeof __non_webpack_require__ === 'function' ? __non_webpack_require__ : (typeof module !== 'undefined' && module.require ? module.require : undefined);
+          
+          if (requireFunc) {
+            Vue = requireFunc('vue');
+            isVue3 = !!(Vue.version?.startsWith('3') || Vue.createApp);
+          }
         } catch (e) {
           ErrorHandler.getInstance().warn('Vue not found. Please ensure Vue is installed in your project.');
           Vue = null;
