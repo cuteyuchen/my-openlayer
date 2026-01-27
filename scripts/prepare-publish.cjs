@@ -7,6 +7,15 @@ const tempDir = path.join(__dirname, '..', 'temp-publish');
 const distDir = path.join(__dirname, '..', 'dist');
 const rootDir = path.join(__dirname, '..');
 
+// 自动更新 CHANGELOG.md
+console.log('正在更新 CHANGELOG.md...');
+try {
+  execSync('node scripts/update-changelog.cjs', { cwd: rootDir, stdio: 'inherit' });
+} catch (error) {
+  console.error('更新 CHANGELOG.md 失败:', error.message);
+  // 可以选择是否中断发布，这里仅警告
+}
+
 // 清理临时目录
 if (fs.existsSync(tempDir)) {
   fs.rmSync(tempDir, { recursive: true, force: true });
@@ -38,6 +47,12 @@ fs.copyFileSync(path.join(rootDir, 'package.json'), path.join(tempDir, 'package.
 fs.copyFileSync(path.join(rootDir, 'LICENSE'), path.join(tempDir, 'LICENSE'));
 fs.copyFileSync(path.join(rootDir, 'README.md'), path.join(tempDir, 'README.md'));
 
+// 复制 CHANGELOG.md
+const changelogSrc = path.join(rootDir, 'CHANGELOG.md');
+if (fs.existsSync(changelogSrc)) {
+  fs.copyFileSync(changelogSrc, path.join(tempDir, 'CHANGELOG.md'));
+}
+
 // 复制 AI_CONTEXT.md
 const aiContextSrc = path.join(rootDir, 'AI_CONTEXT.md');
 if (fs.existsSync(aiContextSrc)) {
@@ -62,6 +77,7 @@ packageJson.files = [
   "**/*",
   "LICENSE",
   "README.md",
+  "CHANGELOG.md",
   "AI_CONTEXT.md",
   "docs",
   "package.json"

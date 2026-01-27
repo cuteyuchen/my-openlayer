@@ -204,8 +204,11 @@ export default class SelectHandler {
    */
   selectByIds(featureIds: string[], options?: ProgrammaticSelectOptions): this {
     try {
+      // 确保交互实例存在
+      this.ensureSelectInteraction();
+
       if (!this.selectInteraction) {
-        this.errorHandler.warn('选择交互未启用，无法选择要素');
+        // 理论上 ensureSelectInteraction 后不应为空，这里做双重保险
         return this;
       }
 
@@ -287,8 +290,11 @@ export default class SelectHandler {
    */
   selectByProperty(propertyName: string, propertyValue: any, options?: ProgrammaticSelectOptions): this {
     try {
+      // 确保交互实例存在
+      this.ensureSelectInteraction();
+
       if (!this.selectInteraction) {
-        this.errorHandler.warn('选择交互未启用，无法选择要素');
+        // 理论上 ensureSelectInteraction 后不应为空，这里做双重保险
         return this;
       }
 
@@ -582,6 +588,31 @@ export default class SelectHandler {
       );
       throw error;
     }
+  }
+
+  /**
+   * 确保 Select 交互已创建
+   * 如果当前未启用选择交互，则创建一个不响应用户操作的交互实例用于编程式选择
+   * @private
+   */
+  private ensureSelectInteraction(): void {
+    if (this.selectInteraction) {
+      return;
+    }
+
+    // 创建一个不响应任何用户操作的 Select 交互
+    // condition 返回 false 表示不响应任何事件
+    this.selectInteraction = new Select({
+      condition: () => false,
+      style: this.createSelectStyle()
+    });
+
+    this.map.addInteraction(this.selectInteraction);
+    this.isEnabled = true;
+    
+    // 注意：这里我们不设置 currentMode，因为这是一种特殊的编程式模式
+    // 也不需要 attachEventListeners，因为这种交互不会触发用户事件
+    this.errorHandler.debug('已自动创建编程式选择交互实例');
   }
 
   /**
