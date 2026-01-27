@@ -38,6 +38,20 @@ fs.copyFileSync(path.join(rootDir, 'package.json'), path.join(tempDir, 'package.
 fs.copyFileSync(path.join(rootDir, 'LICENSE'), path.join(tempDir, 'LICENSE'));
 fs.copyFileSync(path.join(rootDir, 'README.md'), path.join(tempDir, 'README.md'));
 
+// 复制 AI_CONTEXT.md
+const aiContextSrc = path.join(rootDir, 'AI_CONTEXT.md');
+if (fs.existsSync(aiContextSrc)) {
+  fs.copyFileSync(aiContextSrc, path.join(tempDir, 'AI_CONTEXT.md'));
+}
+
+// 复制 docs 目录
+const docsSrc = path.join(rootDir, 'docs');
+const docsDest = path.join(tempDir, 'docs');
+if (fs.existsSync(docsSrc)) {
+  fs.mkdirSync(docsDest, { recursive: true });
+  copyDistFiles(docsSrc, docsDest);
+}
+
 // 修改临时package.json的配置
 const packageJson = JSON.parse(fs.readFileSync(path.join(tempDir, 'package.json'), 'utf8'));
 // 修正main和types路径，因为文件已经在根目录
@@ -48,6 +62,8 @@ packageJson.files = [
   "**/*",
   "LICENSE",
   "README.md",
+  "AI_CONTEXT.md",
+  "docs",
   "package.json"
 ];
 fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify(packageJson, null, 2));
