@@ -1,8 +1,9 @@
 {
   "name": "my-openlayer",
   "private": false,
-  "version": "2.4.3",
+  "version": "2.4.4",
   "type": "module",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "keywords": [
@@ -12,6 +13,14 @@
     "map",
     "vue"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cuteyuchen/my-openlayer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cuteyuchen/my-openlayer/issues"
+  },
+  "homepage": "https://github.com/cuteyuchen/my-openlayer#readme",
   "files": [
     "dist/**/*",
     "LICENSE",

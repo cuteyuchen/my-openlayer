@@ -24,6 +24,7 @@ import ShadeTest from './components/ShadeTest.vue'
 import TwinkleTest from './components/TwinkleTest.vue'
 import ClipTest from './components/ClipTest.vue'
 import LargePolygonTest from './components/LargePolygonTest.vue'
+import SelectHandlerTest from './components/SelectHandlerTest.vue'
 
 const currentComp = ref('MeasureTool')
 
@@ -32,7 +33,8 @@ const components: Record<string, any> = {
   ShadeTest,
   TwinkleTest,
   ClipTest,
-  LargePolygonTest
+  LargePolygonTest,
+  SelectHandlerTest
 }
 
 const getLabel = (key: string) => {
@@ -41,7 +43,8 @@ const getLabel = (key: string) => {
     ShadeTest: '遮罩测试',
     TwinkleTest: '闪烁点测试',
     ClipTest: '裁剪测试',
-    LargePolygonTest: '大文件面测试'
+    LargePolygonTest: '大文件面测试',
+    SelectHandlerTest: '选择交互测试'
   }
   return labels[key] || key
 }

@@ -1,11 +1,12 @@
-import Map from "ol/Map";
+import OlMap  from "ol/Map";
 import { Select } from "ol/interaction";
 import { SelectEvent } from "ol/interaction/Select";
 import { click, pointerMove, platformModifierKeyOnly } from "ol/events/condition";
-import { FeatureLike } from "ol/Feature";
+import Feature, { FeatureLike } from "ol/Feature";
 import VectorLayer from "ol/layer/Vector";
-import VectorSource from "ol/source/Vector";
 import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
+import Collection from 'ol/Collection';
+import { getUid } from "ol/util";
 import { EventManager } from "./EventManager";
 import { ValidationUtils } from "../utils/ValidationUtils";
 import { ErrorHandler, MyOpenLayersError, ErrorType } from "../utils/ErrorHandler";
@@ -14,33 +15,10 @@ import { SelectOptions, SelectMode, SelectCallbackEvent, ProgrammaticSelectOptio
 /**
  * 要素选择处理器类
  * 用于在地图上选择和高亮显示要素，支持单选、多选等多种选择模式
- * 
- * @example
- * ```typescript
- * const selectHandler = new SelectHandler(map);
- * 
- * // 启用点击选择
- * selectHandler.enableSelect('click', {
- *   layerFilter: ['pointLayer', 'polygonLayer'],
- *   multi: false,
- *   onSelect: (event) => {
- *     console.log('选中要素:', event.selected);
- *   }
- * });
- * 
- * // 获取当前选中的要素
- * const selected = selectHandler.getSelectedFeatures();
- * 
- * // 清除选择
- * selectHandler.clearSelection();
- * 
- * // 禁用选择
- * selectHandler.disableSelect();
- * ```
  */
 export default class SelectHandler {
   /** OpenLayers 地图实例 */
-  private readonly map: Map;
+  private readonly map: OlMap;
   
   /** 事件管理器实例 */
   private readonly eventManager: EventManager;
@@ -48,17 +26,23 @@ export default class SelectHandler {
   /** 错误处理器实例 */
   private readonly errorHandler: ErrorHandler;
   
-  /** Select 交互实例 */
-  private selectInteraction?: Select;
+  /** 主 Select 交互实例（只负责交互，不负责渲染） */
+  private mainSelectInteraction?: Select;
+  
+  /** 额外的 Select 交互实例列表（用于编程式选择） */
+  private extraSelectInteractions: Select[] = [];
+
+  /** 渲染用 Select 交互实例映射（用于交互式选择的高亮渲染） featureUID -> Select */
+  private renderInteractions: Map<string, Select> = new Map();
   
   /** 当前选择模式 */
   private currentMode?: SelectMode;
   
-  /** 当前配置选项 */
-  private currentOptions?: SelectOptions;
-  
   /** 是否已启用选择 */
   private isEnabled: boolean = false;
+
+  /** 当前自定义样式函数（用于交互式选择） */
+  private currentSelectStyle?: Style | Style[] | ((feature: FeatureLike, resolution: number) => Style | Style[]);
 
   /** 默认选中样式 - 点要素 */
   private readonly defaultPointStyle = new Style({
@@ -92,14 +76,11 @@ export default class SelectHandler {
    * 构造函数
    * @param map OpenLayers地图实例
    */
-  constructor(map: Map) {
+  constructor(map: OlMap) {
     ValidationUtils.validateMapInstance(map);
     this.map = map;
     this.eventManager = new EventManager(map);
     this.errorHandler = ErrorHandler.getInstance();
-    
-    // 默认启用点击选择模式，支持多选
-    this.enableSelect('click', { multi: true });
   }
 
   /**
@@ -115,21 +96,29 @@ export default class SelectHandler {
         this.disableSelect();
       }
 
-      const mergedOptions = this.mergeOptions(options);
-      this.currentMode = mode;
-      this.currentOptions = mergedOptions;
+      this.currentSelectStyle = options?.selectStyle;
 
-      // 创建 Select 交互
-      this.selectInteraction = this.createSelectInteraction(mode, mergedOptions);
+      // 创建主 Select 交互
+      // 这里的 style 设置为 null，使其只负责交互捕获，不负责渲染
+      // 渲染由独立的 renderInteractions 负责
+      this.mainSelectInteraction = new Select({
+        condition: this.getSelectCondition(mode),
+        layers: this.createLayerFilter(options?.layerFilter),
+        filter: options?.featureFilter,
+        style: null, 
+        multi: options?.multi ?? false,
+        hitTolerance: options?.hitTolerance ?? 0
+      });
 
       // 添加事件监听器
-      this.attachEventListeners(mergedOptions);
+      this.attachEventListeners(this.mainSelectInteraction, options);
 
       // 添加到地图
-      this.map.addInteraction(this.selectInteraction);
+      this.map.addInteraction(this.mainSelectInteraction);
       this.isEnabled = true;
+      this.currentMode = mode;
 
-      this.errorHandler.debug('要素选择已启用', { mode, options: mergedOptions });
+      this.errorHandler.debug('要素选择已启用', { mode, options });
       return this;
 
     } catch (error) {
@@ -150,13 +139,17 @@ export default class SelectHandler {
    */
   disableSelect(): this {
     try {
-      if (this.selectInteraction) {
-        this.map.removeInteraction(this.selectInteraction);
-        this.selectInteraction = undefined;
+      if (this.mainSelectInteraction) {
+        this.map.removeInteraction(this.mainSelectInteraction);
+        this.mainSelectInteraction = undefined;
       }
+      
+      // 清理交互式渲染实例（但不清理编程式的 extraSelectInteractions）
+      this.clearRenderInteractions();
 
       this.isEnabled = false;
       this.currentMode = undefined;
+      this.currentSelectStyle = undefined;
 
       this.errorHandler.debug('要素选择已禁用');
       return this;
@@ -173,16 +166,15 @@ export default class SelectHandler {
   }
 
   /**
-   * 获取当前选中的要素
+   * 获取当前选中的要素（仅返回主交互中的要素）
    * @returns 选中的要素数组
    */
   getSelectedFeatures(): FeatureLike[] {
-    if (!this.selectInteraction) {
-      return [];
+    const features: FeatureLike[] = [];
+    if (this.mainSelectInteraction) {
+      features.push(...this.mainSelectInteraction.getFeatures().getArray());
     }
-
-    const features = this.selectInteraction.getFeatures();
-    return features.getArray();
+    return features;
   }
 
   /**
@@ -190,85 +182,38 @@ export default class SelectHandler {
    * @returns SelectHandler 实例（支持链式调用）
    */
   clearSelection(): this {
-    if (this.selectInteraction) {
-      this.selectInteraction.getFeatures().clear();
+    // 1. 清除主交互的选择
+    if (this.mainSelectInteraction) {
+      this.mainSelectInteraction.getFeatures().clear();
     }
+    
+    // 2. 清理交互式渲染实例
+    this.clearRenderInteractions();
+
+    // 3. 移除并销毁所有额外交互（编程式选择）
+    this.extraSelectInteractions.forEach(interaction => {
+      this.map.removeInteraction(interaction);
+    });
+    this.extraSelectInteractions = []; 
+    
     return this;
   }
 
   /**
    * 通过要素ID选择要素
-   * @param featureIds 要素ID数组
-   * @param options 编程式选择配置选项
-   * @returns SelectHandler 实例（支持链式调用）
    */
   selectByIds(featureIds: string[], options?: ProgrammaticSelectOptions): this {
     try {
-      // 确保交互实例存在
-      this.ensureSelectInteraction();
-
-      if (!this.selectInteraction) {
-        // 理论上 ensureSelectInteraction 后不应为空，这里做双重保险
-        return this;
-      }
-
       if (!featureIds || featureIds.length === 0) {
         this.errorHandler.warn('要素ID列表为空');
         return this;
       }
 
-      // 清除当前选择
-      this.clearSelection();
+      const selectedFeatures = this.findFeaturesByIds(featureIds, options?.layerName);
+      if (selectedFeatures.length === 0) return this;
 
-      // 临时存储选中的要素
-      const selectedFeatures: FeatureLike[] = [];
-
-      // 获取所有图层
-      const layers = this.map.getLayers().getArray();
-      
-      for (const layer of layers) {
-        // 过滤图层
-        if (options?.layerName && layer.get('layerName') !== options.layerName) {
-          continue;
-        }
-
-        if (layer instanceof VectorLayer) {
-          const source = layer.getSource();
-          if (!source) continue;
-
-          // 查找并选择要素
-          for (const featureId of featureIds) {
-            const feature = source.getFeatureById(featureId);
-            if (feature) {
-              selectedFeatures.push(feature);
-              this.selectInteraction.getFeatures().push(feature);
-            }
-          }
-        }
-      }
-
-      // 如果传入了自定义样式，为选中的要素设置样式
-      if (options?.selectStyle && selectedFeatures.length > 0) {
-        for (const feature of selectedFeatures) {
-          if (typeof options.selectStyle === 'function') {
-            (feature as any).setStyle(options.selectStyle(feature));
-          } else {
-            (feature as any).setStyle(options.selectStyle);
-          }
-        }
-      }
-
-      // 定位至选中要素
-      if (options?.fitView && selectedFeatures.length > 0) {
-        this.fitToFeatures(
-          selectedFeatures,
-          options.fitDuration ?? 500,
-          options.fitPadding ?? 100
-        );
-      }
-
+      this.applySelection(selectedFeatures, options);
       return this;
-
     } catch (error) {
       this.errorHandler.handleError(
         new MyOpenLayersError(
@@ -283,77 +228,16 @@ export default class SelectHandler {
 
   /**
    * 通过属性选择要素
-   * @param propertyName 属性名称
-   * @param propertyValue 属性值
-   * @param options 编程式选择配置选项
-   * @returns SelectHandler 实例（支持链式调用）
    */
   selectByProperty(propertyName: string, propertyValue: any, options?: ProgrammaticSelectOptions): this {
     try {
-      // 确保交互实例存在
-      this.ensureSelectInteraction();
+      if (!propertyName) throw new Error('属性名称不能为空');
 
-      if (!this.selectInteraction) {
-        // 理论上 ensureSelectInteraction 后不应为空，这里做双重保险
-        return this;
-      }
+      const selectedFeatures = this.findFeaturesByProperty(propertyName, propertyValue, options?.layerName);
+      if (selectedFeatures.length === 0) return this;
 
-      if (!propertyName) {
-        throw new Error('属性名称不能为空');
-      }
-
-      // 清除当前选择
-      this.clearSelection();
-
-      // 临时存储选中的要素
-      const selectedFeatures: FeatureLike[] = [];
-
-      // 获取所有图层
-      const layers = this.map.getLayers().getArray();
-      
-      for (const layer of layers) {
-        // 过滤图层
-        if (options?.layerName && layer.get('layerName') !== options.layerName) {
-          continue;
-        }
-
-        if (layer instanceof VectorLayer) {
-          const source = layer.getSource();
-          if (!source) continue;
-
-          // 查找并选择要素
-          const features = source.getFeatures();
-          for (const feature of features) {
-            if (feature.get(propertyName) === propertyValue) {
-              selectedFeatures.push(feature);
-              this.selectInteraction.getFeatures().push(feature);
-            }
-          }
-        }
-      }
-
-      // 如果传入了自定义样式，为选中的要素设置样式
-      if (options?.selectStyle && selectedFeatures.length > 0) {
-        for (const feature of selectedFeatures) {
-          if (typeof options.selectStyle === 'function') {
-            (feature as any).setStyle(options.selectStyle(feature));
-          } else {
-            (feature as any).setStyle(options.selectStyle);
-          }
-        }
-      }
-
-      // 定位至选中要素
-      if (options?.fitView && selectedFeatures.length > 0) {
-        this.fitToFeatures(
-          selectedFeatures,
-          options.fitDuration ?? 500,
-          options.fitPadding ?? 100
-        );
-      }
-
+      this.applySelection(selectedFeatures, options);
       return this;
-
     } catch (error) {
       this.errorHandler.handleError(
         new MyOpenLayersError(
@@ -367,45 +251,141 @@ export default class SelectHandler {
   }
 
   /**
-   * 判断选择是否已启用
-   * @returns 是否已启用
+   * 应用选择（编程式）
    */
+  private applySelection(features: Feature[], options?: ProgrammaticSelectOptions): void {
+    if (options?.selectStyle) {
+      if (typeof options.selectStyle === 'function') {
+        features.forEach(feature => {
+          const resolution = this.map.getView().getResolution() || 1;
+          const style = (options.selectStyle as Function)(feature, resolution);
+          this.addExtraInteraction(feature, style);
+        });
+      } else {
+        const customSelect = new Select({
+          condition: () => false,
+          style: options.selectStyle as Style | Style[],
+          features: new Collection(features),
+          hitTolerance: 0
+        });
+        this.map.addInteraction(customSelect);
+        this.extraSelectInteractions.push(customSelect);
+      }
+    } else {
+      // 使用默认样式，添加到主交互
+      this.ensureMainInteraction();
+      this.mainSelectInteraction!.getFeatures().extend(features);
+      // 手动触发渲染交互的创建（因为 mainSelectInteraction 不自动渲染，且直接 extend 可能不会触发 select 事件）
+      // 注意：Select 交互的 'select' 事件通常在用户交互时触发，手动 extend 集合不会触发该事件
+      features.forEach(feature => {
+        this.createRenderInteraction(feature);
+      });
+    }
+
+    if (options?.fitView) {
+      this.fitToFeatures(features, options.fitDuration ?? 500, options.fitPadding ?? 100);
+    }
+  }
+
+  /**
+   * 添加额外的交互实例（用于函数式样式结果）
+   */
+  private addExtraInteraction(feature: Feature, style: Style | Style[]) {
+    const customSelect = new Select({
+      condition: () => false,
+      style: style,
+      features: new Collection([feature]),
+      hitTolerance: 0
+    });
+    this.map.addInteraction(customSelect);
+    this.extraSelectInteractions.push(customSelect);
+  }
+
+  // ... 查找方法保持不变 ...
+  private findFeaturesByIds(featureIds: string[], layerName?: string): Feature[] {
+    const selectedFeatures: Feature[] = [];
+    const layers = this.map.getLayers().getArray();
+
+    for (const layer of layers) {
+      if (layerName && layer.get('layerName') !== layerName) continue;
+      if (!(layer instanceof VectorLayer)) continue;
+      const source = layer.getSource();
+      if (!source) continue;
+      for (const featureId of featureIds) {
+        const feature = source.getFeatureById(featureId);
+        if (feature && feature instanceof Feature) selectedFeatures.push(feature);
+      }
+    }
+    return selectedFeatures;
+  }
+
+  private findFeaturesByProperty(key: string, value: any, layerName?: string): Feature[] {
+    const selectedFeatures: Feature[] = [];
+    const layers = this.map.getLayers().getArray();
+    for (const layer of layers) {
+      if (layerName && layer.get('layerName') !== layerName) continue;
+      if (!(layer instanceof VectorLayer)) continue;
+      const source = layer.getSource();
+      if (!source) continue;
+      const features = source.getFeatures();
+      for (const feature of features) {
+        if (feature.get(key) === value) selectedFeatures.push(feature);
+      }
+    }
+    return selectedFeatures;
+  }
+
+  private ensureMainInteraction(): void {
+    if (!this.mainSelectInteraction) {
+      this.mainSelectInteraction = new Select({
+        condition: () => false, 
+        style: null // 主交互不直接渲染，依靠事件监听创建渲染实例
+      });
+      // 也要监听它的事件来处理默认样式的渲染
+      this.attachEventListeners(this.mainSelectInteraction, {}); 
+      this.map.addInteraction(this.mainSelectInteraction);
+    }
+  }
+
   isSelectEnabled(): boolean {
     return this.isEnabled;
   }
 
-  /**
-   * 获取当前选择模式
-   * @returns 当前选择模式
-   */
   getCurrentMode(): SelectMode | undefined {
     return this.currentMode;
   }
 
-  /**
-   * 定位至要素
-   * @private
-   * @param features 要素数组
-   * @param duration 动画持续时间（毫秒），默认500
-   * @param padding 边距（像素），默认100
-   */
+  updateSelectStyle(selectStyle: Style | Style[] | ((feature: FeatureLike, resolution: number) => Style | Style[])): this {
+    if (!this.mainSelectInteraction) {
+      this.errorHandler.warn('主选择交互未启用，无法更新样式');
+      return this;
+    }
+    this.currentSelectStyle = selectStyle;
+    
+    // 强制刷新：重新生成所有选中要素的渲染实例
+    const features = this.mainSelectInteraction.getFeatures().getArray();
+    
+    // 清除旧的渲染
+    this.clearRenderInteractions();
+    
+    // 重新创建渲染
+    features.forEach(feature => {
+      this.createRenderInteraction(feature as Feature);
+    });
+    
+    return this;
+  }
+  
   private fitToFeatures(features: FeatureLike[], duration: number = 500, padding: number = 100): void {
     try {
-      if (!features || features.length === 0) {
-        return;
-      }
-
-      // 创建一个包含所有要素的范围
+      if (!features || features.length === 0) return;
       let extent: number[] | undefined;
-      
       for (const feature of features) {
         const geometry = feature.getGeometry();
         if (geometry) {
           const featureExtent = geometry.getExtent();
-          if (!extent) {
-            extent = featureExtent;
-          } else {
-            // 扩展范围以包含当前要素
+          if (!extent) extent = featureExtent;
+          else {
             extent = [
               Math.min(extent[0], featureExtent[0]),
               Math.min(extent[1], featureExtent[1]),
@@ -415,11 +395,11 @@ export default class SelectHandler {
           }
         }
       }
-
       if (extent) {
         this.map.getView().fit(extent, {
           duration,
-          padding: [padding, padding, padding, padding]
+          padding: [padding, padding, padding, padding],
+          maxZoom: 18
         });
       }
     } catch (error) {
@@ -427,12 +407,10 @@ export default class SelectHandler {
     }
   }
 
-  /**
-   * 销毁选择处理器，清理所有资源
-   */
   destroy(): void {
     try {
       this.disableSelect();
+      this.clearSelection();
       this.errorHandler.debug('选择处理器已销毁');
     } catch (error) {
       this.errorHandler.handleError(
@@ -444,76 +422,17 @@ export default class SelectHandler {
     }
   }
 
-  /**
-   * 合并选项配置
-   * @private
-   */
-  private mergeOptions(options?: SelectOptions): SelectOptions {
-    return {
-      multi: false,
-      layerFilter: undefined,
-      featureFilter: undefined,
-      hitTolerance: 0,
-      selectStyle: undefined,
-      onSelect: undefined,
-      onDeselect: undefined,
-      ...options
-    };
-  }
-
-  /**
-   * 创建 Select 交互
-   * @private
-   */
-  private createSelectInteraction(mode: SelectMode, options: SelectOptions): Select {
-    // 确定选择条件
-    const condition = this.getSelectCondition(mode);
-
-    // 创建图层过滤器
-    const layerFilter = this.createLayerFilter(options.layerFilter);
-
-    // 创建要素过滤器
-    const filter = options.featureFilter;
-
-    // 创建选择样式
-    const style = this.createSelectStyle(options.selectStyle);
-
-    return new Select({
-      condition,
-      layers: layerFilter,
-      filter,
-      style,
-      multi: options.multi,
-      hitTolerance: options.hitTolerance
-    });
-  }
-
-  /**
-   * 获取选择条件
-   * @private
-   */
   private getSelectCondition(mode: SelectMode): any {
     switch (mode) {
-      case 'click':
-        return click;
-      case 'hover':
-        return pointerMove;
-      case 'ctrl':
-        return platformModifierKeyOnly;
-      default:
-        return click;
+      case 'click': return click;
+      case 'hover': return pointerMove;
+      case 'ctrl': return platformModifierKeyOnly;
+      default: return click;
     }
   }
 
-  /**
-   * 创建图层过滤器
-   * @private
-   */
   private createLayerFilter(layerNames?: string[]): ((layer: any) => boolean) | undefined {
-    if (!layerNames || layerNames.length === 0) {
-      return undefined;
-    }
-
+    if (!layerNames || layerNames.length === 0) return undefined;
     return (layer: any) => {
       const layerName = layer.get('layerName') || layer.get('name');
       return layerNames.includes(layerName);
@@ -521,133 +440,104 @@ export default class SelectHandler {
   }
 
   /**
-   * 创建选择样式
-   * @private
+   * 计算样式（解析函数或返回默认）
    */
-  private createSelectStyle(customStyle?: Style | Style[] | ((feature: FeatureLike) => Style | Style[])): Style | Style[] | ((feature: FeatureLike) => Style | Style[]) {
-    if (customStyle) {
-      return customStyle;
-    }
-
-    // 返回根据几何类型的默认样式
-    return (feature: FeatureLike) => {
-      const geometry = feature.getGeometry();
-      if (!geometry) {
-        return this.defaultPointStyle;
+  private calculateStyle(feature: FeatureLike, resolution: number): Style | Style[] {
+    const styleSource = this.currentSelectStyle;
+    
+    if (styleSource) {
+      if (typeof styleSource === 'function') {
+        return styleSource(feature, resolution);
       }
-
-      const geometryType = geometry.getType();
-      switch (geometryType) {
-        case 'Point':
-        case 'MultiPoint':
-          return this.defaultPointStyle;
-        case 'LineString':
-        case 'MultiLineString':
-          return this.defaultLineStyle;
-        case 'Polygon':
-        case 'MultiPolygon':
-          return this.defaultPolygonStyle;
-        default:
-          return this.defaultPointStyle;
-      }
-    };
-  }
-
-  /**
-   * 更新选择样式
-   * @param selectStyle 新的选择样式
-   * @returns SelectHandler 实例（支持链式调用）
-   */
-  updateSelectStyle(selectStyle: Style | Style[] | ((feature: FeatureLike) => Style | Style[])): this {
-    if (!this.selectInteraction) {
-      this.errorHandler.warn('选择交互未启用，无法更新样式');
-      return this;
+      return styleSource;
     }
-
-    try {
-      // 更新选择交互的样式
-      this.selectInteraction.getStyle = () => {
-        if (typeof selectStyle === 'function') {
-          return selectStyle;
-        }
-        return selectStyle;
-      };
-
-      // 触发样式更新
-      const features = this.selectInteraction.getFeatures();
-      features.changed();
-
-      return this;
-    } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `更新选择样式失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.COMPONENT_ERROR,
-          { selectStyle }
-        )
-      );
-      throw error;
+    
+    // 默认样式逻辑
+    const geometry = feature.getGeometry();
+    if (!geometry) return this.defaultPointStyle;
+    const geometryType = geometry.getType();
+    switch (geometryType) {
+      case 'Point': case 'MultiPoint': return this.defaultPointStyle;
+      case 'LineString': case 'MultiLineString': return this.defaultLineStyle;
+      case 'Polygon': case 'MultiPolygon': return this.defaultPolygonStyle;
+      default: return this.defaultPointStyle;
     }
   }
 
   /**
-   * 确保 Select 交互已创建
-   * 如果当前未启用选择交互，则创建一个不响应用户操作的交互实例用于编程式选择
-   * @private
+   * 为单个要素创建并添加渲染交互
    */
-  private ensureSelectInteraction(): void {
-    if (this.selectInteraction) {
-      return;
-    }
+  private createRenderInteraction(feature: Feature) {
+    const uid = getUid(feature);
+    if (this.renderInteractions.has(uid)) return; // 已存在
 
-    // 创建一个不响应任何用户操作的 Select 交互
-    // condition 返回 false 表示不响应任何事件
-    this.selectInteraction = new Select({
+    const resolution = this.map.getView().getResolution() || 1;
+    const style = this.calculateStyle(feature, resolution);
+
+    const renderSelect = new Select({
       condition: () => false,
-      style: this.createSelectStyle()
+      style: style,
+      features: new Collection([feature]),
+      hitTolerance: 0
     });
 
-    this.map.addInteraction(this.selectInteraction);
-    this.isEnabled = true;
-    
-    // 注意：这里我们不设置 currentMode，因为这是一种特殊的编程式模式
-    // 也不需要 attachEventListeners，因为这种交互不会触发用户事件
-    this.errorHandler.debug('已自动创建编程式选择交互实例');
+    this.map.addInteraction(renderSelect);
+    this.renderInteractions.set(uid, renderSelect);
   }
 
   /**
-   * 附加事件监听器
-   * @private
+   * 移除单个要素的渲染交互
    */
-  private attachEventListeners(options: SelectOptions): void {
-    if (!this.selectInteraction) {
-      return;
+  private removeRenderInteraction(feature: Feature) {
+    const uid = getUid(feature);
+    const interaction = this.renderInteractions.get(uid);
+    if (interaction) {
+      this.map.removeInteraction(interaction);
+      this.renderInteractions.delete(uid);
     }
+  }
 
-    // 监听选择事件
-    this.selectInteraction.on('select', (event: SelectEvent) => {
+  /**
+   * 清理所有交互式渲染交互
+   */
+  private clearRenderInteractions() {
+    this.renderInteractions.forEach(interaction => {
+      this.map.removeInteraction(interaction);
+    });
+    this.renderInteractions.clear();
+  }
+
+  private attachEventListeners(interaction: Select, options?: SelectOptions): void {
+    interaction.on('select', (event: SelectEvent) => {
+      // 1. 处理渲染：选中时创建渲染实例
+      event.selected.forEach(feature => {
+        if (feature instanceof Feature) {
+          this.createRenderInteraction(feature);
+        }
+      });
+
+      // 2. 处理渲染：取消选中时销毁渲染实例
+      event.deselected.forEach(feature => {
+        if (feature instanceof Feature) {
+          this.removeRenderInteraction(feature);
+        }
+      });
+
+      // 3. 触发回调
       const callbackEvent: SelectCallbackEvent = {
         selected: event.selected,
         deselected: event.deselected,
         mapBrowserEvent: event.mapBrowserEvent
       };
 
-      // 触发选择回调
-      if (options.onSelect && event.selected.length > 0) {
-        try {
-          options.onSelect(callbackEvent);
-        } catch (error) {
-          this.errorHandler.error('选择回调执行失败:', error);
-        }
+      if (options?.onSelect && event.selected.length > 0) {
+        try { options.onSelect(callbackEvent); } 
+        catch (e) { this.errorHandler.error('选择回调失败:', e); }
       }
 
-      // 触发取消选择回调
-      if (options.onDeselect && event.deselected.length > 0) {
-        try {
-          options.onDeselect(callbackEvent);
-        } catch (error) {
-          this.errorHandler.error('取消选择回调执行失败:', error);
-        }
+      if (options?.onDeselect && event.deselected.length > 0) {
+        try { options.onDeselect(callbackEvent); } 
+        catch (e) { this.errorHandler.error('取消选择回调失败:', e); }
       }
     });
   }

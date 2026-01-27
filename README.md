@@ -109,7 +109,7 @@ point.addPoint([{ lgtd: 119.81, lttd: 29.969, name: '示例点' }], {
 - **[RiverLayerManager](docs/RiverLayerManager.md)**: 河流图层管理。
 
 ### 交互与工具
-- **[SelectHandler](docs/SelectHandler.md)**: 要素选择交互。
+- **[SelectHandler](docs/SelectHandler.md)**: 要素选择交互（支持独立样式渲染、多选隔离）。
 - **[MeasureHandler](docs/MeasureHandler.md)**: 测量工具。
 - **[MapTools](docs/MapTools.md)**: 通用地图工具。
 - **[ValidationUtils](docs/ValidationUtils.md)**: 验证工具。
