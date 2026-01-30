@@ -439,8 +439,7 @@ export default class MyOl {
       if (latitude < -90 || latitude > 90) {
         throw new Error('纬度值必须在 -90 到 90 之间');
       }
-
-      this.getPoint().locationAction(longitude, latitude, zoom, duration);
+      this.getTools().locationAction(longitude, latitude, zoom, duration);
 
       // 记录定位操作
       this.errorHandler.debug('地图定位完成', {

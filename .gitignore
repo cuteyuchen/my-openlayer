@@ -29,3 +29,7 @@ temp-publish/
 .env.local
 .env.*.local
 .npmrc
+
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache

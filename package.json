@@ -20,7 +20,7 @@
   "bugs": {
     "url": "https://github.com/cuteyuchen/my-openlayer/issues"
   },
-  "homepage": "https://github.com/cuteyuchen/my-openlayer#readme",
+  "homepage": "https://cuteyuchen.github.io/my-openlayer/",
   "files": [
     "dist/**/*",
     "LICENSE",
@@ -32,7 +32,10 @@
     "preview": "vite preview",
     "prepare-publish": "node scripts/prepare-publish.cjs",
     "publish-flat": "npm run build && npm run prepare-publish && cd temp-publish && npm publish",
-    "publish-flat-dry": "npm run build && npm run prepare-publish && cd temp-publish && npm publish --dry-run"
+    "publish-flat-dry": "npm run build && npm run prepare-publish && cd temp-publish && npm publish --dry-run",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",
@@ -46,6 +49,7 @@
     "vite": "^5.4.10",
     "vite-plugin-css-modules": "^0.0.1",
     "vite-plugin-libcss": "^1.1.1",
+    "vitepress": "^1.6.4",
     "vue-tsc": "^2.0.6"
   },
   "peerDependencies": {

@@ -1,126 +1,147 @@
-# SelectHandler 要素选择类
+# SelectHandler 类
 
-`SelectHandler` 负责地图要素的交互选择，支持点击、悬停等多种模式，以及编程式选择。
+`SelectHandler` 类用于处理地图上的要素选择交互，支持点击、悬停、Ctrl+点击等多种模式，并支持编程式选择。
 
-## 核心特性
+## 构造函数
 
-- **独立渲染机制**：采用独立的 Select 实例渲染选中要素，确保样式完全隔离，互不干扰。
-- **静态样式固化**：在选中瞬间计算并固化样式，支持基于原始样式的复杂计算（如 `feature.getStyle()`），彻底避免递归调用风险。
-- **多选隔离**：支持不同要素同时应用完全不同的高亮样式。
-- **自动清理**：自动管理渲染实例的生命周期，防止内存泄漏。
+```typescript
+constructor(map: Map)
+```
+
+- **map**: OpenLayers 地图实例。
+
+## 接口定义
+
+### SelectOptions
+
+| 属性名 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| multi | `boolean` | 是否支持多选，默认 `false` |
+| layerFilter | `string[]` | 图层过滤器，指定可选择的图层名称列表 |
+| featureFilter | `(feature: FeatureLike) => boolean` | 要素过滤器函数 |
+| hitTolerance | `number` | 点击容差（像素），默认为 0 |
+| selectStyle | `Style \| Style[] \| ((feature: FeatureLike) => Style \| Style[])` | 选中要素的样式 |
+| onSelect | `(event: SelectCallbackEvent) => void` | 选中要素时的回调函数 |
+| onDeselect | `(event: SelectCallbackEvent) => void` | 取消选中要素时的回调函数 |
+
+### ProgrammaticSelectOptions
+
+| 属性名 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| layerName | `string` | 图层名称，指定在哪个图层中选择要素 |
+| selectStyle | `Style \| Style[] \| ((feature: FeatureLike) => Style \| Style[])` | 自定义选中样式（仅作用于此次选择） |
+| fitView | `boolean` | 是否定位至选中要素，默认 `false` |
+| fitDuration | `number` | 定位动画持续时间（毫秒），默认 500 |
+| fitPadding | `number` | 定位时的边距（像素），默认 100 |
+
+### SelectMode
+
+```typescript
+type SelectMode = 'click' | 'hover' | 'ctrl';
+```
 
 ## 方法
 
-### 交互选择
+### enableSelect
 
-- **enableSelect(mode: SelectMode, options?: SelectOptions)**: 启用选择交互。
-  - `mode`: `'click'` (点击), `'hover'` (悬停), `'ctrl'` (Ctrl+点击)。
-  - `options`:
-    - `multi`: 是否允许多选。
-    - `layerFilter`: 图层过滤器（图层名称数组）。
-    - `onSelect`: 选中回调。
-    - `onDeselect`: 取消选中回调。
-    - `selectStyle`: 选中时的样式。支持 `Style` 对象、数组或函数 `(feature, resolution) => Style`。**推荐使用函数**以实现基于原始样式的动态高亮。
+启用要素选择。
 
-- **disableSelect()**: 禁用选择交互（停止响应用户操作，并清理交互式高亮）。
-- **isSelectEnabled()**: 检查是否已启用。
+```typescript
+enableSelect(mode: SelectMode = 'click', options?: SelectOptions): this
+```
 
-### 编程式选择
+- **mode**: 选择模式。
+- **options**: 配置选项。
+- **返回值**: `SelectHandler` 实例，支持链式调用。
 
-- **selectByIds(featureIds: string[], options?)**: 根据 ID 选中要素。
-- **selectByProperty(propertyName: string, propertyValue: any, options?)**: 根据属性值选中要素。
-- **clearSelection()**: 清除当前所有选中状态（包括交互式和编程式）。
-- **getSelectedFeatures()**: 获取当前选中的要素列表（仅包含交互式选择的要素）。
+### disableSelect
+
+禁用要素选择。
+
+```typescript
+disableSelect(): this
+```
+
+- **返回值**: `SelectHandler` 实例。
+
+### clearSelection
+
+清除所有选择（包括交互式和编程式）。
+
+```typescript
+clearSelection(): this
+```
+
+- **返回值**: `SelectHandler` 实例。
+
+### selectByIds
+
+通过要素 ID 编程式选择要素。
+
+```typescript
+selectByIds(featureIds: string[], options?: ProgrammaticSelectOptions): this
+```
+
+- **featureIds**: 要素 ID 数组。
+- **options**: 编程式选择选项。
+- **返回值**: `SelectHandler` 实例。
+
+### selectByProperty
+
+通过属性编程式选择要素。
+
+```typescript
+selectByProperty(propertyName: string, propertyValue: any, options?: ProgrammaticSelectOptions): this
+```
+
+- **propertyName**: 属性名。
+- **propertyValue**: 属性值。
+- **options**: 编程式选择选项。
+- **返回值**: `SelectHandler` 实例。
 
 ## 使用示例
 
-### 1. 基础用法
+### 启用点击选择
 
 ```typescript
-const selectHandler = map.getSelectHandler();
+import { SelectHandler } from 'my-openlayers';
 
-// 启用点击选择
+const selectHandler = new SelectHandler(map);
+
+// 启用点击选择，仅针对 'cities' 图层
 selectHandler.enableSelect('click', {
-  multi: false, // 单选
-  layerFilter: ['target-layer'], // 仅选择特定图层的要素
+  layerFilter: ['cities'],
   onSelect: (event) => {
-    const feature = event.selected[0];
-    console.log('选中要素:', feature.getProperties());
+    console.log('Selected:', event.selected);
   },
   onDeselect: (event) => {
-    console.log('取消选中:', event.deselected);
-  },
-  // 自定义选中样式（简单对象）
-  selectStyle: new Style({
-    image: new Circle({
-      radius: 8,
-      fill: new Fill({ color: 'red' }),
-      stroke: new Stroke({ color: 'white', width: 2 })
-    })
-  })
-});
-```
-
-### 2. 高级用法：基于原始样式的动态高亮
-
-利用函数式 `selectStyle`，可以在选中时动态获取要素的原始样式，并在此基础上修改（例如只改边框颜色，保留填充）。由于采用了**样式固化**机制，这种写法是安全的。
-
-```typescript
-selectHandler.enableSelect('click', {
-  selectStyle: (feature, resolution) => {
-    // 获取要素的原始样式
-    // 注意：feature.getStyle() 可能返回 Style 对象、数组或函数，需要自行处理归一化
-    const originStyleLike = feature.getStyle(); 
-    let originStyle = originStyleLike;
-    
-    // 如果原始样式是函数，执行它获取 Style 对象
-    if (typeof originStyleLike === 'function') {
-      originStyle = originStyleLike(feature, resolution);
-    }
-    
-    // 归一化为数组
-    const styles = Array.isArray(originStyle) ? originStyle : [originStyle];
-    
-    // 克隆并修改样式（例如：将边框改为青色）
-    return styles.map(s => {
-      const clone = s.clone();
-      const stroke = clone.getStroke();
-      if (stroke) {
-        stroke.setColor('#00FFFF');
-        stroke.setWidth(3);
-      } else {
-        // 如果没有边框，添加一个
-        clone.setStroke(new Stroke({ color: '#00FFFF', width: 3 }));
-      }
-      return clone;
-    });
+    console.log('Deselected:', event.deselected);
   }
 });
 ```
 
-### 3. 编程式选择（带独立样式）
-
-编程式选择支持传入特定的样式，该样式将独立于主交互样式生效，且支持多要素使用不同样式。
+### 启用悬停高亮
 
 ```typescript
-// 选中 ID 为 'feature-1' 的要素，并用红色高亮
-selectHandler.selectByIds(['feature-1'], {
-  selectStyle: new Style({ stroke: new Stroke({ color: 'red', width: 4 }) }),
-  fitView: true // 自动定位
-});
-
-// 同时选中 ID 为 'feature-2' 的要素，但用蓝色高亮（互不冲突）
-selectHandler.selectByIds(['feature-2'], {
-  selectStyle: new Style({ stroke: new Stroke({ color: 'blue', width: 4 }) })
+selectHandler.enableSelect('hover', {
+  selectStyle: new Style({
+    stroke: new Stroke({ color: 'yellow', width: 4 })
+  })
 });
 ```
 
-### 4. 禁用与清理
+### 编程式选择并定位
 
 ```typescript
-// 禁用用户交互（停止响应点击，但保留编程式高亮）
-selectHandler.disableSelect();
+// 选择 ID 为 'beijing' 的要素并自动定位
+selectHandler.selectByIds(['beijing'], {
+  fitView: true,
+  fitPadding: 50
+});
+```
 
-// 清除所有选择（包括交互式和编程式的高亮）
+### 清除选择
+
+```typescript
 selectHandler.clearSelection();
 ```
