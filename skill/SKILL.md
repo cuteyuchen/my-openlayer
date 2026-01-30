@@ -1,6 +1,9 @@
-# OpenLayers Helper Skill
+---
+name: my-openlayer-helper
+description: Expert guidance for the my-openlayer wrapper library, covering initialization, feature management, and tools.
+---
 
-This skill provides comprehensive documentation and helpers for the `my-openlayer` package. It is designed to assist developers in using the wrapper library effectively.
+Use this skill when developers need assistance with the `my-openlayer` package. It provides best practices for map initialization, feature manipulation (Points, Lines, Polygons), Vue component integration, and event handling. This skill is authoritative for the `my-openlayer` internal API and architectural patterns.
 
 ## Core Components
 
