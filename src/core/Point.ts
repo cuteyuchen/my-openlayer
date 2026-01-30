@@ -186,6 +186,7 @@ export default class Point {
       }
       
       const pointFeature = new Feature({
+        type: options.layerName,
         layerName: options.layerName,
         geometry: new olPoint([item.lgtd, item.lttd]),
         name: options.textKey ? item[options.textKey] : '',
@@ -208,7 +209,14 @@ export default class Point {
       layerName: options.layerName,
       source: clusterSource,
       style: (feature: any) => {
-        const name = feature.get('features')[0].get(options.textKey);
+        if (options.style) {
+          if (typeof options.style === 'function') {
+            return options.style(feature);
+          } else {
+            return options.style;
+          }
+        }
+        const name = feature.get('features')[0].get('name');
         return this.createClusterStyle(options, name);
       },
       zIndex: options.zIndex || ConfigManager.DEFAULT_CLUSTER_OPTIONS.zIndex,
@@ -327,7 +335,6 @@ export default class Point {
       anchors,
       remove:()=>{
         anchors.forEach(anchor => {
-          console.log('Removing overlay:', anchor);
           const element = anchor.getElement();
           if (element) {
             element.remove();
