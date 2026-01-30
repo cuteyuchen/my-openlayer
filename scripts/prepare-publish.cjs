@@ -53,12 +53,6 @@ if (fs.existsSync(changelogSrc)) {
   fs.copyFileSync(changelogSrc, path.join(tempDir, 'CHANGELOG.md'));
 }
 
-// 复制 AI_CONTEXT.md
-const aiContextSrc = path.join(rootDir, 'AI_CONTEXT.md');
-if (fs.existsSync(aiContextSrc)) {
-  fs.copyFileSync(aiContextSrc, path.join(tempDir, 'AI_CONTEXT.md'));
-}
-
 // 复制 docs 目录
 const docsSrc = path.join(rootDir, 'docs');
 const docsDest = path.join(tempDir, 'docs');
@@ -78,7 +72,6 @@ packageJson.files = [
   "LICENSE",
   "README.md",
   "CHANGELOG.md",
-  "AI_CONTEXT.md",
   "docs",
   "package.json"
 ];
