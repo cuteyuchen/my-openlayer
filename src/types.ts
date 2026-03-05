@@ -262,6 +262,8 @@ export interface ClusterOptions extends PointOptions {
  */
 export interface TwinkleItem extends PointData {
   className?: string;
+  /** 自定义DOM元素，可以是HTMLElement或者返回HTMLElement的函数 */
+  element?: HTMLElement | ((item: TwinkleItem) => HTMLElement);
   [key: string]: any;
 }
 

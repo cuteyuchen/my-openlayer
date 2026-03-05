@@ -307,9 +307,25 @@ export default class Point {
   } {
     let anchors: Overlay[] = [];
     twinkleList.forEach(twinkleItem => {
-      // 创建DOM元素
-      const element = document.createElement('div');
-      element.className = twinkleItem.className || '';
+      let element: HTMLElement;
+      // 创建或获取DOM元素
+      if (twinkleItem.element) {
+        if (typeof twinkleItem.element === 'function') {
+          element = twinkleItem.element(twinkleItem);
+        } else {
+          element = twinkleItem.element;
+        }
+        // 如果有className，追加到自定义元素
+        if (twinkleItem.className) {
+          const classes = twinkleItem.className.split(/\s+/).filter(Boolean);
+          if (classes.length > 0) {
+            element.classList.add(...classes);
+          }
+        }
+      } else {
+        element = document.createElement('div');
+        element.className = twinkleItem.className || '';
+      }
       
       // 添加点击事件
       if(callback){
