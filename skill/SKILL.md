@@ -1,62 +1,71 @@
 ---
 name: my-openlayer-helper
-description: Expert guidance for the my-openlayer wrapper library, covering initialization, feature management, and tools.
+description: "Initialize my-openlayer maps, add points/lines/polygons, configure Vue overlays, switch base layers, and handle measurement tools. Use when the user asks about my-openlayer setup, OpenLayers map initialization, adding map markers, polygon drawing, map overlay components, layer switching, feature selection, or measurement on a map."
 ---
 
-Use this skill when developers need assistance with the `my-openlayer` package. It provides best practices for map initialization, feature manipulation (Points, Lines, Polygons), Vue component integration, and event handling. This skill is authoritative for the `my-openlayer` internal API and architectural patterns.
+## Workflow
 
-## Core Components
+1. **Initialize** the map via `MyOl` constructor with a container ID and options.
+2. **Access modules** through lazy-loaded getters (`getPoint()`, `getLine()`, `getPolygon()`, `getTools()`).
+3. **Add features** by passing data arrays and options to module methods.
+4. **Clean up** by calling `destroy()` or event-manager dispose functions on unmount.
 
-Essential classes for map initialization and basic feature management.
-
-- [MyOl](references/core-my-ol.md) - Main entry point, map initialization, and module access.
-- [Point](references/core-point.md) - Management of point features, clustering, and markers.
-- [VueTemplatePoint](references/core-vue-template-point.md) - Integration of Vue components as map overlays.
-- [Line](references/core-line.md) - Management of polyline features and styling.
-- [Polygon](references/core-polygon.md) - Management of polygon features, heatmaps, and styling.
-
-## Map Tools
-
-Interactive tools and layer management utilities.
-
-- [MapTools](references/tool-map-tools.md) - Common map operations (zoom, pan, export, etc.).
-- [MeasureHandler](references/tool-measure-handler.md) - Distance and area measurement tools.
-- [SelectHandler](references/tool-select-handler.md) - Feature selection and interaction handling.
-- [MapBaseLayers](references/tool-map-base-layers.md) - Base layer switching (Tianditu, ArcGIS, etc.).
-- [RiverLayerManager](references/tool-river-layer-manager.md) - Specialized manager for river system layers.
-
-## Infrastructure
-
-Low-level utilities, configuration, and event handling.
-
-- [ConfigManager](references/infra-config-manager.md) - Centralized configuration and default values.
-- [EventManager](references/infra-event-manager.md) - Unified event listening and dispatching system.
-- [ErrorHandler](references/infra-error-handler.md) - Error handling, logging, and validation.
-- [ValidationUtils](references/infra-validation-utils.md) - Parameter and data validation helpers.
-
-## Usage Overview
-
-### Initialization
+### Quick Start
 
 ```typescript
 import { MyOl } from 'my-openlayer';
 
+// 1. Initialize map (container element must exist in DOM)
 const map = new MyOl('map-container', {
-  center: [120.15, 30.28],
-  zoom: 12
+  center: [120.155, 30.274],
+  zoom: 12,
+  token: 'YOUR_TIANDITU_TOKEN'
+});
+
+// 2. Add point markers
+const pointModule = map.getPoint();
+pointModule.addPoint(
+  [{ lgtd: 120.15, lttd: 30.27, name: 'Hangzhou HQ' }],
+  { layerName: 'offices', img: '/icons/marker.png', textKey: 'name', scale: 0.8 }
+);
+
+// 3. Listen for map ready
+const eventMgr = map.getEventManager();
+const unsub = eventMgr.on('rendercomplete', () => console.log('Map ready'));
+
+// 4. Cleanup on unmount
+onUnmounted(() => {
+  unsub();       // remove listener
+  map.destroy(); // release resources
 });
 ```
 
-### Accessing Modules
+### Error Recovery
 
-Modules are lazy-loaded via the `MyOl` instance:
+- **Container not found**: Ensure the DOM element exists before `new MyOl(...)`. In Vue, initialize inside `onMounted`, never in `setup`.
+- **Wrong coordinates**: The library expects `[longitude, latitude]` in EPSG:4326. EPSG:3857 projected values will misplace features.
+- **Clustering conflicts**: Enabling clustering replaces individual point rendering. Remove the existing non-clustered layer before switching.
+- **Event listener leaks**: Always call the dispose/unsubscribe function returned by `EventManager.on()` when the component unmounts.
 
-```typescript
-// Get Point module
-const pointModule = map.getPoint();
-pointModule.addPoint([...]);
+## Core Components
 
-// Get Tools module
-const tools = map.getMapTools();
-tools.zoomIn();
-```
+- [MyOl](references/core-my-ol.md) — Map initialization, configuration, and module access.
+- [Point](references/core-point.md) — Point features, clustering, markers, and Vue template points.
+- [Line](references/core-line.md) — Polyline features and styling.
+- [Polygon](references/core-polygon.md) — Polygon features, heatmaps, and styling.
+- [VueTemplatePoint](references/core-vue-template-point.md) — Vue components rendered as map overlays.
+
+## Map Tools
+
+- [MapTools](references/tool-map-tools.md) — Zoom, pan, export, z-index helpers.
+- [MeasureHandler](references/tool-measure-handler.md) — Distance and area measurement.
+- [SelectHandler](references/tool-select-handler.md) — Feature click/hover selection.
+- [MapBaseLayers](references/tool-map-base-layers.md) — Base layer switching (Tianditu, ArcGIS).
+- [RiverLayerManager](references/tool-river-layer-manager.md) — Specialized river system layers.
+
+## Infrastructure
+
+- [ConfigManager](references/infra-config-manager.md) — Centralized defaults and runtime config.
+- [EventManager](references/infra-event-manager.md) — Event listening and dispatching.
+- [ErrorHandler](references/infra-error-handler.md) — Error handling and logging.
+- [ValidationUtils](references/infra-validation-utils.md) — Parameter and data validation.
