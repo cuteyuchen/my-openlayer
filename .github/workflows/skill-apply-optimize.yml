@@ -1,0 +1,23 @@
+name: Skill Apply Optimize
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply-optimize:
+    if: >
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/apply-optimize')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref }}
+      - uses: tessl-io/skill-apply-optimize-action@d81583861aaf29d1da7f10e6539efef4e27b0dd5
+        env:
+          TESSL_API_TOKEN: ${{ secrets.TESSL_API_TOKEN }}
