@@ -125,18 +125,19 @@ export default class MapBaseLayers {
    */
   private initializeLayers(): this {
     const { layers, token, annotation } = this.options;
+    this.layers = {};
+
+    if (token) {
+      this.initTiandituLayers();
+    }
 
     // 初始化底图配置
     if (Array.isArray(layers)) {
-      this.layers = { [CUSTOM_LAYER_KEY]: layers };
+      this.layers[CUSTOM_LAYER_KEY] = layers;
     } else if (layers && Object.keys(layers).length > 0) {
-      this.layers = layers;
-    } else if (token) {
-      // 如果没有提供layers但提供了token，则初始化标准天地图
-      this.initTiandituLayers();
-    } else {
-      this.layers = {};
+      this.layers = { ...this.layers, ...layers };
     }
+      // 如果没有提供layers但提供了token，则初始化标准天地图
 
     // 初始化注记配置
     if (annotation) {
