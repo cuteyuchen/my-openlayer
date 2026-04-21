@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.4.12] - 2026-04-21
+
+### Features
+
+- **Point:** 新增 `addPulsePointLayer`，使用 `VectorLayer` 和单个 `requestAnimationFrame` 支持大量高性能闪烁点。
+- **Point:** 高性能闪烁点参数对齐 `addPoint`，支持 `img`、`scale`、`iconColor`、`textKey`、`textVisible` 等常用配置。
+- **examples:** 新增高性能闪烁点示例和村庄点位 SVG 图标。
+
+### Documentation
+
+- 更新 README、VitePress docs 和 Codex skill 文档，补充 `addPulsePointLayer` 用法。
+
 ## [2.4.8] - 2026-01-30
 
 ### ✨ Features

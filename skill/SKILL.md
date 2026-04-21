@@ -29,11 +29,25 @@ pointModule.addPoint(
   { layerName: 'offices', img: '/icons/marker.png', textKey: 'name', scale: 0.8 }
 );
 
-// 3. Listen for map ready
+// 3. Add many animated warning markers without per-point DOM animations
+pointModule.addPulsePointLayer(
+  [{ lgtd: 120.16, lttd: 30.28, name: 'Warning Village', lev: 0 }],
+  {
+    layerName: 'warnings',
+    levelKey: 'lev',
+    img: '/icons/village.svg',
+    scale: 0.8,
+    textKey: 'name',
+    textVisible: true,
+    pulse: { radius: [8, 28], duration: 2400 }
+  }
+);
+
+// 4. Listen for map ready
 const eventMgr = map.getEventManager();
 const unsub = eventMgr.on('rendercomplete', () => console.log('Map ready'));
 
-// 4. Cleanup on unmount
+// 5. Cleanup on unmount
 onUnmounted(() => {
   unsub();       // remove listener
   map.destroy(); // release resources
@@ -45,12 +59,13 @@ onUnmounted(() => {
 - **Container not found**: Ensure the DOM element exists before `new MyOl(...)`. In Vue, initialize inside `onMounted`, never in `setup`.
 - **Wrong coordinates**: The library expects `[longitude, latitude]` in EPSG:4326. EPSG:3857 projected values will misplace features.
 - **Clustering conflicts**: Enabling clustering replaces individual point rendering. Remove the existing non-clustered layer before switching.
+- **Many animated markers**: Prefer `addPulsePointLayer` over `addDomPoint` when rendering large warning/village pulse point lists.
 - **Event listener leaks**: Always call the dispose/unsubscribe function returned by `EventManager.on()` when the component unmounts.
 
 ## Core Components
 
 - [MyOl](references/core-my-ol.md) — Map initialization, configuration, and module access.
-- [Point](references/core-point.md) — Point features, clustering, markers, and Vue template points.
+- [Point](references/core-point.md) — Point features, clustering, high-performance pulse markers, and Vue template points.
 - [Line](references/core-line.md) — Polyline features and styling.
 - [Polygon](references/core-polygon.md) — Polygon features, heatmaps, and styling.
 - [VueTemplatePoint](references/core-vue-template-point.md) — Vue components rendered as map overlays.

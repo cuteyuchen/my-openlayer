@@ -1,6 +1,6 @@
 # Point 类
 
-`Point` 类用于在地图上添加和管理点要素，支持普通点、聚合点、DOM 点和 Vue 组件点。
+`Point` 类用于在地图上添加和管理点要素，支持普通点、聚合点、DOM 点、高性能闪烁点和 Vue 组件点。
 
 ## 构造函数
 
@@ -35,6 +35,34 @@ constructor(map: Map)
 | :--- | :--- | :--- |
 | distance | `number` | 聚合距离（像素），默认为 20 |
 | minDistance | `number` | 最小聚合距离 |
+
+### PulsePointOptions
+
+继承自 `PointOptions`，因此与 `addPoint` 一致支持 `img`、`scale`、`iconColor`、`textKey`、`textVisible` 等参数。
+
+| 属性名 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| levelKey | `string` | 点位等级字段，默认 `lev` |
+| icon | `PulsePointIconOptions` | 不使用 `img` 时的矢量圆点兜底配置 |
+| pulse.enabled | `boolean` | 是否启用闪烁圈，默认 `true` |
+| pulse.duration | `number` | 单轮动画时长，默认 `2400ms` |
+| pulse.radius | `[number, number]` | 闪烁圈半径范围，默认 `[8, 26]` |
+| pulse.colorMap | `Record<string \| number, string>` | 按等级配置闪烁圈填充色 |
+| pulse.strokeColorMap | `Record<string \| number, string>` | 按等级配置闪烁圈描边色 |
+| pulse.strokeWidth | `number` | 闪烁圈描边宽度，默认 `0` |
+| pulse.frameCount | `number` | 动画分帧缓存数量，默认 `24` |
+
+### PulsePointLayerHandle
+
+| 属性名 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| layer | `VectorLayer<VectorSource>` | 创建的闪烁点图层 |
+| source | `VectorSource` | 图层数据源 |
+| start | `() => void` | 开始闪烁动画 |
+| stop | `() => void` | 停止闪烁动画 |
+| setVisible | `(visible: boolean) => void` | 控制图层显隐 |
+| updateData | `(data: PointData[]) => void` | 更新点位数据 |
+| remove | `() => void` | 停止动画并移除图层 |
 
 ### PointData
 
@@ -101,6 +129,18 @@ addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
 - **callback**: 点击回调函数。
 - **返回值**: 控制对象，包含 `remove` 和 `setVisible` 方法。
 
+### addPulsePointLayer
+
+添加高性能闪烁点图层。
+
+```typescript
+addPulsePointLayer(pointData: PointData[], options: PulsePointOptions): PulsePointLayerHandle | null
+```
+
+- **pointData**: 点位数据数组。
+- **options**: 闪烁点配置选项，复用 `addPoint` 的图标、文本和图层参数习惯。
+- **返回值**: 控制对象，包含动画启停、显隐、数据更新和移除方法；如果数据无效返回 `null`。
+
 ### addVueTemplatePoint
 
 添加 Vue 组件作为点位。
@@ -148,6 +188,34 @@ point.addClusterPoint(data, {
   distance: 40,
   img: 'path/to/cluster-icon.png'
 });
+```
+
+### 添加高性能闪烁点
+
+```typescript
+const pulseCtrl = point.addPulsePointLayer(data, {
+  layerName: 'village-warning-pulse',
+  levelKey: 'lev',
+  textKey: 'name',
+  img: '/icons/village.svg',
+  scale: 0.8,
+  textVisible: true,
+  pulse: {
+    duration: 2400,
+    radius: [8, 28],
+    colorMap: {
+      0: 'rgba(255, 48, 54, 0.48)',
+      1: 'rgba(255, 136, 0, 0.45)',
+      2: 'rgba(253, 216, 46, 0.4)',
+      3: 'rgba(6, 183, 253, 0.32)'
+    }
+  }
+});
+
+pulseCtrl?.stop();
+pulseCtrl?.start();
+pulseCtrl?.updateData(data);
+pulseCtrl?.remove();
 ```
 
 ### 添加 Vue 组件点

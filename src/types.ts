@@ -4,6 +4,8 @@ import { WMTS } from "ol/source";
 import View from "ol/View";
 import Feature, { FeatureLike } from "ol/Feature";
 import { Style } from "ol/style";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
 import MapBrowserEvent from "ol/MapBrowserEvent";
 import { Units } from "ol/proj/Units";
 
@@ -255,6 +257,66 @@ export interface ClusterOptions extends PointOptions {
   distance?: number;
   /** 最小聚合距离 */
   minDistance?: number;
+}
+
+/**
+ * 高性能闪烁点图层图标配置。
+ */
+export interface PulsePointIconOptions {
+  /** 图标地址 */
+  src?: string;
+  /** 图标缩放比例 */
+  scale?: number;
+  /** 图标染色 */
+  color?: string;
+  /** 未使用图片时的矢量圆点半径，默认 5 */
+  radius?: number;
+  /** 未使用图片时的矢量圆点填充色，默认 #06b7fd */
+  fillColor?: string;
+  /** 未使用图片时的矢量圆点描边色，默认 #ffffff */
+  strokeColor?: string;
+  /** 未使用图片时的矢量圆点描边宽度，默认 2 */
+  strokeWidth?: number;
+}
+
+/**
+ * 高性能闪烁点图层配置。
+ */
+export interface PulsePointOptions extends PointOptions {
+  /** 点位等级字段，默认 lev */
+  levelKey?: string;
+  /** 点位中心图标。优先使用与 addPoint 一致的 img/scale/iconColor；该字段用于高级兜底配置 */
+  icon?: PulsePointIconOptions;
+  /** 闪烁圈配置 */
+  pulse?: {
+    /** 是否启用闪烁圈，默认 true */
+    enabled?: boolean;
+    /** 单轮动画时长，单位 ms，默认 2400 */
+    duration?: number;
+    /** 闪烁圈最小/最大半径，默认 [8, 26] */
+    radius?: [number, number];
+    /** 等级颜色映射 */
+    colorMap?: Record<string | number, string>;
+    /** 描边颜色映射 */
+    strokeColorMap?: Record<string | number, string>;
+    /** 描边宽度，默认 0 */
+    strokeWidth?: number;
+    /** 动画分帧缓存数量，默认 24 */
+    frameCount?: number;
+  };
+}
+
+/**
+ * 高性能闪烁点图层句柄。
+ */
+export interface PulsePointLayerHandle {
+  layer: VectorLayer<VectorSource>;
+  source: VectorSource;
+  start: () => void;
+  stop: () => void;
+  setVisible: (visible: boolean) => void;
+  updateData: (data: PointData[]) => void;
+  remove: () => void;
 }
 
 /**

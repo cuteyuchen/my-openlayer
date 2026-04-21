@@ -22,6 +22,7 @@ import { ref } from 'vue'
 import MeasureTool from './components/MeasureTool.vue'
 import ShadeTest from './components/ShadeTest.vue'
 import TwinkleTest from './components/TwinkleTest.vue'
+import PulsePointTest from './components/PulsePointTest.vue'
 import ClipTest from './components/ClipTest.vue'
 import LargePolygonTest from './components/LargePolygonTest.vue'
 import SelectHandlerTest from './components/SelectHandlerTest.vue'
@@ -32,6 +33,7 @@ const components: Record<string, any> = {
   MeasureTool,
   ShadeTest,
   TwinkleTest,
+  PulsePointTest,
   ClipTest,
   LargePolygonTest,
   SelectHandlerTest
@@ -42,6 +44,7 @@ const getLabel = (key: string) => {
     MeasureTool: '测量工具',
     ShadeTest: '遮罩测试',
     TwinkleTest: '闪烁点测试',
+    PulsePointTest: '高性能闪烁点',
     ClipTest: '裁剪测试',
     LargePolygonTest: '大文件面测试',
     SelectHandlerTest: '选择交互测试'
