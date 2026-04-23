@@ -2,7 +2,7 @@
  * 配置管理类
  * 用于统一管理默认配置和验证
  */
-export class ConfigManager {
+export default class ConfigManager {
   /**
    * 默认点位配置
    */
@@ -54,10 +54,12 @@ export class ConfigManager {
     autoStart: true,
     showBaseLine: true,
     animationMode: 'icon',
-    arrowScale: 0.8,
-    arrowRotateWithView: false,
-    arrowCount: 1,
-    arrowSpacing: 0.15,
+    flowSymbol: {
+      scale: 0.8,
+      rotateWithView: true,
+      count: 1,
+      spacing: 0.15
+    },
     trailEnabled: false,
     trailLength: 0,
     zIndex: 16

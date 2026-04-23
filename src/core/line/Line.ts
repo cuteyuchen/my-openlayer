@@ -1,27 +1,23 @@
 import Map from "ol/Map";
-import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
-import { Stroke, Style } from "ol/style";
-import { Feature } from "ol";
-import { FeatureLike } from "ol/Feature";
-import { FlowLineLayerHandle, FlowLineOptions, LineOptions, MapJSONData } from "../types";
-import MapTools from "./MapTools";
-import { ValidationUtils } from "../utils/ValidationUtils";
-import { ConfigManager } from "./ConfigManager";
-import { ProjectionUtils } from "../utils/ProjectionUtils";
-import { ErrorHandler } from "../utils/ErrorHandler";
+import VectorSource from "ol/source/Vector";
+import type { FlowLineLayerHandle, FlowLineOptions, LineOptions, MapJSONData } from "../../types";
+import { ErrorHandler } from "../../utils/ErrorHandler";
+import ProjectionUtils from "../../utils/ProjectionUtils";
+import ValidationUtils from "../../utils/ValidationUtils";
+import { ConfigManager, MapTools } from "../map";
 import LineFlowAnimator from "./LineFlowAnimator";
+import LineStyleFactory from "./LineStyleFactory";
 
 /**
  * 线要素管理类
  * 用于在地图上添加和管理静态线与流动线要素。
  */
 export default class Line {
-  /** OpenLayers 地图实例 */
   private readonly map: Map;
-  /** 流动线控制句柄注册表 */
   private readonly flowLineRegistry = new globalThis.Map<string, FlowLineLayerHandle>();
+  private readonly styleFactory = new LineStyleFactory();
 
   constructor(map: Map) {
     ValidationUtils.validateMapInstance(map);
@@ -31,74 +27,48 @@ export default class Line {
   /**
    * 合并静态线默认配置。
    */
-  private mergeDefaultOptions(options?: LineOptions) {
+  private mergeDefaultOptions(options?: LineOptions): LineOptions & { layerName: string } {
     const layerName = options?.layerName || ConfigManager.DEFAULT_LINE_OPTIONS.layerName;
-    const defaultOptions = {
+    return {
       ...ConfigManager.DEFAULT_LINE_OPTIONS,
+      ...options,
       layerName
     };
-
-    const mergedOptions = { ...defaultOptions, ...options };
-    return { ...mergedOptions, layerName };
   }
 
   /**
-   * 创建静态线样式函数。
+   * 合并流动线默认配置。
    */
-  private createStyleFunction(mergedOptions: ReturnType<Line['mergeDefaultOptions']>) {
-    return (feature: FeatureLike) => {
-      if (feature instanceof Feature) {
-        feature.set('type', mergedOptions.type);
-        feature.set('layerName', mergedOptions.layerName);
-      }
-
-      if (mergedOptions.style) {
-        if (typeof mergedOptions.style === 'function') {
-          return mergedOptions.style(feature);
-        }
-        return mergedOptions.style;
-      }
-
-      return new Style({
-        stroke: new Stroke({
-          color: mergedOptions.strokeColor,
-          width: mergedOptions.strokeWidth,
-          lineDash: mergedOptions.lineDash,
-          lineDashOffset: mergedOptions.lineDashOffset
-        })
-      });
+  private mergeFlowLineOptions(options?: FlowLineOptions): FlowLineOptions & { layerName: string } {
+    const layerName = options?.layerName || ConfigManager.DEFAULT_LINE_OPTIONS.layerName;
+    return {
+      ...ConfigManager.DEFAULT_FLOW_LINE_OPTIONS,
+      ...options,
+      flowSymbol: {
+        ...ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.flowSymbol,
+        ...options?.flowSymbol
+      },
+      layerName
     };
   }
 
   /**
    * 创建静态线图层。
    */
-  private createLayer(source: VectorSource, mergedOptions: ReturnType<Line['mergeDefaultOptions']>): VectorLayer<VectorSource> {
+  private createStaticLayer(source: VectorSource, options: LineOptions & { layerName: string }): VectorLayer<VectorSource> {
     const layer = new VectorLayer({
       properties: {
-        name: mergedOptions.layerName,
-        layerName: mergedOptions.layerName
+        name: options.layerName,
+        layerName: options.layerName
       },
       source,
-      style: this.createStyleFunction(mergedOptions),
-      zIndex: mergedOptions.zIndex
+      style: this.styleFactory.createBaseLineStyleResolver(options),
+      zIndex: options.zIndex
     });
 
-    layer.setVisible(mergedOptions.visible);
+    layer.setVisible(options.visible ?? true);
     this.map.addLayer(layer);
     return layer;
-  }
-
-  /**
-   * 合并流动线默认配置。
-   */
-  private mergeFlowLineOptions(options?: FlowLineOptions): FlowLineOptions {
-    const layerName = options?.layerName || ConfigManager.DEFAULT_LINE_OPTIONS.layerName;
-    return {
-      ...ConfigManager.DEFAULT_FLOW_LINE_OPTIONS,
-      ...options,
-      layerName
-    };
   }
 
   /**
@@ -115,20 +85,13 @@ export default class Line {
     this.flowLineRegistry.delete(layerName);
   }
 
-  /**
-   * 添加静态线要素。
-   */
   addLine(data: MapJSONData, options?: LineOptions): VectorLayer<VectorSource> {
     ValidationUtils.validateRequired(data, 'GeoJSON data is required');
     const mergedOptions = this.mergeDefaultOptions(options);
     const features = new GeoJSON().readFeatures(data, ProjectionUtils.getGeoJSONReadOptions(mergedOptions));
-    const source = new VectorSource({ features });
-    return this.createLayer(source, mergedOptions);
+    return this.createStaticLayer(new VectorSource({ features }), mergedOptions);
   }
 
-  /**
-   * 从 URL 添加静态线要素。
-   */
   addLineByUrl(url: string, options: LineOptions = {}): VectorLayer<VectorSource> {
     ValidationUtils.validateNonEmptyString(url, 'Line url is required');
     const mergedOptions = this.mergeDefaultOptions(options);
@@ -136,29 +99,21 @@ export default class Line {
       url,
       format: new GeoJSON(ProjectionUtils.getGeoJSONReadOptions(mergedOptions))
     });
-
-    return this.createLayer(source, mergedOptions);
+    return this.createStaticLayer(source, mergedOptions);
   }
 
-  /**
-   * 移除静态线图层。
-   */
   removeLineLayer(layerName: string): void {
     ValidationUtils.validateLayerName(layerName);
     MapTools.removeLayer(this.map, layerName);
   }
 
-  /**
-   * 添加流动线图层，返回控制句柄。
-   */
   addFlowLine(data: MapJSONData, options: FlowLineOptions = {}): FlowLineLayerHandle | null {
     const mergedOptions = this.mergeFlowLineOptions(options);
-    const layerName = mergedOptions.layerName || ConfigManager.DEFAULT_LINE_OPTIONS.layerName;
+    const layerName = mergedOptions.layerName;
 
     try {
       ValidationUtils.validateLayerName(layerName);
-      const existingHandle = this.flowLineRegistry.get(layerName);
-      existingHandle?.remove();
+      this.flowLineRegistry.get(layerName)?.remove();
 
       const animator = new LineFlowAnimator(this.map, data, mergedOptions, name => {
         this.unregisterFlowLineHandle(name);
@@ -176,9 +131,6 @@ export default class Line {
     }
   }
 
-  /**
-   * 从 URL 添加流动线图层。
-   */
   async addFlowLineByUrl(url: string, options: FlowLineOptions = {}): Promise<FlowLineLayerHandle | null> {
     const mergedOptions = this.mergeFlowLineOptions(options);
 
@@ -190,7 +142,7 @@ export default class Line {
       }
 
       const jsonData = await response.json();
-      if (!jsonData || (typeof jsonData !== 'object')) {
+      if (!jsonData || typeof jsonData !== 'object') {
         throw new Error('Flow line JSON data is invalid');
       }
 
@@ -201,18 +153,13 @@ export default class Line {
     }
   }
 
-  /**
-   * 移除流动线图层。
-   */
   removeFlowLineLayer(layerName: string): void {
     ValidationUtils.validateLayerName(layerName);
-
     const handle = this.flowLineRegistry.get(layerName);
     if (handle) {
       handle.remove();
       return;
     }
-
     MapTools.removeLayer(this.map, [layerName, `${layerName}__flow-animation`]);
   }
 }

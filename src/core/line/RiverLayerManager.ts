@@ -5,12 +5,10 @@ import VectorLayer from "ol/layer/Vector";
 import { Stroke, Style } from "ol/style";
 import { Feature } from "ol";
 import { FeatureLike } from "ol/Feature";
-import { LineOptions, MapJSONData } from "../types";
-import MapTools from "./MapTools";
-import { ValidationUtils } from "../utils/ValidationUtils";
-import { EventManager } from "./EventManager";
-import { ErrorHandler } from "../utils/ErrorHandler";
-import { ConfigManager } from "./ConfigManager";
+import { LineOptions, MapJSONData } from "../../types";
+import ValidationUtils from "../../utils/ValidationUtils";
+import { ErrorHandler } from "../../utils/ErrorHandler";
+import { ConfigManager, EventManager, MapTools } from "../map";
 
 /**
  * 河流图层管理类

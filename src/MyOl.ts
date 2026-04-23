@@ -14,15 +14,12 @@ import BaseLayer from "ol/layer/Base";
 import proj4 from "proj4";
 
 // 内部模块导入
-import Polygon from "./core/Polygon";
-import Point from "./core/Point";
-import Line from "./core/Line";
-import MapBaseLayers from "./core/MapBaseLayers";
-import MapTools from "./core/MapTools";
-import SelectHandler from "./core/SelectHandler";
+import { Polygon } from "./core/polygon";
+import { Point } from "./core/point";
+import { Line } from "./core/line";
+import { MapBaseLayers, MapTools, EventManager, ConfigManager } from "./core/map";
+import { SelectHandler } from "./core/select";
 import { ErrorHandler, MyOpenLayersError, ErrorType } from './utils/ErrorHandler';
-import { EventManager } from './core/EventManager';
-import { ConfigManager } from './core/ConfigManager';
 
 // 类型定义导入
 import { MapInitType, MapLayersOptions } from './types'

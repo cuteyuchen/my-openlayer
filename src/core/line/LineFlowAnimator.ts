@@ -1,16 +1,14 @@
 import Feature from 'ol/Feature';
 import Map from 'ol/Map';
-import GeoJSON from 'ol/format/GeoJSON';
-import { LineString, MultiLineString, Point as OlPoint } from 'ol/geom';
+import { LineString, Point as OlPoint } from 'ol/geom';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import { getVectorContext } from 'ol/render';
 import { unByKey } from 'ol/Observable';
-import { Fill, Icon, RegularShape, Stroke, Style } from 'ol/style';
-import { ConfigManager } from './ConfigManager';
-import { ErrorHandler } from '../utils/ErrorHandler';
-import { ProjectionUtils } from '../utils/ProjectionUtils';
-import type { FlowLineLayerHandle, FlowLineOptions, MapJSONData } from '../types';
+import type { FlowLineLayerHandle, FlowLineOptions, MapJSONData } from '../../types';
+import { ConfigManager } from '../map';
+import LineFeatureFactory from './LineFeatureFactory';
+import LineStyleFactory from './LineStyleFactory';
 
 type AnimationState = 'running' | 'paused' | 'stopped' | 'removed';
 
@@ -21,28 +19,29 @@ interface NormalizedFlowLineOptions extends FlowLineOptions {
   autoStart: boolean;
   showBaseLine: boolean;
   animationMode: 'icon' | 'dash' | 'icon+dash';
-  arrowScale: number;
-  arrowRotateWithView: boolean;
-  arrowCount: number;
-  arrowSpacing: number;
   trailEnabled: boolean;
   trailLength: number;
   speed: number;
   zIndex: number;
+  flowSymbol: {
+    src?: string;
+    scale: number;
+    color?: string;
+    rotateWithView: boolean;
+    count: number;
+    spacing: number;
+  };
 }
 
 /**
- * 线动画渲染器，负责流动线标准化、图层管理与动画生命周期。
+ * 流动线动画器
+ * 负责动画生命周期、postrender 与 RAF 驱动。
  */
 export default class LineFlowAnimator {
   private readonly map: Map;
-  private readonly errorHandler = ErrorHandler.getInstance();
   private readonly onRemove?: (layerName: string) => void;
-  private readonly dashFallback = [12, 12];
-  private readonly maxArrowCount = 12;
-  private readonly arrowStyleCache = new globalThis.Map<string, Style>();
-  private readonly baseLineStyle = new Style();
-  private readonly emptyStyle = new Style();
+  private readonly maxSymbolCount = 12;
+  private readonly styleFactory = new LineStyleFactory();
   private readonly animationPointGeometry = new OlPoint([0, 0]);
   private readonly animationPointFeature = new Feature(this.animationPointGeometry);
 
@@ -52,7 +51,7 @@ export default class LineFlowAnimator {
   private animationSource = new VectorSource<Feature<LineString>>();
   private baseLayer: VectorLayer<VectorSource<Feature<LineString>>>;
   private animationLayer: VectorLayer<VectorSource<Feature<LineString>>>;
-  private dashStyle: Style;
+  private dashStyle = this.styleFactory.createDashStyle(ConfigManager.DEFAULT_FLOW_LINE_OPTIONS);
   private state: AnimationState = 'stopped';
   private startTime = 0;
   private pausedAt = 0;
@@ -70,16 +69,13 @@ export default class LineFlowAnimator {
     this.map = map;
     this.onRemove = onRemove;
     this.options = this.normalizeOptions(options);
-    this.normalizedFeatures = this.normalizeLineFeatures(data, this.options);
-    this.dashStyle = this.createDashStyle();
+    this.normalizedFeatures = LineFeatureFactory.normalizeLineFeatures(data, this.options);
+    this.dashStyle = this.styleFactory.createDashStyle(this.options);
     this.baseLayer = this.createBaseLayer();
     this.animationLayer = this.createAnimationLayer();
     this.updateSources(this.normalizedFeatures);
   }
 
-  /**
-   * 创建控制句柄。若数据无效则返回 null。
-   */
   createHandle(): FlowLineLayerHandle | null {
     if (this.normalizedFeatures.length === 0) {
       return null;
@@ -105,69 +101,6 @@ export default class LineFlowAnimator {
     };
   }
 
-  /**
-   * 标准化输入线数据。
-   */
-  normalizeLineFeatures(data: unknown, options: FlowLineOptions): Feature<LineString>[] {
-    if (!data) {
-      this.errorHandler.error('[LineFlowAnimator] 流动线数据不能为空');
-      return [];
-    }
-
-    try {
-      const readOptions = ProjectionUtils.getGeoJSONReadOptions(options);
-      const features = new GeoJSON().readFeatures(data as any, readOptions);
-      const normalizedFeatures: Feature<LineString>[] = [];
-
-      features.forEach(feature => {
-        const geometry = feature.getGeometry();
-        if (!geometry) {
-          return;
-        }
-
-        const properties = { ...feature.getProperties() };
-        delete properties.geometry;
-
-        if (geometry instanceof LineString) {
-          if (geometry.getCoordinates().length >= 2) {
-            const normalizedFeature = new Feature({
-              ...properties,
-              geometry: geometry.clone()
-            }) as Feature<LineString>;
-            normalizedFeatures.push(normalizedFeature);
-          }
-          return;
-        }
-
-        if (geometry instanceof MultiLineString) {
-          geometry.getLineStrings().forEach((lineString, index) => {
-            if (lineString.getCoordinates().length < 2) {
-              return;
-            }
-            const normalizedFeature = new Feature({
-              ...properties,
-              __segmentIndex: index,
-              geometry: lineString.clone()
-            }) as Feature<LineString>;
-            normalizedFeatures.push(normalizedFeature);
-          });
-        }
-      });
-
-      if (normalizedFeatures.length === 0) {
-        this.errorHandler.error('[LineFlowAnimator] 未找到可用于流动动画的 LineString / MultiLineString 要素');
-      }
-
-      return normalizedFeatures;
-    } catch (error) {
-      this.errorHandler.error('[LineFlowAnimator] 标准化流动线数据失败:', error);
-      return [];
-    }
-  }
-
-  /**
-   * 基于时间计算动画进度。
-   */
   getProgressByTime(now: number, startTime: number, duration: number, speed: number, loop: boolean): number {
     const safeDuration = duration > 0 ? duration : ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.duration;
     const safeSpeed = speed > 0 ? speed : 1;
@@ -181,9 +114,6 @@ export default class LineFlowAnimator {
     return Math.min(progress, 1);
   }
 
-  /**
-   * 获取当前进度下的坐标与朝向。
-   */
   getCoordinateAndRotation(line: LineString, progress: number): { coordinate: number[]; rotation: number } {
     const safeProgress = Math.max(0, Math.min(progress, 1));
     const epsilon = 0.0001;
@@ -198,9 +128,6 @@ export default class LineFlowAnimator {
     };
   }
 
-  /**
-   * 启动动画，重复调用不会重复绑定。
-   */
   start(): void {
     if (this.state === 'removed' || this.state === 'running' || this.normalizedFeatures.length === 0) {
       return;
@@ -215,9 +142,6 @@ export default class LineFlowAnimator {
     this.startRafLoop();
   }
 
-  /**
-   * 暂停动画。
-   */
   pause(): void {
     if (this.state !== 'running') {
       return;
@@ -230,9 +154,6 @@ export default class LineFlowAnimator {
     this.animationLayer.changed();
   }
 
-  /**
-   * 继续播放动画。
-   */
   resume(): void {
     if (this.state !== 'paused') {
       return;
@@ -246,9 +167,6 @@ export default class LineFlowAnimator {
     this.startRafLoop();
   }
 
-  /**
-   * 停止动画并回到初始状态。
-   */
   stop(): void {
     if (this.state === 'removed') {
       return;
@@ -263,23 +181,17 @@ export default class LineFlowAnimator {
     this.animationLayer.changed();
   }
 
-  /**
-   * 同步设置基础线和动画层可见性。
-   */
   setVisible(visible: boolean): void {
     this.baseLayer.setVisible(visible);
     this.animationLayer.setVisible(visible);
   }
 
-  /**
-   * 更新流动线数据，并保持当前动画状态。
-   */
   updateData(data: unknown): void {
     if (this.state === 'removed') {
       return;
     }
 
-    const nextFeatures = this.normalizeLineFeatures(data, this.options);
+    const nextFeatures = LineFeatureFactory.normalizeLineFeatures(data, this.options);
     this.normalizedFeatures = nextFeatures;
     this.updateSources(nextFeatures);
     this.animationLayer.changed();
@@ -289,9 +201,6 @@ export default class LineFlowAnimator {
     }
   }
 
-  /**
-   * 释放动画资源。
-   */
   remove(): void {
     if (this.state === 'removed') {
       return;
@@ -302,16 +211,13 @@ export default class LineFlowAnimator {
     this.normalizedFeatures = [];
     this.baseSource.clear();
     this.animationSource.clear();
-    this.arrowStyleCache.clear();
+    this.styleFactory.clearCaches();
     this.onRemove?.(this.options.layerName);
     this.map.removeLayer(this.baseLayer);
     this.map.removeLayer(this.animationLayer);
     this.state = 'removed';
   }
 
-  /**
-   * 创建基础线图层。
-   */
   private createBaseLayer(): VectorLayer<VectorSource<Feature<LineString>>> {
     return new VectorLayer({
       properties: {
@@ -319,14 +225,11 @@ export default class LineFlowAnimator {
         layerName: this.options.layerName
       },
       source: this.baseSource,
-      style: feature => this.getBaseLineStyle(feature as Feature<LineString>),
+      style: feature => this.styleFactory.getFlowBaseLineStyle(feature as Feature<LineString>, this.options),
       zIndex: this.options.zIndex
     });
   }
 
-  /**
-   * 创建动画线图层。
-   */
   private createAnimationLayer(): VectorLayer<VectorSource<Feature<LineString>>> {
     return new VectorLayer({
       properties: {
@@ -334,68 +237,19 @@ export default class LineFlowAnimator {
         layerName: `${this.options.layerName}__flow-animation`
       },
       source: this.animationSource,
-      style: () => this.getAnimationLayerStyle(),
+      style: () => this.styleFactory.getAnimationLayerStyle(this.options, this.dashStyle),
       zIndex: this.options.zIndex + 1
     });
   }
 
-  /**
-   * 获取基础线样式。
-   */
-  private getBaseLineStyle(feature: Feature<LineString>): Style | Style[] | void {
-    if (!this.options.showBaseLine) {
-      this.baseLineStyle.setStroke(new Stroke({ color: 'rgba(0,0,0,0)', width: 0 }));
-      return this.baseLineStyle;
-    }
-
-    if (this.options.style) {
-      if (typeof this.options.style === 'function') {
-        return this.options.style(feature);
-      }
-      return this.options.style;
-    }
-
-    this.baseLineStyle.setStroke(new Stroke({
-      color: this.options.strokeColor ?? ConfigManager.DEFAULT_LINE_OPTIONS.strokeColor,
-      width: this.options.strokeWidth ?? ConfigManager.DEFAULT_LINE_OPTIONS.strokeWidth,
-      lineDash: this.options.lineDash,
-      lineDashOffset: this.options.lineDashOffset
-    }));
-    return this.baseLineStyle;
-  }
-
-  /**
-   * 获取动画图层样式。
-   */
-  private getAnimationLayerStyle(): Style {
-    if (this.options.animationMode === 'icon') {
-      return this.emptyStyle;
-    }
-    return this.dashStyle;
-  }
-
-  /**
-   * 创建虚线流光样式。
-   */
-  private createDashStyle(): Style {
-    const lineDash = this.options.lineDash && this.options.lineDash.length > 0 ? this.options.lineDash : this.dashFallback;
-    return new Style({
-      stroke: new Stroke({
-        color: this.options.strokeColor ?? ConfigManager.DEFAULT_LINE_OPTIONS.strokeColor,
-        width: this.options.strokeWidth ?? ConfigManager.DEFAULT_LINE_OPTIONS.strokeWidth,
-        lineDash,
-        lineDashOffset: this.options.lineDashOffset ?? 0
-      })
-    });
-  }
-
-  /**
-   * 标准化动画配置。
-   */
   private normalizeOptions(options: FlowLineOptions): NormalizedFlowLineOptions {
     const mergedOptions = {
       ...ConfigManager.DEFAULT_FLOW_LINE_OPTIONS,
       ...options
+    };
+    const flowSymbolOptions = {
+      ...ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.flowSymbol,
+      ...options.flowSymbol
     };
 
     return {
@@ -406,39 +260,28 @@ export default class LineFlowAnimator {
       autoStart: mergedOptions.autoStart ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.autoStart,
       showBaseLine: mergedOptions.showBaseLine ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.showBaseLine,
       animationMode: mergedOptions.animationMode ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.animationMode,
-      arrowScale: mergedOptions.arrowScale ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.arrowScale,
-      arrowRotateWithView: mergedOptions.arrowRotateWithView ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.arrowRotateWithView,
-      arrowCount: Math.min(this.maxArrowCount, Math.max(1, Math.round(mergedOptions.arrowCount ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.arrowCount))),
-      arrowSpacing: Math.max(0.01, Math.min(0.5, mergedOptions.arrowSpacing ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.arrowSpacing)),
       trailEnabled: mergedOptions.trailEnabled ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.trailEnabled,
       trailLength: mergedOptions.trailLength ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.trailLength,
       speed: mergedOptions.speed && mergedOptions.speed > 0 ? mergedOptions.speed : 1,
-      zIndex: mergedOptions.zIndex ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.zIndex
+      zIndex: mergedOptions.zIndex ?? ConfigManager.DEFAULT_FLOW_LINE_OPTIONS.zIndex,
+      flowSymbol: {
+        src: flowSymbolOptions.src,
+        scale: flowSymbolOptions.scale,
+        color: flowSymbolOptions.color,
+        rotateWithView: flowSymbolOptions.rotateWithView,
+        count: Math.min(this.maxSymbolCount, Math.max(1, Math.round(flowSymbolOptions.count))),
+        spacing: Math.max(0.01, Math.min(0.5, flowSymbolOptions.spacing))
+      }
     };
   }
 
-  /**
-   * 更新基础线和动画线的数据源。
-   */
   private updateSources(features: Feature<LineString>[]): void {
-    const createClone = (feature: Feature<LineString>) => {
-      const properties = { ...feature.getProperties() };
-      delete properties.geometry;
-      return new Feature({
-        ...properties,
-        geometry: feature.getGeometry()?.clone()
-      }) as Feature<LineString>;
-    };
-
     this.baseSource.clear();
     this.animationSource.clear();
-    this.baseSource.addFeatures(features.map(createClone));
-    this.animationSource.addFeatures(features.map(createClone));
+    this.baseSource.addFeatures(LineFeatureFactory.cloneLineFeatures(features));
+    this.animationSource.addFeatures(LineFeatureFactory.cloneLineFeatures(features));
   }
 
-  /**
-   * 绑定 postrender 事件。
-   */
   private bindPostrender(): void {
     if (this.postrenderKey || (this.options.animationMode !== 'icon' && this.options.animationMode !== 'icon+dash')) {
       return;
@@ -457,19 +300,19 @@ export default class LineFlowAnimator {
           return;
         }
 
-        for (let arrowIndex = 0; arrowIndex < this.options.arrowCount; arrowIndex += 1) {
-          const offsetProgress = baseProgress - (arrowIndex * this.options.arrowSpacing);
+        for (let symbolIndex = 0; symbolIndex < this.options.flowSymbol.count; symbolIndex += 1) {
+          const offsetProgress = baseProgress - (symbolIndex * this.options.flowSymbol.spacing);
           const normalizedProgress = this.options.loop
             ? ((offsetProgress % 1) + 1) % 1
             : Math.max(0, Math.min(offsetProgress, 1));
 
-          if (!this.options.loop && (normalizedProgress <= 0 || normalizedProgress >= 1) && arrowIndex > 0) {
+          if (!this.options.loop && (normalizedProgress <= 0 || normalizedProgress >= 1) && symbolIndex > 0) {
             continue;
           }
 
           const { coordinate, rotation } = this.getCoordinateAndRotation(geometry, normalizedProgress);
           this.animationPointGeometry.setCoordinates(coordinate);
-          const style = this.getArrowStyle(rotation);
+          const style = this.styleFactory.getMovingSymbolStyle(rotation, this.options);
           vectorContext.setStyle(style);
           vectorContext.drawFeature(this.animationPointFeature, style);
         }
@@ -477,9 +320,6 @@ export default class LineFlowAnimator {
     });
   }
 
-  /**
-   * 解绑 postrender 事件。
-   */
   private unbindPostrender(): void {
     if (!this.postrenderKey) {
       return;
@@ -488,58 +328,12 @@ export default class LineFlowAnimator {
     this.postrenderKey = null;
   }
 
-  /**
-   * 获取箭头样式，按旋转角做缓存。
-   */
-  private getArrowStyle(rotation: number): Style {
-    const rotationKey = rotation.toFixed(2);
-    const cacheKey = [
-      rotationKey,
-      this.options.arrowScale,
-      this.options.arrowIcon ?? 'builtin',
-      String(this.options.arrowRotateWithView),
-      String(this.options.strokeColor ?? ConfigManager.DEFAULT_LINE_OPTIONS.strokeColor)
-    ].join('|');
-
-    const cachedStyle = this.arrowStyleCache.get(cacheKey);
-    if (cachedStyle) {
-      return cachedStyle;
-    }
-
-    const image = this.options.arrowIcon
-      ? new Icon({
-          src: this.options.arrowIcon,
-          scale: this.options.arrowScale,
-          rotation,
-          rotateWithView: this.options.arrowRotateWithView
-        })
-      : new RegularShape({
-          points: 3,
-          radius: 10 * this.options.arrowScale,
-          rotation: rotation - Math.PI / 2,
-          rotateWithView: this.options.arrowRotateWithView,
-          fill: new Fill({
-            color: this.options.strokeColor ?? ConfigManager.DEFAULT_LINE_OPTIONS.strokeColor
-          }),
-          stroke: new Stroke({
-            color: this.options.strokeColor ?? ConfigManager.DEFAULT_LINE_OPTIONS.strokeColor,
-            width: 1
-          })
-        });
-
-    const style = new Style({ image });
-    this.arrowStyleCache.set(cacheKey, style);
-    return style;
-  }
-
-  /**
-   * 启动 RAF 渲染循环。
-   */
   private startRafLoop(): void {
     if (this.rafId !== null) {
       return;
     }
 
+    const dashFallback = this.styleFactory.getDashFallback();
     const renderFrame = () => {
       if (this.state !== 'running') {
         this.rafId = null;
@@ -547,7 +341,10 @@ export default class LineFlowAnimator {
       }
 
       if (this.options.animationMode === 'dash' || this.options.animationMode === 'icon+dash') {
-        const dashOffset = -this.getCurrentProgress() * (this.options.lineDash?.reduce((sum, item) => sum + item, 0) ?? this.dashFallback.reduce((sum, item) => sum + item, 0));
+        const dashOffset = -this.getCurrentProgress() * (
+          this.options.lineDash?.reduce((sum: number, item: number) => sum + item, 0) ??
+          dashFallback.reduce((sum: number, item: number) => sum + item, 0)
+        );
         this.dashStyle.getStroke()?.setLineDashOffset(dashOffset);
         this.animationLayer.changed();
       }
@@ -559,9 +356,6 @@ export default class LineFlowAnimator {
     this.rafId = requestAnimationFrame(renderFrame);
   }
 
-  /**
-   * 停止 RAF 渲染循环。
-   */
   private stopRafLoop(): void {
     if (this.rafId === null) {
       return;
@@ -570,9 +364,6 @@ export default class LineFlowAnimator {
     this.rafId = null;
   }
 
-  /**
-   * 获取当前动画进度。
-   */
   private getCurrentProgress(): number {
     if (this.state === 'paused') {
       return this.frozenProgress;
@@ -591,9 +382,6 @@ export default class LineFlowAnimator {
     );
   }
 
-  /**
-   * 获取时间戳。
-   */
   private getNow(): number {
     return typeof performance !== 'undefined' ? performance.now() : Date.now();
   }

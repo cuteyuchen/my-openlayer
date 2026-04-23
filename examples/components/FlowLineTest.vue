@@ -93,9 +93,14 @@ function startFlowLine() {
       strokeColor: '#19b1ff',
       strokeWidth: 3,
       lineDash: [18, 12],
-      arrowCount: 2,
-      arrowSpacing: 0.2,
-      arrowScale: 0.9,
+      flowSymbol: {
+        // src: '/symbols/boat.svg',
+        scale: 0.9,
+        color: '#19b1ff',
+        rotateWithView: true,
+        count: 2,
+        spacing: 0.2
+      },
       duration: 3600,
       showBaseLine: true,
       zIndex: 40

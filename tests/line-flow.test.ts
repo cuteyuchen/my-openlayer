@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import Line from '../src/core/Line';
+import { Line } from '../src/core/line';
 import { ProjectionUtils } from '../src/utils/ProjectionUtils';
-import type { MapJSONData } from '../src/types';
+import type { FlowLineOptions, MapJSONData } from '../src/types';
 
 const lineStringData: MapJSONData = {
   type: 'FeatureCollection',
@@ -93,8 +93,22 @@ describe('Line.addFlowLine', () => {
     const map = createMapStub();
     const line = new Line(map);
 
-    const lineHandle = line.addFlowLine(lineStringData, { layerName: 'flow-line-a' });
-    const multiHandle = line.addFlowLine(multiLineStringData, { layerName: 'flow-line-b' });
+    const lineHandle = line.addFlowLine(lineStringData, {
+      layerName: 'flow-line-a',
+      flowSymbol: {
+        scale: 1,
+        rotateWithView: true,
+        count: 2,
+        spacing: 0.2
+      }
+    });
+    const multiHandle = line.addFlowLine(multiLineStringData, {
+      layerName: 'flow-line-b',
+      flowSymbol: {
+        src: '/ship.svg',
+        color: '#19b1ff'
+      }
+    });
 
     expect(lineHandle?.layer).toBeInstanceOf(VectorLayer);
     expect(lineHandle?.animationLayer).toBeInstanceOf(VectorLayer);
@@ -160,11 +174,38 @@ describe('Line.addFlowLine', () => {
     const map = createMapStub();
     const handle = new Line(map).addFlowLine(lineStringData, {
       layerName: `mode-${animationMode}`,
-      animationMode
+      animationMode,
+      flowSymbol: {
+        src: '/symbol.svg',
+        scale: 0.9,
+        rotateWithView: true,
+        count: 2,
+        spacing: 0.25
+      }
     });
 
     expect(handle).not.toBeNull();
     expect(handle?.animationLayer.get('layerName')).toBe(`mode-${animationMode}__flow-animation`);
+  });
+
+  it('flowSymbol 配置可作为沿线运动符号主入口', () => {
+    const map = createMapStub();
+    const options: FlowLineOptions = {
+      layerName: 'symbol-flow',
+      animationMode: 'icon',
+      flowSymbol: {
+        src: '/boat.svg',
+        scale: 1.1,
+        color: '#00d2ff',
+        rotateWithView: true,
+        count: 3,
+        spacing: 0.18
+      }
+    };
+
+    const handle = new Line(map).addFlowLine(lineStringData, options);
+    expect(handle).not.toBeNull();
+    expect(handle?.animationLayer.get('layerName')).toBe('symbol-flow__flow-animation');
   });
 
   it('非法数据返回 null 且不留下脏图层', () => {

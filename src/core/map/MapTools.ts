@@ -1,7 +1,7 @@
 "use strict";
 
 import Map from "ol/Map";
-import { MapJSONData } from "../types";
+import { MapJSONData } from "../../types";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
@@ -10,9 +10,9 @@ import GeoJSON from "ol/format/GeoJSON";
 import BaseLayer from "ol/layer/Base";
 import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
-import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
-import { ValidationUtils } from "../utils/ValidationUtils";
-import { ProjectionUtils } from "../utils/ProjectionUtils";
+import { ErrorHandler, ErrorType } from "../../utils/ErrorHandler";
+import ValidationUtils from "../../utils/ValidationUtils";
+import ProjectionUtils from "../../utils/ProjectionUtils";
 import { createEmpty, extend, isEmpty } from "ol/extent";
 
 /**

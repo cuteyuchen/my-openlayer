@@ -1,6 +1,6 @@
 # Line 线要素类
 
-`Line` 类用于在地图上管理静态线和流动线，支持 GeoJSON 数据加载、自定义样式、图层管理以及沿线箭头/流光动画。
+`Line` 类用于在地图上管理静态线和流动线，支持 GeoJSON 数据加载、自定义样式、图层管理以及沿线运动符号 / 流光动画。
 
 ## 构造函数
 
@@ -38,11 +38,7 @@ const line = new Line(map: Map);
 | `speed` | `number` | 动画速度倍率，小于等于 `0` 时回退为 `1` |
 | `showBaseLine` | `boolean` | 是否显示基础静态线，默认 `true` |
 | `animationMode` | `'icon' \| 'dash' \| 'icon+dash'` | 动画模式 |
-| `arrowIcon` | `string` | 箭头图片地址，未传时使用内置矢量箭头 |
-| `arrowScale` | `number` | 箭头缩放，默认 `0.8` |
-| `arrowRotateWithView` | `boolean` | 箭头是否随视图旋转 |
-| `arrowCount` | `number` | 同时显示的箭头数量 |
-| `arrowSpacing` | `number` | 多箭头间距 |
+| `flowSymbol` | `{ src?: string; scale?: number; color?: string; rotateWithView?: boolean; count?: number; spacing?: number }` | 沿线运动符号配置 |
 
 ### FlowLineLayerHandle
 
@@ -90,7 +86,7 @@ removeLineLayer(layerName: string): void
 
 移除静态线图层。
 
-## 流动线 / 动态箭头线
+## 流动线 / 动态图标线
 
 ### addFlowLine
 
@@ -99,6 +95,7 @@ addFlowLine(data: MapJSONData, options?: FlowLineOptions): FlowLineLayerHandle |
 ```
 
 支持 `LineString` 和 `MultiLineString`。`MultiLineString` 会在内部拆解后参与动画。
+`flowSymbol.src` 不限于箭头，可以是船、车、粒子、标记等任意沿线运动符号；未传时内部会使用默认矢量 moving symbol。
 
 ### addFlowLineByUrl
 
@@ -140,9 +137,14 @@ const flow = lineModule.addFlowLine(lineData, {
   strokeColor: '#19b1ff',
   strokeWidth: 3,
   lineDash: [18, 12],
-  arrowCount: 2,
-  arrowSpacing: 0.2,
-  arrowScale: 0.9,
+  flowSymbol: {
+    src: '/symbols/boat.svg',
+    scale: 0.9,
+    color: '#19b1ff',
+    rotateWithView: true,
+    count: 2,
+    spacing: 0.2
+  },
   duration: 3600
 });
 ```
@@ -182,9 +184,15 @@ flow?.updateData({
 ```typescript
 lineModule.addFlowLine(projectedLineData, {
   layerName: 'projected-flow',
-  animationMode: 'dash',
+  animationMode: 'icon+dash',
   dataProjection: 'EPSG:4490',
-  featureProjection: 'EPSG:3857'
+  featureProjection: 'EPSG:3857',
+  flowSymbol: {
+    src: '/symbols/ship.svg',
+    scale: 1,
+    count: 1,
+    spacing: 0.15
+  }
 });
 ```
 
@@ -193,12 +201,12 @@ lineModule.addFlowLine(projectedLineData, {
 ## 样式兼容说明
 
 - `strokeColor`、`strokeWidth`、`lineDash`、`lineDashOffset`、`style` 继续兼容。
-- 当传入 `style` 时，它只控制基础线图层，不直接控制运动箭头。
+- 当传入 `style` 时，它只控制基础线图层，不直接控制 moving symbol。
 - `animationMode: 'dash'` 未传虚线参数时，内部会补默认虚线样式，确保流光可见。
 - `animationMode: 'icon+dash'` 会同时渲染：
   - 基础线图层
   - 动画虚线图层
-  - `postrender` 箭头动画
+  - `postrender` moving symbol 动画
 
 ## 与旧版 projectionOptOptions 的关系
 
