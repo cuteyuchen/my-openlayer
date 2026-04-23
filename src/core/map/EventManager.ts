@@ -2,7 +2,7 @@ import { Map as OLMap } from 'ol';
 import MapBrowserEvent from 'ol/MapBrowserEvent';
 import { Pixel } from 'ol/pixel';
 import { FeatureLike } from 'ol/Feature';
-import { ErrorHandler, ErrorType } from '../utils/ErrorHandler';
+import { ErrorHandler, ErrorType } from '../../utils/ErrorHandler';
 
 /**
  * 事件类型定义
@@ -45,7 +45,7 @@ interface EventListener {
  * 事件管理器类
  * 用于统一管理地图事件的注册、触发和移除
  */
-export class EventManager {
+export default class EventManager {
   private readonly map: OLMap;
   private listeners: Map<string, EventListener> = new Map();
   private eventCounters: Map<MapEventType, number> = new Map();

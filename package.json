@@ -6,6 +6,12 @@
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "keywords": [
     "openlayers",
     "ol",
@@ -29,6 +35,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
     "preview": "vite preview",
     "prepare-publish": "node scripts/prepare-publish.cjs",
     "publish-flat": "npm run build && npm run prepare-publish && cd temp-publish && npm publish",
@@ -47,6 +56,7 @@
     "@vitejs/plugin-vue": "^5.0.4",
     "typescript": "~5.6.2",
     "vite": "^5.4.10",
+    "vitest": "^2.1.9",
     "vite-plugin-css-modules": "^0.0.1",
     "vite-plugin-libcss": "^1.1.1",
     "vitepress": "^1.6.4",

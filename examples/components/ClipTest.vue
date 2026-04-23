@@ -11,37 +11,41 @@
 import { ref, onMounted, shallowRef } from 'vue'
 import { MyOl, MapTools } from '../../src/index'
 import { MapJSONData } from '../../src/types'
+import TileLayer from 'ol/layer/Tile'
 import boundaryData from '../json/boundary.json'
 
+/***********************状态*********************/
 const mapContainer = ref<HTMLElement | null>(null)
 const myOlInstance = shallowRef<MyOl | null>(null)
 
 // 使用 import.meta.env 获取 token
 const tiandituToken = (import.meta as any).env?.VITE_TIANDITU_TOKEN || 'YOUR_TIANDITU_TOKEN_HERE'
 
+/***********************生命周期*********************/
 onMounted(() => {
   if (mapContainer.value) {
     initMap(mapContainer.value)
   }
 })
 
+/***********************地图初始化*********************/
 const initMap = (target: HTMLElement) => {
+  myOlInstance.value?.destroy()
+
   const newMyOl = new MyOl(target, {
     token: tiandituToken,
-    center: [109.030378, 33.944369],
+    center: [115.909656812607, 38.86535161266765],
     zoom: 8,
     annotation: true,
   })
   myOlInstance.value = newMyOl
 }
 
+/***********************测试动作*********************/
 const testClip = () => {
   if (mapContainer.value) {
-     // 重置地图
-     initMap(mapContainer.value)
-     
-     // 运行测试
-     runClipTest(myOlInstance.value?.map)
+    initMap(mapContainer.value)
+    runClipTest(myOlInstance.value?.map)
   }
 }
 
@@ -49,18 +53,23 @@ const runClipTest = (map: any) => {
   if (!map) return
 
   console.log('Testing setMapClip with multi-feature GeoJSON...')
-  
-  // 获取底图图层（通常是第一个图层，天地图矢量底图）
-  const layers = map.getLayers().getArray()
-  const baseLayer = layers[0] 
-  
-  if (baseLayer) {
-    // 应用裁剪
-    MapTools.setMapClip(baseLayer, boundaryData as MapJSONData)
-    
-    // 强制刷新地图以触发 postrender
-    map.render()
-  }
+
+  const visibleTileLayers = map
+    .getLayers()
+    .getArray()
+    .filter((layer: any) => layer instanceof TileLayer && layer.getVisible())
+
+  visibleTileLayers.forEach((layer: any) => {
+    MapTools.setMapClip(layer, boundaryData as MapJSONData)
+  })
+
+  MapTools.fitByData(map, boundaryData as MapJSONData, {
+    duration: 500,
+    maxZoom: 9,
+    padding: [80, 80, 80, 80]
+  })
+
+  map.render()
 }
 </script>
 

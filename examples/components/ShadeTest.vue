@@ -9,10 +9,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, shallowRef } from 'vue'
-import { MyOl, Polygon } from '../../src/index'
-import { MapJSONData } from '../../src/types'
+import { MyOl, Polygon, MapTools } from '../../src/index'
+import { MapJSONData } from '../../src'
 import boundaryData from '../json/boundary.json'
 
+/***********************状态*********************/
 const mapContainer = ref<HTMLElement | null>(null)
 const myOlInstance = shallowRef<MyOl | null>(null)
 const polygonHandler = ref<Polygon | null>(null)
@@ -20,16 +21,20 @@ const polygonHandler = ref<Polygon | null>(null)
 // 使用 import.meta.env 获取 token
 const tiandituToken = (import.meta as any).env?.VITE_TIANDITU_TOKEN || 'YOUR_TIANDITU_TOKEN_HERE'
 
+/***********************生命周期*********************/
 onMounted(() => {
   if (mapContainer.value) {
     initMap(mapContainer.value)
   }
 })
 
+/***********************地图初始化*********************/
 const initMap = (target: HTMLElement) => {
+  myOlInstance.value?.destroy()
+
   const newMyOl = new MyOl(target, {
     token: tiandituToken,
-    center: [109.030378, 33.944369],
+    center: [115.909656812607, 38.86535161266765],
     zoom: 8,
     annotation: true,
   })
@@ -37,30 +42,33 @@ const initMap = (target: HTMLElement) => {
   polygonHandler.value = new Polygon(newMyOl.map)
 }
 
+/***********************测试动作*********************/
 const testShade = () => {
-  // 重置地图状态
   if (mapContainer.value) {
-     // 简单的方式是销毁重建，或者清理图层
-     // 这里我们选择重建地图以确保干净的环境，或者也可以只是清理图层
-     // 但为了符合“重置”的语义，我们重新初始化
-     initMap(mapContainer.value)
-     
-     // 必须等到 map 初始化完成（同步的）
-     runShadeTest()
+    initMap(mapContainer.value)
+    runShadeTest()
   }
 }
 
 const runShadeTest = () => {
-  if (!polygonHandler.value) return
-  
+  if (!polygonHandler.value || !myOlInstance.value) return
+
   console.log('Testing setOutLayer with multi-feature GeoJSON...')
-  
+
+  MapTools.removeLayer(myOlInstance.value.map, 'shade-test-out-layer')
   polygonHandler.value.setOutLayer(boundaryData as MapJSONData, {
+    layerName: 'shade-test-out-layer',
     extent: true,
     fillColor: 'rgba(0, 0, 0, 0.5)',
     strokeWidth: 2,
     strokeColor: '#0099ff',
     zIndex: 99
+  })
+
+  MapTools.fitByData(myOlInstance.value.map, boundaryData as MapJSONData, {
+    duration: 500,
+    maxZoom: 9,
+    padding: [80, 80, 80, 80]
   })
 }
 </script>
@@ -71,6 +79,7 @@ const runShadeTest = () => {
   height: 100%;
   position: relative;
 }
+
 button {
   padding: 5px 15px;
   cursor: pointer;

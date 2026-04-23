@@ -26,6 +26,7 @@ import PulsePointTest from './components/PulsePointTest.vue'
 import ClipTest from './components/ClipTest.vue'
 import LargePolygonTest from './components/LargePolygonTest.vue'
 import SelectHandlerTest from './components/SelectHandlerTest.vue'
+import FlowLineTest from './components/FlowLineTest.vue'
 
 const currentComp = ref('MeasureTool')
 
@@ -34,6 +35,7 @@ const components: Record<string, any> = {
   ShadeTest,
   TwinkleTest,
   PulsePointTest,
+  FlowLineTest,
   ClipTest,
   LargePolygonTest,
   SelectHandlerTest
@@ -45,6 +47,7 @@ const getLabel = (key: string) => {
     ShadeTest: '遮罩测试',
     TwinkleTest: '闪烁点测试',
     PulsePointTest: '高性能闪烁点',
+    FlowLineTest: '流动线动画',
     ClipTest: '裁剪测试',
     LargePolygonTest: '大文件面测试',
     SelectHandlerTest: '选择交互测试'

@@ -13,10 +13,10 @@ import WMTSTileGrid from "ol/tilegrid/WMTS";
 import XYZ from "ol/source/XYZ";
 import BaseLayer from "ol/layer/Base";
 import MapTools from "./MapTools";
-import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
-import { MapLayersOptions, TiandituType, AnnotationLayerOptions, MapLayers, AnnotationType } from "../types";
-import { ValidationUtils } from "../utils/ValidationUtils";
-import { ConfigManager } from "./ConfigManager";
+import { ErrorHandler, ErrorType } from "../../utils/ErrorHandler";
+import { MapLayersOptions, TiandituType, AnnotationLayerOptions, MapLayers, AnnotationType } from "../../types";
+import ValidationUtils from "../../utils/ValidationUtils";
+import ConfigManager from "./ConfigManager";
 
 const TIANDITU_TYPES = ['vec_c', 'img_c', 'ter_c'];
 const CUSTOM_LAYER_KEY = '__custom__';

@@ -14,15 +14,12 @@ import BaseLayer from "ol/layer/Base";
 import proj4 from "proj4";
 
 // 内部模块导入
-import Polygon from "./core/Polygon";
-import Point from "./core/Point";
-import Line from "./core/Line";
-import MapBaseLayers from "./core/MapBaseLayers";
-import MapTools from "./core/MapTools";
-import SelectHandler from "./core/SelectHandler";
+import { Polygon } from "./core/polygon";
+import { Point } from "./core/point";
+import { Line } from "./core/line";
+import { MapBaseLayers, MapTools, EventManager, ConfigManager } from "./core/map";
+import { SelectHandler } from "./core/select";
 import { ErrorHandler, MyOpenLayersError, ErrorType } from './utils/ErrorHandler';
-import { EventManager } from './core/EventManager';
-import { ConfigManager } from './core/ConfigManager';
 
 // 类型定义导入
 import { MapInitType, MapLayersOptions } from './types'
@@ -425,21 +422,31 @@ export default class MyOl {
    * @param zoom 缩放级别
    * @param duration 动画持续时间（毫秒）
    */
-  locationAction(longitude: number, latitude: number, zoom: number = 20, duration: number = 3000): void {
+  locationAction(longitude: number, latitude: number, zoom: number = 20, duration: number = 3000, projection?: {
+    dataProjection?: string;
+    featureProjection?: string;
+  }): void {
     try {
       // 参数验证
       if (typeof longitude !== 'number' || typeof latitude !== 'number') {
         throw new Error('经纬度必须是数字类型');
       }
 
-      if (longitude < -180 || longitude > 180) {
-        throw new Error('经度值必须在 -180 到 180 之间');
+      const hasProjection = !!projection?.dataProjection || !!projection?.featureProjection;
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        throw new Error('经纬度必须是有效数字');
       }
 
-      if (latitude < -90 || latitude > 90) {
-        throw new Error('纬度值必须在 -90 到 90 之间');
+      if (!hasProjection) {
+        if (longitude < -180 || longitude > 180) {
+          throw new Error('经度值必须在 -180 到 180 之间');
+        }
+
+        if (latitude < -90 || latitude > 90) {
+          throw new Error('纬度值必须在 -90 到 90 之间');
+        }
       }
-      this.getTools().locationAction(longitude, latitude, zoom, duration);
+      this.getTools().locationAction(longitude, latitude, zoom, duration, projection);
 
       // 记录定位操作
       this.errorHandler.debug('地图定位完成', {

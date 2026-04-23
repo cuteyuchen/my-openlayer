@@ -7,10 +7,10 @@ import VectorLayer from "ol/layer/Vector";
 import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
 import Collection from 'ol/Collection';
 import { getUid } from "ol/util";
-import { EventManager } from "./EventManager";
-import { ValidationUtils } from "../utils/ValidationUtils";
-import { ErrorHandler, MyOpenLayersError, ErrorType } from "../utils/ErrorHandler";
-import { SelectOptions, SelectMode, SelectCallbackEvent, ProgrammaticSelectOptions } from "../types";
+import EventManager from "../map/EventManager";
+import ValidationUtils from "../../utils/ValidationUtils";
+import { ErrorHandler, MyOpenLayersError, ErrorType } from "../../utils/ErrorHandler";
+import { SelectOptions, SelectMode, SelectCallbackEvent, ProgrammaticSelectOptions } from "../../types";
 
 /**
  * 要素选择处理器类
@@ -42,7 +42,7 @@ export default class SelectHandler {
   private isEnabled: boolean = false;
 
   /** 当前自定义样式函数（用于交互式选择） */
-  private currentSelectStyle?: Style | Style[] | ((feature: FeatureLike, resolution: number) => Style | Style[]);
+  private currentSelectStyle?: SelectOptions['selectStyle'];
 
   /** 默认选中样式 - 点要素 */
   private readonly defaultPointStyle = new Style({
@@ -355,7 +355,7 @@ export default class SelectHandler {
     return this.currentMode;
   }
 
-  updateSelectStyle(selectStyle: Style | Style[] | ((feature: FeatureLike, resolution: number) => Style | Style[])): this {
+  updateSelectStyle(selectStyle: SelectOptions['selectStyle']): this {
     if (!this.mainSelectInteraction) {
       this.errorHandler.warn('主选择交互未启用，无法更新样式');
       return this;
@@ -447,7 +447,7 @@ export default class SelectHandler {
     
     if (styleSource) {
       if (typeof styleSource === 'function') {
-        return styleSource(feature, resolution);
+        return styleSource(feature);
       }
       return styleSource;
     }

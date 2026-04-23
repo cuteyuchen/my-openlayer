@@ -1,10 +1,10 @@
 import { Map as OLMap } from 'ol'
 import Overlay from 'ol/Overlay'
 import { Coordinate } from 'ol/coordinate'
-import { VueTemplatePointOptions, VueApp, VueLegacyInstance, VueTemplatePointState, VueTemplatePointInstance } from '../types'
-import { ErrorHandler, ErrorType } from '../utils/ErrorHandler'
-import { ValidationUtils } from '../utils/ValidationUtils'
-import { ConfigManager } from './ConfigManager'
+import { VueTemplatePointOptions, VueApp, VueLegacyInstance, VueTemplatePointState, VueTemplatePointInstance } from '../../types'
+import { ErrorHandler, ErrorType } from '../../utils/ErrorHandler'
+import ValidationUtils from '../../utils/ValidationUtils'
+import { ConfigManager } from '../map'
 
 // 动态导入Vue
 let Vue: any = null;

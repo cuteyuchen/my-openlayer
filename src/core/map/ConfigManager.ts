@@ -2,7 +2,7 @@
  * 配置管理类
  * 用于统一管理默认配置和验证
  */
-export class ConfigManager {
+export default class ConfigManager {
   /**
    * 默认点位配置
    */
@@ -43,6 +43,27 @@ export class ConfigManager {
     layerName: 'lineLayer',
     zIndex: 15
   };
+
+  /**
+   * 默认流动线动画配置
+   */
+  static readonly DEFAULT_FLOW_LINE_OPTIONS = {
+    ...ConfigManager.DEFAULT_LINE_OPTIONS,
+    duration: 4000,
+    loop: true,
+    autoStart: true,
+    showBaseLine: true,
+    animationMode: 'icon',
+    flowSymbol: {
+      scale: 0.8,
+      rotateWithView: true,
+      count: 1,
+      spacing: 0.15
+    },
+    trailEnabled: false,
+    trailLength: 0,
+    zIndex: 16
+  } as const;
 
   /**
    * 默认面配置
