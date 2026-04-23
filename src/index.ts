@@ -27,7 +27,7 @@ export { ValidationUtils } from './utils/ValidationUtils'
 export type { BaseOptions, StyleOptions, TextOptions } from './types'
 
 // 类型定义 - 专用选项接口
-export type { PointOptions, LineOptions, PolygonOptions, PulsePointOptions, PulsePointLayerHandle } from './types'
+export type { PointOptions, LineOptions, FlowLineOptions, FlowLineLayerHandle, PolygonOptions, PulsePointOptions, PulsePointLayerHandle } from './types'
 
 // 类型定义 - 兼容性类型
 export type { OptionsType } from './types'

@@ -12,6 +12,7 @@ import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
 import { ErrorHandler, ErrorType } from "../utils/ErrorHandler";
 import { ValidationUtils } from "../utils/ValidationUtils";
+import { ProjectionUtils } from "../utils/ProjectionUtils";
 import { createEmpty, extend, isEmpty } from "ol/extent";
 
 /**
@@ -248,17 +249,25 @@ export default class MapTools {
    * @param duration 动画时长
    * @returns 定位是否成功
    */
-  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean {
+  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000, projection?: {
+    dataProjection?: string;
+    featureProjection?: string;
+  }): boolean {
     if (!this.map) {
       throw new Error('Map instance is not available');
     }
-    
-    if (!ValidationUtils.validateLngLat(lgtd, lttd)) {
+
+    const hasProjection = !!projection?.dataProjection || !!projection?.featureProjection;
+    const isValidCoordinate = hasProjection
+      ? typeof lgtd === 'number' && typeof lttd === 'number' && Number.isFinite(lgtd) && Number.isFinite(lttd)
+      : ValidationUtils.validateLngLat(lgtd, lttd);
+    if (!isValidCoordinate) {
       return false;
     }
     
     try {
-      this.map.getView().animate({ center: [lgtd, lttd], zoom, duration });
+      const center = ProjectionUtils.transformCoordinate([lgtd, lttd], projection);
+      this.map.getView().animate({ center, zoom, duration });
       return true;
     } catch (error) {
       this.errorHandler.error('[地图定位]', '定位失败:', error);

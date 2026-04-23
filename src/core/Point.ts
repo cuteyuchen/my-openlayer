@@ -14,6 +14,7 @@ import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
 import { ValidationUtils } from '../utils/ValidationUtils';
 import { ErrorHandler } from '../utils/ErrorHandler';
+import { ProjectionUtils } from '../utils/ProjectionUtils';
 import MapTools from './MapTools';
 import { ConfigManager } from "./ConfigManager";
 
@@ -151,7 +152,7 @@ export default class Point {
           rawData: item,
           type: options.layerName,
           layerName: options.layerName,
-          geometry: new olPoint([item.lgtd, item.lttd])
+          geometry: new olPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options))
         })
       );
     });
@@ -195,7 +196,7 @@ export default class Point {
         rawData: item,
         type: options.layerName,
         layerName: options.layerName,
-        geometry: new olPoint([item.lgtd, item.lttd])
+        geometry: new olPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options))
       });
       
       if (options.style) {
@@ -237,7 +238,7 @@ export default class Point {
       const pointFeature = new Feature({
         type: options.layerName,
         layerName: options.layerName,
-        geometry: new olPoint([item.lgtd, item.lttd]),
+        geometry: new olPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options)),
         name: options.textKey ? item[options.textKey] : '',
         rawData: item,
       });
@@ -628,7 +629,10 @@ export default class Point {
    * @param zoom 缩放级别
    * @param duration 动画时长
    */
-  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean {
-    return new MapTools(this.map).locationAction(lgtd, lttd, zoom, duration);
+  locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000, projection?: {
+    dataProjection?: string;
+    featureProjection?: string;
+  }): boolean {
+    return new MapTools(this.map).locationAction(lgtd, lttd, zoom, duration, projection);
   }
 }

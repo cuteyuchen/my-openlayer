@@ -45,6 +45,25 @@ export class ConfigManager {
   };
 
   /**
+   * 默认流动线动画配置
+   */
+  static readonly DEFAULT_FLOW_LINE_OPTIONS = {
+    ...ConfigManager.DEFAULT_LINE_OPTIONS,
+    duration: 4000,
+    loop: true,
+    autoStart: true,
+    showBaseLine: true,
+    animationMode: 'icon',
+    arrowScale: 0.8,
+    arrowRotateWithView: false,
+    arrowCount: 1,
+    arrowSpacing: 0.15,
+    trailEnabled: false,
+    trailLength: 0,
+    zIndex: 16
+  } as const;
+
+  /**
    * 默认面配置
    */
   static readonly DEFAULT_POLYGON_OPTIONS = {

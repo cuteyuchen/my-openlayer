@@ -104,7 +104,14 @@ export interface BaseOptions {
   mapClip?: boolean;
   /** 地图裁剪数据 */
   mapClipData?: MapJSONData;
-  /** 投影选项 */
+  /** 输入数据投影，默认按经纬度处理 */
+  dataProjection?: string;
+  /** 地图要素投影，传入后会将输入数据转换到该投影 */
+  featureProjection?: string;
+  /**
+   * GeoJSON 读取投影选项。
+   * @deprecated 新项目请使用 dataProjection / featureProjection。
+   */
   projectionOptOptions?: any;
   /** 自定义样式函数 */
   style?: Style | Style[] | ((feature: FeatureLike) => Style | Style[]);
@@ -174,6 +181,53 @@ export interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
 export interface LineOptions extends BaseOptions, StyleOptions, TextOptions {
   /** 线条类型 */
   type?: string;
+}
+
+/**
+ * 流动线动画配置。
+ */
+export interface FlowLineOptions extends LineOptions {
+  /** 是否循环播放，默认 true */
+  loop?: boolean;
+  /** 是否创建后自动播放，默认 true */
+  autoStart?: boolean;
+  /** 单轮动画时长，单位 ms，默认 4000 */
+  duration?: number;
+  /** 动画速度倍率，小于等于 0 时回退为 1 */
+  speed?: number;
+  /** 是否显示基础静态线，默认 true */
+  showBaseLine?: boolean;
+  /** 动画模式：图标、虚线流光或两者同时 */
+  animationMode?: 'icon' | 'dash' | 'icon+dash';
+  /** 箭头图片地址，未传时使用内置矢量箭头 */
+  arrowIcon?: string;
+  /** 箭头缩放比例，默认 0.8 */
+  arrowScale?: number;
+  /** 箭头是否随视图旋转，默认 false */
+  arrowRotateWithView?: boolean;
+  /** 每条线上同时显示的箭头数量，默认 1 */
+  arrowCount?: number;
+  /** 多箭头之间的进度间距，默认 0.15 */
+  arrowSpacing?: number;
+  /** 是否启用尾迹预留开关 */
+  trailEnabled?: boolean;
+  /** 尾迹长度预留配置 */
+  trailLength?: number;
+}
+
+/**
+ * 流动线图层控制句柄。
+ */
+export interface FlowLineLayerHandle {
+  layer: VectorLayer<VectorSource>;
+  animationLayer: VectorLayer<VectorSource>;
+  start: () => void;
+  pause: () => void;
+  resume: () => void;
+  stop: () => void;
+  setVisible: (visible: boolean) => void;
+  updateData: (data: MapJSONData) => void;
+  remove: () => void;
 }
 
 /**

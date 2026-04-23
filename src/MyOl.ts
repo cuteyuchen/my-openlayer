@@ -425,21 +425,31 @@ export default class MyOl {
    * @param zoom 缩放级别
    * @param duration 动画持续时间（毫秒）
    */
-  locationAction(longitude: number, latitude: number, zoom: number = 20, duration: number = 3000): void {
+  locationAction(longitude: number, latitude: number, zoom: number = 20, duration: number = 3000, projection?: {
+    dataProjection?: string;
+    featureProjection?: string;
+  }): void {
     try {
       // 参数验证
       if (typeof longitude !== 'number' || typeof latitude !== 'number') {
         throw new Error('经纬度必须是数字类型');
       }
 
-      if (longitude < -180 || longitude > 180) {
-        throw new Error('经度值必须在 -180 到 180 之间');
+      const hasProjection = !!projection?.dataProjection || !!projection?.featureProjection;
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        throw new Error('经纬度必须是有效数字');
       }
 
-      if (latitude < -90 || latitude > 90) {
-        throw new Error('纬度值必须在 -90 到 90 之间');
+      if (!hasProjection) {
+        if (longitude < -180 || longitude > 180) {
+          throw new Error('经度值必须在 -180 到 180 之间');
+        }
+
+        if (latitude < -90 || latitude > 90) {
+          throw new Error('纬度值必须在 -90 到 90 之间');
+        }
       }
-      this.getTools().locationAction(longitude, latitude, zoom, duration);
+      this.getTools().locationAction(longitude, latitude, zoom, duration, projection);
 
       // 记录定位操作
       this.errorHandler.debug('地图定位完成', {
