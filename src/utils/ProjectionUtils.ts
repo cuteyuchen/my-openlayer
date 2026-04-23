@@ -19,7 +19,7 @@ export interface ProjectionOptionLike {
 /**
  * 投影处理工具，统一显式字段与旧 projectionOptOptions 的兼容逻辑。
  */
-export class ProjectionUtils {
+export default class ProjectionUtils {
   /**
    * 生成 GeoJSON 读取投影参数。显式字段优先于旧 projectionOptOptions。
    */

@@ -2,7 +2,7 @@
  * 验证工具类
  * 统一管理参数校验逻辑，错误记录由调用方或 ErrorHandler 负责。
  */
-export class ValidationUtils {
+export default class ValidationUtils {
   /**
    * 判断值是否为有效数字。
    */
