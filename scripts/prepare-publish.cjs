@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { preparePublishPackageJson } = require('./prepare-publish-package.cjs');
 
 // 创建临时发布目录
 const tempDir = path.join(__dirname, '..', 'temp-publish');
@@ -61,21 +62,11 @@ if (fs.existsSync(docsSrc)) {
   copyDistFiles(docsSrc, docsDest);
 }
 
-// 修改临时package.json的配置
-const packageJson = JSON.parse(fs.readFileSync(path.join(tempDir, 'package.json'), 'utf8'));
-// 修正main和types路径，因为文件已经在根目录
-packageJson.main = "index.js";
-packageJson.types = "index.d.ts";
-// 确保包含所有必要文件
-packageJson.files = [
-  "**/*",
-  "LICENSE",
-  "README.md",
-  "CHANGELOG.md",
-  "docs",
-  "package.json"
-];
-fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify(packageJson, null, 2));
+// 修改临时 package.json 的入口、类型和 exports，匹配扁平发布目录。
+const packageJsonPath = path.join(tempDir, 'package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+const publishPackageJson = preparePublishPackageJson(packageJson);
+fs.writeFileSync(packageJsonPath, JSON.stringify(publishPackageJson, null, 2));
 
 console.log('准备发布文件完成，临时目录:', tempDir);
 console.log('请进入临时目录执行 npm publish');
