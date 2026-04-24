@@ -17,16 +17,21 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: "24"
           cache: npm
-          registry-url: https://registry.npmjs.org
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Check Node and npm version
+        run: |
+          node -v
+          npm -v
 
       - name: Install dependencies
         run: npm ci
@@ -55,6 +60,7 @@ jobs:
             echo "$PACKAGE_NAME@$PACKAGE_VERSION is already published on npm."
           else
             echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "$PACKAGE_NAME@$PACKAGE_VERSION is not published yet."
           fi
 
       - name: Build package
@@ -65,9 +71,12 @@ jobs:
         if: steps.npm_check.outputs.already_published != 'true'
         run: npm run prepare-publish
 
+      - name: Preview publish files
+        if: steps.npm_check.outputs.already_published != 'true'
+        working-directory: temp-publish
+        run: npm pack --dry-run
+
       - name: Publish to npm
         if: steps.npm_check.outputs.already_published != 'true'
         working-directory: temp-publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance
+        run: npm publish
