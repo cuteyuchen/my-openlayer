@@ -24,6 +24,7 @@ import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { MyOl } from '../../src'
 import type { FlowLineLayerHandle, MyOl as MyOlType } from '../../src'
 import { mixedFlowLineData, singleLineData } from '../flow-line/data'
+import transferPathSymbol from '../assets/transfer-path.svg'
 
 /***********************地图实例与状态*********************/
 const mapContainer = ref<HTMLElement | null>(null)
@@ -91,10 +92,9 @@ function startFlowLine() {
       layerName: 'flow-line-demo',
       animationMode: 'icon+dash',
       strokeColor: '#19b1ff',
-      strokeWidth: 3,
-      lineDash: [18, 12],
+      strokeWidth: 4,
       flowSymbol: {
-        // src: '/symbols/boat.svg',
+        src: transferPathSymbol,
         scale: 0.9,
         color: '#19b1ff',
         rotateWithView: true,

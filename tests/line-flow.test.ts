@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import { Line } from '../src/core/line';
+import { Icon, RegularShape } from 'ol/style';
+import { Line, LineStyleFactory } from '../src/core/line';
 import { ProjectionUtils } from '../src/utils/ProjectionUtils';
 import type { FlowLineOptions, MapJSONData } from '../src/types';
 
@@ -262,5 +263,26 @@ describe('ProjectionUtils', () => {
       dataProjection: 'EPSG:4326',
       featureProjection: 'EPSG:3857'
     });
+  });
+});
+
+describe('LineStyleFactory.getMovingSymbolStyle', () => {
+  it('传入 src 时使用 Icon，未传 src 时回退为内建图形', () => {
+    const styleFactory = new LineStyleFactory();
+
+    const iconStyle = styleFactory.getMovingSymbolStyle(0, {
+      flowSymbol: {
+        src: '/symbol.svg',
+        scale: 1
+      }
+    });
+    const builtinStyle = styleFactory.getMovingSymbolStyle(0, {
+      flowSymbol: {
+        scale: 1
+      }
+    });
+
+    expect(iconStyle.getImage()).toBeInstanceOf(Icon);
+    expect(builtinStyle.getImage()).toBeInstanceOf(RegularShape);
   });
 });
