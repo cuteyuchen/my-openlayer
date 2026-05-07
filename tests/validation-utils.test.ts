@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ValidationUtils } from '../src/utils/ValidationUtils';
+import ValidationUtils from '../src/utils/ValidationUtils';
 
 describe('ValidationUtils 坐标校验', () => {
   it('不会把 0 经度或 0 纬度误判为无效', () => {

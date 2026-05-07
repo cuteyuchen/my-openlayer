@@ -14,6 +14,7 @@ import { ErrorHandler, ErrorType } from "../../utils/ErrorHandler";
 import ValidationUtils from "../../utils/ValidationUtils";
 import ProjectionUtils from "../../utils/ProjectionUtils";
 import { createEmpty, extend, isEmpty } from "ol/extent";
+import { multiply as multiplyTransform } from "ol/transform";
 
 /**
  * 地图工具类
@@ -99,10 +100,16 @@ export default class MapTools {
 
     baseLayer.on("prerender", (event: any) => {
       const ctx = event.context;
-      // 获取坐标转换矩阵 (pixel = coordinate * transform)
-      // 注意：OpenLayers 的 transform 可能包含 pixelRatio，也可能不包含，取决于版本
-      // 在现代版本中，event.frameState.coordinateToPixelTransform 通常用于将地理坐标转换为 Canvas 像素坐标
-      const transform = event.frameState.coordinateToPixelTransform;
+
+      /** *********************高分屏坐标转换*********************/
+      // coordinateToPixelTransform 得到的是地图视口 CSS 像素；
+      // inversePixelTransform 会继续转换到当前图层 canvas 的真实渲染像素。
+      const transform = event.inversePixelTransform
+        ? multiplyTransform(
+            event.inversePixelTransform.slice(),
+            event.frameState.coordinateToPixelTransform
+          )
+        : event.frameState.coordinateToPixelTransform;
       
       ctx.save();
       ctx.beginPath();

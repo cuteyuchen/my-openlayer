@@ -3,7 +3,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import { Icon, RegularShape } from 'ol/style';
 import { Line, LineStyleFactory } from '../src/core/line';
-import { ProjectionUtils } from '../src/utils/ProjectionUtils';
+import ProjectionUtils from '../src/utils/ProjectionUtils';
 import type { FlowLineOptions, MapJSONData } from '../src/types';
 
 const lineStringData: MapJSONData = {
