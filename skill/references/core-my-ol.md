@@ -48,6 +48,8 @@ Initializes a new map instance.
 | `projection.code` | `string` | Projection code, such as `'EPSG:4549'`. |
 | `projection.def` | `string` | proj4 definition string. |
 | `projection.extent` | `number[]` | Projection extent. |
+| `projection.worldExtent` | `number[]` | Geographic world extent for the projection. |
+| `projection.units` | `Units` | Explicit unit override. Usually omit this and let `projection.def` drive proj4/OpenLayers inference. |
 
 ### Built-in Projections
 
@@ -58,6 +60,8 @@ Initializes a new map instance.
 | `EPSG:4326` | WGS84 longitude/latitude source coordinates and transform base. |
 | `EPSG:4490` | CGCS2000 longitude/latitude projection, used by the default view. |
 | `EPSG:4549` | CGCS2000 3-degree belt projection, usable through `projection.code`. |
+
+When `projection.def` is provided, `MyOl` writes it to `proj4.defs` before registering proj4 with OpenLayers. If only `code` and `def` are provided, the view reuses the registered projection object and preserves units inferred from the proj4 definition, such as `+units=m`.
 
 ## Static Methods
 
@@ -264,9 +268,12 @@ const map = new MyOl('map', {
   projection: {
     code: 'EPSG:4549', // CGCS2000 3-degree belt
     def: '+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs',
-    extent: [...] // Optional
+    extent: [...], // Optional, only when constraining projected extent
+    worldExtent: [...] // Optional geographic world extent
   }
 });
 ```
 
 When `projection.def` is provided, `MyOl` writes it to `proj4.defs` before registering proj4 with OpenLayers. This keeps the transform from EPSG:4326 to the target projection available during `createView`.
+
+`projection.extent` and `projection.worldExtent` are applied only when explicitly provided. Pass `projection.units` only when overriding the unit inferred from `projection.def`; meter projections normally only need `+units=m` in the proj4 definition.

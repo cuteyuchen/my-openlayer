@@ -43,6 +43,8 @@ constructor(id: string | HTMLElement, options?: Partial<MapInitType>)
 | `projection.code` | `string` | 投影代码，如 `'EPSG:4549'`。 |
 | `projection.def` | `string` | proj4 定义字符串。 |
 | `projection.extent` | `number[]` | 投影范围。 |
+| `projection.worldExtent` | `number[]` | 投影对应的经纬度世界范围。 |
+| `projection.units` | `Units` | 显式覆盖投影单位，通常不需要传；优先让 `proj4.def` 自动推导。 |
 
 ### 内置坐标系
 
@@ -53,6 +55,8 @@ constructor(id: string | HTMLElement, options?: Partial<MapInitType>)
 | `EPSG:4326` | WGS84 经纬度坐标，作为输入经纬度和投影转换的基础坐标系。 |
 | `EPSG:4490` | CGCS2000 经纬度坐标，默认视图投影。 |
 | `EPSG:4549` | CGCS2000 3 度带投影，可通过 `projection.code` 使用。 |
+
+自定义投影传入 `projection.def` 后，`MyOl` 会先写入 `proj4.defs`，再统一调用 OpenLayers `register(proj4)`。如果只传 `code` 和 `def`，视图会复用注册后的投影对象，保留 proj4 从定义字符串中推导出的单位，例如 `+units=m` 会保持为米制，不会被默认经纬度元数据覆盖。
 
 ## 静态方法
 
@@ -251,9 +255,12 @@ const map = new MyOl('map', {
   projection: {
     code: 'EPSG:4549', // CGCS2000 3度带
     def: '+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs',
-    extent: [...] // 可选
+    extent: [...], // 可选，仅在需要限制投影范围时传入
+    worldExtent: [...] // 可选，经纬度世界范围
   }
 });
 ```
 
 自定义投影传入 `projection.def` 时，`MyOl` 会先写入 `proj4.defs`，再统一注册到 OpenLayers。这样可以保证 `center` 从 `EPSG:4326` 转换到目标投影时已有完整转换关系。
+
+`projection.extent` 和 `projection.worldExtent` 只会在显式传入时补充到已注册投影；`projection.units` 只有在确实需要覆盖 `proj4.def` 推导结果时才传入。米制投影一般只需要在 `def` 中包含 `+units=m`，不需要额外传 `units`。
