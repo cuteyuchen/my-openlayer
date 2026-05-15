@@ -5,7 +5,8 @@ import { register as olProj4Register } from 'ol/proj/proj4'
 import {
   Projection as olProjProjection,
   addProjection as olProjAddProjection,
-  fromLonLat as olProjFromLonLat
+  fromLonLat as olProjFromLonLat,
+  get as olProjGetProjection
 } from 'ol/proj'
 import View from "ol/View";
 import Map from "ol/Map";
@@ -176,14 +177,7 @@ export default class MyOl {
     olProjAddProjection(cgsc2000);
 
     if (options.projection?.code) {
-      const code = options.projection.code;
-      const customProj = new olProjProjection({
-        code,
-        extent: options.projection.extent ?? cgsc2000.getExtent(),
-        worldExtent: options.projection.worldExtent ?? cgsc2000.getWorldExtent(),
-        units: options.projection.units ?? cgsc2000.getUnits()
-      });
-      olProjAddProjection(customProj);
+      MyOl.applyCustomProjectionMetadata(options.projection);
     }
   }
 
@@ -194,6 +188,44 @@ export default class MyOl {
   private static ensureProj4Definition(code: string, definition: string): void {
     if (!proj4.defs(code)) {
       proj4.defs(code, definition);
+    }
+  }
+
+  /**
+   * 应用用户显式提供的投影元数据。
+   * @private
+   */
+  private static applyCustomProjectionMetadata(projection: NonNullable<MapInitType["projection"]>): void {
+    const { code, extent, worldExtent, units } = projection;
+    const registeredProjection = olProjGetProjection(code);
+
+    /** *********************自定义投影元数据初始化*********************/
+    if (units) {
+      olProjAddProjection(new olProjProjection({
+        code,
+        extent: extent ?? registeredProjection?.getExtent(),
+        worldExtent: worldExtent ?? registeredProjection?.getWorldExtent(),
+        units
+      }));
+      return;
+    }
+
+    if (registeredProjection) {
+      if (extent) {
+        registeredProjection.setExtent(extent);
+      }
+      if (worldExtent) {
+        registeredProjection.setWorldExtent(worldExtent);
+      }
+      return;
+    }
+
+    if (extent || worldExtent) {
+      olProjAddProjection(new olProjProjection({
+        code,
+        extent,
+        worldExtent
+      }));
     }
   }
 
@@ -237,12 +269,7 @@ export default class MyOl {
   static createView(options: MapInitType = MyOl.DefaultOptions): View {
     try {
       const code = options.projection?.code ?? MyOl.PROJECTIONS.CGCS2000;
-      const projection = new olProjProjection({
-        code,
-        extent: options.projection?.extent ?? [-180, -90, 180, 90],
-        worldExtent: options.projection?.worldExtent ?? [-180, -90, 180, 90],
-        units: options.projection?.units ?? "degrees"
-      });
+      const projection = MyOl.resolveViewProjection(options, code);
 
       const viewOptions = {
         projection,
@@ -261,6 +288,31 @@ export default class MyOl {
         { options }
       );
     }
+  }
+
+  /**
+   * 解析视图投影，优先复用已注册投影，避免丢失 proj4 推导的单位信息。
+   * @private
+   */
+  private static resolveViewProjection(options: MapInitType, code: string): olProjProjection {
+    const registeredProjection = olProjGetProjection(code);
+
+    /** *********************视图投影初始化*********************/
+    if (
+      registeredProjection
+      && !options.projection?.extent
+      && !options.projection?.worldExtent
+      && !options.projection?.units
+    ) {
+      return registeredProjection;
+    }
+
+    return new olProjProjection({
+      code,
+      extent: options.projection?.extent ?? registeredProjection?.getExtent() ?? [-180, -90, 180, 90],
+      worldExtent: options.projection?.worldExtent ?? registeredProjection?.getWorldExtent() ?? [-180, -90, 180, 90],
+      units: options.projection?.units ?? registeredProjection?.getUnits() ?? "degrees"
+    });
   }
 
   /**
