@@ -1,11 +1,11 @@
 ---
 name: core-line
-description: Management of polyline features and styling
+description: Management of polyline features, styling, and animated flow lines
 ---
 
 # Line Class
 
-The `Line` class is used to draw line features on the map, supporting GeoJSON data loading, custom styles, and layer management.
+The `Line` class is used to draw line features on the map, supporting GeoJSON data loading, custom styles, layer management, and animated flow lines.
 
 ## Constructor
 
@@ -45,6 +45,44 @@ Configures the style, properties, and behavior of the line layer. Inherits from 
 | `textOffsetY` | `number` | Text Y-axis offset |
 | **Others** | | |
 | `type` | `string` | Line type identifier, written into Feature properties |
+| `dataProjection` | `string` | Input GeoJSON projection, preferred over legacy `projectionOptOptions` |
+| `featureProjection` | `string` | Target feature projection |
+| `projectionOptOptions` | `any` | Legacy GeoJSON read projection options; keep only for compatibility |
+
+### FlowLineOptions
+
+Extends `LineOptions` for animated line layers.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `loop` | `boolean` | Whether animation repeats, default `true` |
+| `autoStart` | `boolean` | Whether animation starts after layer creation, default `true` |
+| `duration` | `number` | Animation duration for one cycle in ms |
+| `speed` | `number` | Animation speed multiplier |
+| `showBaseLine` | `boolean` | Whether to keep the static base line visible |
+| `animationMode` | `'icon' \| 'dash' \| 'icon+dash'` | Animation rendering mode |
+| `flowSymbol.src` | `string` | Optional icon URL for moving symbols |
+| `flowSymbol.scale` | `number` | Moving symbol scale |
+| `flowSymbol.color` | `string` | Moving symbol color when using built-in symbol |
+| `flowSymbol.rotateWithView` | `boolean` | Rotate moving symbol along the line |
+| `flowSymbol.count` | `number` | Number of moving symbols |
+| `flowSymbol.spacing` | `number` | Normalized spacing between symbols |
+| `trailEnabled` | `boolean` | Whether trail rendering is enabled |
+| `trailLength` | `number` | Trail length |
+
+### FlowLineLayerHandle
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `layer` | `VectorLayer<VectorSource>` | Static base line layer |
+| `animationLayer` | `VectorLayer<VectorSource>` | Animation layer |
+| `start` | `() => void` | Start animation |
+| `pause` | `() => void` | Pause animation |
+| `resume` | `() => void` | Resume animation |
+| `stop` | `() => void` | Stop animation |
+| `setVisible` | `(visible: boolean) => void` | Toggle both base and animation layers |
+| `updateData` | `(data: MapJSONData) => void` | Replace line data |
+| `remove` | `() => void` | Remove both layers and unregister handle |
 
 ### MapJSONData (GeoJSON)
 
@@ -110,6 +148,37 @@ removeLineLayer(layerName: string): void
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `layerName` | `string` | Name of the layer to remove |
+
+### addFlowLine
+
+Add an animated flow line. Reusing the same `layerName` removes the old flow line handle before creating the new one.
+
+```typescript
+addFlowLine(data: MapJSONData, options?: FlowLineOptions): FlowLineLayerHandle | null
+```
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `data` | `MapJSONData` | LineString or MultiLineString GeoJSON data |
+| `options` | `FlowLineOptions` | Flow line animation and style options |
+
+**Returns**: A controllable flow line handle, or `null` when data/options are invalid.
+
+### addFlowLineByUrl
+
+Load animated flow line data from a URL.
+
+```typescript
+addFlowLineByUrl(url: string, options?: FlowLineOptions): Promise<FlowLineLayerHandle | null>
+```
+
+### removeFlowLineLayer
+
+Remove a flow line by layer name. It removes both the base layer and the `__flow-animation` layer.
+
+```typescript
+removeFlowLineLayer(layerName: string): void
+```
 
 ## Usage Examples
 
@@ -189,4 +258,28 @@ lineModule.addLineByUrl('/api/lines/all.json', {
   strokeColor: 'orange',
   strokeWidth: 2
 });
+```
+
+### Animated Flow Line
+
+```typescript
+const flow = lineModule.addFlowLine(lineData, {
+  layerName: 'river-flow',
+  animationMode: 'icon+dash',
+  strokeColor: '#19b1ff',
+  strokeWidth: 3,
+  lineDash: [18, 12],
+  flowSymbol: {
+    src: '/symbols/boat.svg',
+    scale: 0.9,
+    rotateWithView: true,
+    count: 2,
+    spacing: 0.2
+  }
+});
+
+flow?.pause();
+flow?.resume();
+flow?.updateData(lineData);
+flow?.remove();
 ```

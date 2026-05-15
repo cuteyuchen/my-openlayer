@@ -49,6 +49,16 @@ Initializes a new map instance.
 | `projection.def` | `string` | proj4 definition string. |
 | `projection.extent` | `number[]` | Projection extent. |
 
+### Built-in Projections
+
+`MyOl` explicitly registers these built-in projections before calling OpenLayers `register(proj4)`, so application code does not need to manually define EPSG:4326 for production builds:
+
+| Projection | Purpose |
+| :--- | :--- |
+| `EPSG:4326` | WGS84 longitude/latitude source coordinates and transform base. |
+| `EPSG:4490` | CGCS2000 longitude/latitude projection, used by the default view. |
+| `EPSG:4549` | CGCS2000 3-degree belt projection, usable through `projection.code`. |
+
 ## Static Methods
 
 ### createView
@@ -62,6 +72,14 @@ static createView(options: MapInitType): View
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `options` | `MapInitType` | Map configuration options, mainly using `center`, `zoom`, `projection` properties. |
+
+### getView
+
+Deprecated compatibility alias for `createView`.
+
+```typescript
+static getView(options: MapInitType): View
+```
 
 ## Instance Methods
 
@@ -250,3 +268,5 @@ const map = new MyOl('map', {
   }
 });
 ```
+
+When `projection.def` is provided, `MyOl` writes it to `proj4.defs` before registering proj4 with OpenLayers. This keeps the transform from EPSG:4326 to the target projection available during `createView`.
