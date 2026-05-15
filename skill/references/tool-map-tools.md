@@ -54,7 +54,16 @@ setLayerVisible(layerName: string, visible: boolean): void
 View positioning animation.
 
 ```typescript
-locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean
+locationAction(
+  lgtd: number,
+  lttd: number,
+  zoom = 20,
+  duration = 3000,
+  projection?: {
+    dataProjection?: string;
+    featureProjection?: string;
+  }
+): boolean
 ```
 
 | Parameter | Type | Description |
@@ -63,6 +72,15 @@ locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000): boolean
 | `lttd` | `number` | Target latitude |
 | `zoom` | `number` | Target zoom level |
 | `duration` | `number` | Animation duration (ms) |
+| `projection` | `object` | Optional source/target projection. When omitted, coordinates are validated as EPSG:4326 longitude/latitude |
+
+#### getMap
+
+Return the wrapped OpenLayers map instance.
+
+```typescript
+getMap(): Map
+```
 
 #### fitToLayers
 
@@ -139,6 +157,12 @@ tools.setLayerVisible('background-layer', false);
 ```typescript
 // Position to specific coordinates
 tools.locationAction(120.123, 30.456, 15, 2000);
+
+// Position from custom source projection to the current feature projection
+tools.locationAction(500000, 3319200, 15, 2000, {
+  dataProjection: 'EPSG:4549',
+  featureProjection: 'EPSG:4490'
+});
 
 // Zoom to include all features in specified layer
 tools.fitToLayers('target-layer', {

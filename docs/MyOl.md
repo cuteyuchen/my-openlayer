@@ -44,6 +44,16 @@ constructor(id: string | HTMLElement, options?: Partial<MapInitType>)
 | `projection.def` | `string` | proj4 定义字符串。 |
 | `projection.extent` | `number[]` | 投影范围。 |
 
+### 内置坐标系
+
+`MyOl` 初始化时会显式注册以下内置坐标系，并在 `register(proj4)` 前保证 `EPSG:4326` 存在，因此业务项目不需要手动调用 `proj4.defs('EPSG:4326', ...)`：
+
+| 坐标系 | 说明 |
+| :--- | :--- |
+| `EPSG:4326` | WGS84 经纬度坐标，作为输入经纬度和投影转换的基础坐标系。 |
+| `EPSG:4490` | CGCS2000 经纬度坐标，默认视图投影。 |
+| `EPSG:4549` | CGCS2000 3 度带投影，可通过 `projection.code` 使用。 |
+
 ## 静态方法
 
 ### createView
@@ -245,3 +255,5 @@ const map = new MyOl('map', {
   }
 });
 ```
+
+自定义投影传入 `projection.def` 时，`MyOl` 会先写入 `proj4.defs`，再统一注册到 OpenLayers。这样可以保证 `center` 从 `EPSG:4326` 转换到目标投影时已有完整转换关系。

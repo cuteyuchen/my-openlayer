@@ -1,6 +1,6 @@
 ---
 name: my-openlayer-helper
-description: "Initialize my-openlayer maps, add points/lines/polygons, configure Vue overlays, switch base layers, and handle measurement tools. Use when the user asks about my-openlayer setup, OpenLayers map initialization, adding map markers, polygon drawing, map overlay components, layer switching, feature selection, or measurement on a map."
+description: "Initialize my-openlayer maps, add points/lines/polygons, configure Vue overlays, switch base layers, and handle measurement tools. Use when the user asks about my-openlayer setup, OpenLayers map initialization, adding map markers, pulse points, static or animated flow lines, polygon drawing, map overlay components, layer switching, feature selection, measurement, projection registration, or EPSG transform errors."
 ---
 
 ## Workflow
@@ -58,6 +58,7 @@ onUnmounted(() => {
 
 - **Container not found**: Ensure the DOM element exists before `new MyOl(...)`. In Vue, initialize inside `onMounted`, never in `setup`.
 - **Wrong coordinates**: The library expects `[longitude, latitude]` in EPSG:4326. EPSG:3857 projected values will misplace features.
+- **Projection registration**: `MyOl` owns projection setup and explicitly registers EPSG:4326, EPSG:4490, and EPSG:4549 before OpenLayers proj4 registration. Do not ask app code to manually register EPSG:4326 for production builds.
 - **Clustering conflicts**: Enabling clustering replaces individual point rendering. Remove the existing non-clustered layer before switching.
 - **Many animated markers**: Prefer `addPulsePointLayer` over `addDomPoint` when rendering large warning/village pulse point lists.
 - **Event listener leaks**: Always call the dispose/unsubscribe function returned by `EventManager.on()` when the component unmounts.

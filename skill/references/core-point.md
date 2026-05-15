@@ -164,6 +164,25 @@ addVueTemplatePoint(pointDataList: PointData[], template: any, options?: VueTemp
 - **options**: Configuration options.
 - **Returns**: Control object containing display/hide and remove methods.
 
+### locationAction
+
+Proxy to `MapTools.locationAction` for positioning the map from the point module.
+
+```typescript
+locationAction(
+  lgtd: number,
+  lttd: number,
+  zoom = 20,
+  duration = 3000,
+  projection?: {
+    dataProjection?: string;
+    featureProjection?: string;
+  }
+): boolean
+```
+
+- **projection**: Optional source/target projection. Omit it for EPSG:4326 longitude/latitude.
+
 ## Usage Examples
 
 ### Add Ordinary Points

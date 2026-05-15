@@ -79,6 +79,14 @@ Removes an event listener by ID.
 
 **Returns**: `boolean` - Whether removal was successful.
 
+### Remove All Listeners of One Type
+
+```typescript
+offAll(type: MapEventType): void
+```
+
+Removes all listeners for the given event type and detaches the OpenLayers listener for that type.
+
 ### Clear All Listeners
 
 ```typescript
@@ -86,6 +94,20 @@ clear(): void
 ```
 
 Removes all registered event listeners.
+
+### Listener Inspection
+
+```typescript
+getListenerCount(type: MapEventType): number
+getListenersInfo(): Array<{
+  id: string;
+  type: MapEventType;
+  hasFilter: boolean;
+  isOnce: boolean;
+}>
+```
+
+Use these methods for debugging listener state and leak checks.
 
 ## Usage Examples
 
@@ -141,6 +163,13 @@ eventManager.on('click', (event) => {
 ```typescript
 // Stop listening
 eventManager.off(clickId);
+
+// Remove all click listeners
+eventManager.offAll('click');
+
+// Inspect listener state while debugging
+console.log(eventManager.getListenerCount('zoomend'));
+console.log(eventManager.getListenersInfo());
 
 // Or clear all
 eventManager.clear();

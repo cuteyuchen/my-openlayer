@@ -94,6 +94,14 @@ clearAllLayers(): this
 
 ### Annotation Operations
 
+#### createAnnotationLayer
+
+Create a TianDiTu annotation layer without adding it to the map.
+
+```typescript
+static createAnnotationLayer(options: AnnotationLayerOptions): TileLayer<XYZ>
+```
+
 #### addAnnotationLayer
 
 Add annotation layer.
@@ -126,7 +134,44 @@ Check if annotation layer is visible.
 isAnnotationVisible(): boolean
 ```
 
+#### getCurrentAnnotationType
+
+Get current annotation type.
+
+```typescript
+getCurrentAnnotationType(): string | null
+```
+
 ### Advanced Layers
+
+#### getTiandiTuLayer
+
+Create a TianDiTu base layer without adding it to the map.
+
+```typescript
+static getTiandiTuLayer(options: {
+  type: TiandituType | string;
+  token: string;
+  zIndex: number;
+  visible: boolean;
+}): TileLayer<XYZ>
+```
+
+#### getTileGrid
+
+Create an EPSG:4326 WMTS tile grid.
+
+```typescript
+static getTileGrid(length: number): WMTSTileGrid
+```
+
+#### getAnnotationLayer
+
+Deprecated compatibility alias for `createAnnotationLayer`.
+
+```typescript
+static getAnnotationLayer(options: AnnotationLayerOptions): TileLayer<XYZ>
+```
 
 #### addGeoServerLayer
 
@@ -148,6 +193,30 @@ Get layer count statistics.
 
 ```typescript
 getLayerStats(): { totalTypes: number; totalLayers: number; layersByType: Record<string, number> }
+```
+
+#### getAvailableLayerTypes
+
+Get all registered base layer type keys.
+
+```typescript
+getAvailableLayerTypes(): string[]
+```
+
+#### hasLayerType
+
+Check whether a layer type is registered.
+
+```typescript
+hasLayerType(type: string): boolean
+```
+
+#### destroy
+
+Clear all managed layers and release this manager's state.
+
+```typescript
+destroy(): this
 ```
 
 ## Usage Examples
@@ -200,4 +269,6 @@ const wmsLayer = baseLayers.addGeoServerLayer(
 const stats = baseLayers.getLayerStats();
 console.log(`Total Layers: ${stats.totalLayers}`);
 console.log('Layers by Type:', stats.layersByType);
+console.log('Available Types:', baseLayers.getAvailableLayerTypes());
+console.log('Has Vector Base:', baseLayers.hasLayerType('vec_c'));
 ```
