@@ -53,8 +53,16 @@ export default class MyOl {
 
   // 坐标系配置
   private static readonly PROJECTIONS = {
+    WGS84: "EPSG:4326",
     CGCS2000: "EPSG:4490",
     CGCS2000_3_DEGREE: "EPSG:4549"
+  } as const;
+
+  /** *********************内置投影定义*********************/
+  private static readonly PROJECTION_DEFINITIONS = {
+    [MyOl.PROJECTIONS.WGS84]: "+title=WGS 84 (long/lat) +proj=longlat +ellps=WGS84 +datum=WGS84 +units=degrees",
+    [MyOl.PROJECTIONS.CGCS2000]: "+proj=longlat +ellps=GRS80 +no_defs",
+    [MyOl.PROJECTIONS.CGCS2000_3_DEGREE]: "+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs"
   } as const;
 
   /**
@@ -146,9 +154,14 @@ export default class MyOl {
    * @private
    */
   private static initializeProjections(options: MapInitType): void {
-    // 定义 CGCS2000 坐标系
-    proj4.defs(MyOl.PROJECTIONS.CGCS2000, "+proj=longlat +ellps=GRS80 +no_defs");
-    proj4.defs(MyOl.PROJECTIONS.CGCS2000_3_DEGREE, "+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs");
+    /** *********************投影定义初始化*********************/
+    MyOl.ensureProj4Definition(MyOl.PROJECTIONS.WGS84, MyOl.PROJECTION_DEFINITIONS[MyOl.PROJECTIONS.WGS84]);
+    MyOl.ensureProj4Definition(MyOl.PROJECTIONS.CGCS2000, MyOl.PROJECTION_DEFINITIONS[MyOl.PROJECTIONS.CGCS2000]);
+    MyOl.ensureProj4Definition(MyOl.PROJECTIONS.CGCS2000_3_DEGREE, MyOl.PROJECTION_DEFINITIONS[MyOl.PROJECTIONS.CGCS2000_3_DEGREE]);
+
+    if (options.projection?.code && options.projection.def) {
+      proj4.defs(options.projection.code, options.projection.def);
+    }
 
     // 注册到 OpenLayers
     olProj4Register(proj4);
@@ -164,9 +177,6 @@ export default class MyOl {
 
     if (options.projection?.code) {
       const code = options.projection.code;
-      if (options.projection.def) {
-        proj4.defs(code, options.projection.def);
-      }
       const customProj = new olProjProjection({
         code,
         extent: options.projection.extent ?? cgsc2000.getExtent(),
@@ -174,6 +184,16 @@ export default class MyOl {
         units: options.projection.units ?? cgsc2000.getUnits()
       });
       olProjAddProjection(customProj);
+    }
+  }
+
+  /**
+   * 缺失时注册 proj4 投影定义，避免生产构建依赖第三方模块默认副作用。
+   * @private
+   */
+  private static ensureProj4Definition(code: string, definition: string): void {
+    if (!proj4.defs(code)) {
+      proj4.defs(code, definition);
     }
   }
 

@@ -9,6 +9,7 @@ My OpenLayers 是一个基于 OpenLayers 的轻量级地图封装库，旨在简
 - **TypeScript**: 完全使用 TypeScript 编写，提供完整的类型定义。
 - **工具丰富**: 内置测量、选择、裁剪、遮罩等实用工具。
 - **高性能闪烁点**: 基于 `VectorLayer` 和单个 `requestAnimationFrame` 渲染大量预警点位，避免 DOM 动画卡顿。
+- **坐标系稳定注册**: 内置 `EPSG:4326`、`EPSG:4490`、`EPSG:4549`，生产构建下无需业务侧手动注册 WGS84。
 - **扩展性强**: 提供基础类和接口，方便二次封装和扩展。
 
 ## 安装
@@ -30,8 +31,7 @@ import 'ol/ol.css'; // 引入 OpenLayers 样式
 // 初始化地图
 const map = new MyOl('map-container', {
   center: [120.2, 30.3],
-  zoom: 12,
-  projection: 'EPSG:4326'
+  zoom: 12
 });
 
 // 获取原生 Map 实例

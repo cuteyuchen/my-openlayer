@@ -119,8 +119,13 @@ Methods provided by a single point instance (`VueTemplatePointInstance`):
 | `addClass(className: string): void` | Adds a CSS class name. |
 | `removeClass(className: string): void` | Removes a CSS class name. |
 | `remove(): void` | Removes and destroys the current point. |
+| `getOverlay(): Overlay` | Gets the OpenLayers overlay instance. |
 | `getId(): string` | Gets the unique ID of the point. |
 | `getDomElement(): HTMLElement` | Gets the DOM element corresponding to the point. |
+| `getState(): VueTemplatePointState` | Gets lifecycle state for the point instance. |
+| `getOptions(): Readonly<VueTemplatePointOptions>` | Gets readonly point options. |
+| `isDestroyed(): boolean` | Checks whether the point instance is destroyed. |
+| `getMap(): Map` | Gets the OpenLayers map instance for this point. |
 
 ## Usage Examples
 

@@ -98,6 +98,14 @@ Add border layer (usually for administrative boundaries, supports cutout effect)
 addBorderPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource>
 ```
 
+### addBorderPolygonByUrl
+
+Load border polygon data from a URL.
+
+```typescript
+addBorderPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource>
+```
+
 ### updateFeatureColor
 
 Dynamically update polygon feature colors, commonly used for data visualization.
@@ -145,6 +153,22 @@ setOutLayer(data: MapJSONData, options?: {
   strokeColor?: string,
   zIndex?: number
 }): VectorLayer<VectorSource>
+```
+
+### addMaskLayer
+
+Add a regular mask layer through `PolygonMaskLayer`.
+
+```typescript
+addMaskLayer(data: any, options?: MaskLayerOptions): VectorLayer<VectorSource>
+```
+
+### removePolygonLayer
+
+Remove a polygon layer by name.
+
+```typescript
+removePolygonLayer(layerName: string): void
 ```
 
 ## Usage Examples
@@ -243,4 +267,6 @@ polygonModule.setOutLayer(polygonData, {
   strokeColor: '#fff',
   strokeWidth: 2
 });
+
+polygonModule.removePolygonLayer('mask-layer');
 ```

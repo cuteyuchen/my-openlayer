@@ -79,6 +79,14 @@ clearSelection(): this
 
 - **Returns**: `SelectHandler` instance.
 
+### getSelectedFeatures
+
+Return the features currently selected by the main interactive selection.
+
+```typescript
+getSelectedFeatures(): FeatureLike[]
+```
+
 ### selectByIds
 
 Programmatically select features by ID.
@@ -103,6 +111,20 @@ selectByProperty(propertyName: string, propertyValue: any, options?: Programmati
 - **propertyValue**: Property value.
 - **options**: Programmatic selection options.
 - **Returns**: `SelectHandler` instance.
+
+### State and Style Helpers
+
+```typescript
+isSelectEnabled(): boolean
+getCurrentMode(): SelectMode | undefined
+updateSelectStyle(selectStyle: SelectOptions['selectStyle']): this
+destroy(): void
+```
+
+- `isSelectEnabled` reports whether interactive selection is active.
+- `getCurrentMode` returns the active mode.
+- `updateSelectStyle` rebuilds highlight render interactions for currently selected features.
+- `destroy` disables selection and clears all selected/rendered state.
 
 ## Usage Examples
 
@@ -148,5 +170,9 @@ selectHandler.selectByIds(['beijing'], {
 ### Clear Selection
 
 ```typescript
+const selected = selectHandler.getSelectedFeatures();
+console.log('Selected count:', selected.length);
+
 selectHandler.clearSelection();
+selectHandler.destroy();
 ```
