@@ -68,6 +68,8 @@ constructor(id: string | HTMLElement, options?: Partial<MapInitType>)
 static createView(options: MapInitType): View
 ```
 
+`createView()` 可以单独作为静态方法调用，内部会先完成 `EPSG:4326`、`EPSG:4490`、`EPSG:4549` 以及自定义 `projection.def` 的投影注册，避免生产构建下直接调用静态方法时缺少坐标转换。
+
 | 参数名 | 类型 | 描述 |
 | :--- | :--- | :--- |
 | `options` | `MapInitType` | 地图配置选项，主要使用其中的 `center`, `zoom`, `projection` 等属性。 |

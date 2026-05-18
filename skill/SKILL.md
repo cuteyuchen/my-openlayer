@@ -59,6 +59,7 @@ onUnmounted(() => {
 - **Container not found**: Ensure the DOM element exists before `new MyOl(...)`. In Vue, initialize inside `onMounted`, never in `setup`.
 - **Wrong coordinates**: The library expects `[longitude, latitude]` in EPSG:4326. EPSG:3857 projected values will misplace features.
 - **Projection registration**: `MyOl` owns projection setup and explicitly registers EPSG:4326, EPSG:4490, and EPSG:4549 before OpenLayers proj4 registration. Do not ask app code to manually register EPSG:4326 for production builds.
+- **Static createView transforms**: `MyOl.createView()` can be called directly and must initialize projections internally. If production reports `No transform available between EPSG:4326 and EPSG:4490`, check that the package version includes this static initialization path.
 - **Custom projection metadata**: When `projection.def` contains `+units=m`, let proj4/OpenLayers infer the unit. Only pass `projection.units` when explicitly overriding the inferred unit.
 - **Clustering conflicts**: Enabling clustering replaces individual point rendering. Remove the existing non-clustered layer before switching.
 - **Many animated markers**: Prefer `addPulsePointLayer` over `addDomPoint` when rendering large warning/village pulse point lists.

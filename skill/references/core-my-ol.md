@@ -73,6 +73,8 @@ Creates an OpenLayers `View` instance.
 static createView(options: MapInitType): View
 ```
 
+`createView()` can be used directly as a static helper. It initializes the built-in projections and any `projection.def` before resolving the view projection, so direct static calls have the same EPSG transform setup as the constructor path.
+
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `options` | `MapInitType` | Map configuration options, mainly using `center`, `zoom`, `projection` properties. |

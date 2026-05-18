@@ -268,6 +268,9 @@ export default class MyOl {
    */
   static createView(options: MapInitType = MyOl.DefaultOptions): View {
     try {
+      /** *********************静态视图投影初始化*********************/
+      MyOl.initializeProjections(options);
+
       const code = options.projection?.code ?? MyOl.PROJECTIONS.CGCS2000;
       const projection = MyOl.resolveViewProjection(options, code);
 

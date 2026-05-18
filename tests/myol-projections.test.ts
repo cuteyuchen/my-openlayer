@@ -41,6 +41,28 @@ describe("MyOl 投影初始化", () => {
     }
   });
 
+  it("直接调用 createView 时自动初始化默认投影转换", () => {
+    const originalEpsg4326 = proj4.defs("EPSG:4326");
+    const originalWgs84Alias = proj4.defs.WGS84;
+
+    try {
+      delete proj4.defs["EPSG:4326"];
+      delete proj4.defs.WGS84;
+      resetProjectionState();
+
+      expect(() => MyOl.createView(MyOl.DefaultOptions)).not.toThrow();
+      expect(proj4.defs("EPSG:4326")).toBeTruthy();
+    } finally {
+      if (originalEpsg4326) {
+        proj4.defs("EPSG:4326", originalEpsg4326);
+      }
+      if (originalWgs84Alias) {
+        proj4.defs.WGS84 = originalWgs84Alias;
+      }
+      resetProjectionState();
+    }
+  });
+
   it("自定义米制投影未显式传 metadata 时保留 proj4 推导的单位", () => {
     const code = "EPSG:12345";
     const originalDefinition = proj4.defs(code);
@@ -68,7 +90,7 @@ describe("MyOl 投影初始化", () => {
     }
   });
 
-  it("createView 使用自定义米制投影时复用已注册投影单位", () => {
+  it("createView 使用自定义米制投影时自动注册并保留 proj4 推导单位", () => {
     const code = "EPSG:12346";
     const originalDefinition = proj4.defs(code);
     const options: MapInitType = {
@@ -83,8 +105,6 @@ describe("MyOl 投影初始化", () => {
     try {
       delete proj4.defs[code];
       resetProjectionState();
-
-      initializeProjections(options);
 
       expect(MyOl.createView(options).getProjection().getUnits()).toBe("m");
     } finally {
