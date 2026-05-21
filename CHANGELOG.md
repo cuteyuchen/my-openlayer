@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.5.4] - 2026-05-18
+
+### 🐛 Bug Fixes
+
+- 修复生产环境下直接调用 `MyOl.createView()` 时，`EPSG:4326 -> EPSG:4490` 转换缺失的问题。
+
+### 📝 Documentation
+
+- 同步更新 `MyOl` 文档与 skill 说明，明确 `createView()` 会自动完成投影初始化。
+
 ## [2.4.12] - 2026-04-21
 
 ### Features
