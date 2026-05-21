@@ -162,4 +162,15 @@ export default class Line {
     }
     MapTools.removeLayer(this.map, [layerName, `${layerName}__flow-animation`]);
   }
+
+  /**
+   * 销毁本实例创建的所有流动线动画。供 MyOl.destroy 调用，
+   * 确保地图销毁后所有 requestAnimationFrame / postrender 监听被回收。
+   */
+  destroyAllFlowLines(): void {
+    Array.from(this.flowLineRegistry.values()).forEach(handle => {
+      try { handle.remove(); } catch { /* ignore */ }
+    });
+    this.flowLineRegistry.clear();
+  }
 }

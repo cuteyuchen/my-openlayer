@@ -5,6 +5,7 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import { Image as ImageLayer } from "ol/layer";
+import BaseLayer from "ol/layer/Base";
 import Feature from "ol/Feature";
 import {
   PolygonOptions,
@@ -31,7 +32,10 @@ import PolygonStyleFactory from './PolygonStyleFactory';
 export default class Polygon {
   private map: Map;
 
-  [key: string]: any;
+  /**
+   * 由本实例创建的所有图层句柄（含 mask 子图层等）。destroyAll 时统一回收，避免地图销毁后图层泄漏。
+   */
+  private readonly managedLayers = new Set<BaseLayer>();
 
   /**
    * 构造函数
@@ -42,6 +46,29 @@ export default class Polygon {
       throw new Error('Map instance is required');
     }
     this.map = map;
+  }
+
+  /**
+   * 跟踪一个本实例创建的图层，便于销毁阶段统一清理。
+   * @internal
+   */
+  private trackLayer<T extends BaseLayer>(layer: T): T {
+    this.managedLayers.add(layer);
+    return layer;
+  }
+
+  /**
+   * 销毁本实例创建的所有图层。供 MyOl.destroy 调用。
+   */
+  destroyAll(): void {
+    this.managedLayers.forEach(layer => {
+      try {
+        this.map.removeLayer(layer);
+      } catch {
+        // ignore
+      }
+    });
+    this.managedLayers.clear();
   }
 
 
@@ -141,6 +168,7 @@ export default class Polygon {
 
     layer.setVisible(mergedOptions.visible!);
     this.map.addLayer(layer);
+    this.trackLayer(layer);
 
     // 如果需要适应视图
     if (mergedOptions.fitView) {
@@ -197,6 +225,7 @@ export default class Polygon {
 
     layer.setVisible(mergedOptions.visible!);
     this.map.addLayer(layer);
+    this.trackLayer(layer);
 
     // 如果需要适应视图
     if (mergedOptions.fitView) {
@@ -278,7 +307,11 @@ export default class Polygon {
     strokeColor?: string,
     zIndex?: number
   }) {
-    return PolygonMaskLayer.setOutLayer(this.map, data, options);
+    const layer = PolygonMaskLayer.setOutLayer(this.map, data, options);
+    if (layer) {
+      this.trackLayer(layer);
+    }
+    return layer;
   }
 
   /**
@@ -289,7 +322,9 @@ export default class Polygon {
    * @throws 当数据格式无效时抛出错误
    */
   addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<any> {
-    return PolygonImageLayer.addImageLayer(this.map, imageData, options);
+    const layer = PolygonImageLayer.addImageLayer(this.map, imageData, options);
+    this.trackLayer(layer);
+    return layer;
   }
 
   /**
@@ -298,7 +333,11 @@ export default class Polygon {
    * @param options 热力图配置
    */
   addHeatmap(pointData: PointData[], options?: HeatMapOptions) {
-    return PolygonHeatmapLayer.addHeatmap(this.map, pointData, options)
+    const layer = PolygonHeatmapLayer.addHeatmap(this.map, pointData, options);
+    if (layer) {
+      this.trackLayer(layer);
+    }
+    return layer;
   }
 
   /**
@@ -309,11 +348,18 @@ export default class Polygon {
    * @throws 当数据格式无效时抛出错误
    */
   addMaskLayer(data: any, options?: MaskLayerOptions): VectorLayer<VectorSource> {
-    return PolygonMaskLayer.addMaskLayer(this.map, data, options);
+    const layer = PolygonMaskLayer.addMaskLayer(this.map, data, options);
+    this.trackLayer(layer);
+    return layer;
   }
 
   removePolygonLayer(layerName: string) {
-    new MapTools(this.map).removeLayer(layerName)
-    this[layerName] = null
+    new MapTools(this.map).removeLayer(layerName);
+    // 从 managedLayers 中也移除对应记录
+    this.managedLayers.forEach(layer => {
+      if (layer.get('layerName') === layerName || layer.get('name') === layerName) {
+        this.managedLayers.delete(layer);
+      }
+    });
   }
 }

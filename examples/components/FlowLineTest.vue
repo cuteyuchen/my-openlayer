@@ -94,7 +94,7 @@ function startFlowLine() {
       strokeColor: '#19b1ff',
       strokeWidth: 4,
       flowSymbol: {
-        src: transferPathSymbol,
+        // src: transferPathSymbol,
         scale: 0.9,
         color: '#19b1ff',
         rotateWithView: true,

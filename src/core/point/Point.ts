@@ -1,11 +1,10 @@
-"use strict";
-
 import Map from "ol/Map";
 import Feature from "ol/Feature";
 import { Point as olPoint } from "ol/geom";
 import { Text, Style, Fill, Stroke, Icon, Circle as CircleStyle } from "ol/style";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
+import BaseLayer from "ol/layer/Base";
 import { PointOptions, ClusterOptions, PointData,VueTemplatePointInstance,TwinkleItem, PulsePointOptions, PulsePointLayerHandle } from '../../types'
 import { VueTemplatePoint } from '../vue-template-point';
 import { Options as IconOptions } from "ol/style/Icon";
@@ -18,11 +17,58 @@ import PointOverlay from './PointOverlay';
 import PointPulseLayer from './PointPulseLayer';
 
 
+/**
+ * 通用的可销毁句柄。用于让 Point 内部统一回收 addPulsePointLayer / addDomPoint /
+ * addVueTemplatePoint 等返回的不同形态对象。
+ */
+interface Disposable { remove(): void }
+
 export default class Point {
   private map: Map;
 
+  /** 由本实例创建的纯图层（addPoint / addClusterPoint）。destroyAll 时统一移除。 */
+  private readonly managedLayers = new Set<BaseLayer>();
+
+  /** 由本实例创建的、需要主动 remove 的句柄（Pulse / DOM / Vue 模板）。 */
+  private readonly managedDisposables = new Set<Disposable>();
+
+  /** VueTemplatePoint 实例复用，避免每次调用 addVueTemplatePoint 都 new 一个无主实例。 */
+  private vueTemplatePoint?: VueTemplatePoint;
+
   constructor(map: Map) {
     this.map = map;
+  }
+
+  /** @internal */
+  private trackLayer<T extends BaseLayer>(layer: T): T {
+    this.managedLayers.add(layer);
+    return layer;
+  }
+
+  /** @internal */
+  private trackDisposable<T extends Disposable>(handle: T): T {
+    this.managedDisposables.add(handle);
+    return handle;
+  }
+
+  /**
+   * 销毁本实例创建的所有图层与动画句柄。供 MyOl.destroy 调用。
+   */
+  destroyAll(): void {
+    this.managedDisposables.forEach(handle => {
+      try { handle.remove(); } catch { /* ignore */ }
+    });
+    this.managedDisposables.clear();
+
+    this.managedLayers.forEach(layer => {
+      try { this.map.removeLayer(layer); } catch { /* ignore */ }
+    });
+    this.managedLayers.clear();
+
+    if (this.vueTemplatePoint) {
+      try { this.vueTemplatePoint.removeAllPoints(); } catch { /* ignore */ }
+      this.vueTemplatePoint = undefined;
+    }
   }
 
 
@@ -160,14 +206,18 @@ export default class Point {
     });
 
     const PointVectorLayer = new VectorLayer({
-      layerName: options.layerName,
+      properties: {
+        name: options.layerName,
+        layerName: options.layerName
+      },
       source: new VectorSource({
         features: pointFeatureList
       }),
       zIndex: options.zIndex || ConfigManager.DEFAULT_POINT_OPTIONS.zIndex,
-    } as any);
-    
+    });
+
     this.configureLayer(PointVectorLayer, options);
+    this.trackLayer(PointVectorLayer);
     return PointVectorLayer;
   }
 
@@ -177,7 +227,11 @@ export default class Point {
       return null;
     }
 
-    return PointClusterLayer.create(this.map, pointData, options, this.createClusterStyle.bind(this));
+    const layer = PointClusterLayer.create(this.map, pointData, options, this.createClusterStyle.bind(this));
+    if (layer) {
+      this.trackLayer(layer);
+    }
+    return layer;
   }
 
   /**
@@ -190,81 +244,15 @@ export default class Point {
     if (!ValidationUtils.validatePointData(pointData)) {
       return null;
     }
-    return PointPulseLayer.create(this.map, pointData, options);
+    const handle = PointPulseLayer.create(this.map, pointData, options);
+    this.trackDisposable(handle);
+    return handle;
   }
 
 
-  // // 在流域中心添加闪烁点位
-  // addTwinkleLayerFromPolygon(twinkleList: any[], className: string, key: string, json: MapJSONData, options?: PolygonOptions) {
-  //   new MapTools(this.map).removeLayer('twinklePoint')
-  //   // 计算多边形的中心点坐标
-  //   const calculatePolygonCenter = (polygonCoordinates: any) => {
-  //     const polygon = turf.polygon(polygonCoordinates[0]);
-
-  //     const centroid = turf.centroid(polygon);
-  //     return centroid.geometry.coordinates;
-  //   };
-
-  //   const features: any[] = json.features
-  //   const vectorSource = new VectorSource({
-  //     format: new GeoJSON(),
-  //   });
-  //   twinkleList.forEach(item => {
-  //     const feature = features.find((ele: any) => {
-  //       return ele.properties.BASIN === item.idx
-  //     })
-  //     if (!feature) return
-  //     feature.properties.level = item.lev
-  //     const geojson = new GeoJSON();
-  //     const olFeature = geojson.readFeature(feature);
-  //     if (Array.isArray(olFeature)) {
-  //       vectorSource.addFeatures(olFeature);
-  //     } else {
-  //       vectorSource.addFeature(olFeature);
-  //     }
-  //     if (feature) {
-  //       const polygonCenter = calculatePolygonCenter(feature.geometry.coordinates)
-  //       item.lgtd = polygonCenter[0]
-  //       item.lttd = polygonCenter[1]
-  //     }
-  //   })
-  //   const basinLayer = new VectorLayer({
-  //     name: 'twinklePoint',
-  //     layerName: 'twinklePoint',
-  //     source: vectorSource,
-  //     style: function (feature: any) {
-  //       if (options?.style) {
-  //         if (typeof options.style === 'function') {
-  //           return options.style(feature);
-  //         } else {
-  //           return options.style;
-  //         }
-  //       }
-  //       return new Style({
-  //         stroke: new Stroke({
-  //           color: 'rgb(139,188,245)',
-  //           width: 3
-  //         }),
-  //         fill: new Fill({ color: 'rgba(255, 255, 255, 0)' }),
-  //         text: new Text({
-  //           text: feature.values_['BASIN'] || "",
-  //           font: '14px Calibri,sans-serif',
-  //           fill: new Fill({ color: '#FFF' }),
-  //           stroke: new Stroke({
-  //             color: '#409EFF', width: 2
-  //           }),
-  //         })
-  //       })
-  //     },
-  //     zIndex: 21
-  //   } as any)
-  //   this.map.addLayer(basinLayer)
-  //   this.addTwinkleLayer(twinkleList.map(item => ({...item, className: item[key]})), className, key)
-  // }
-
   /**
    * 添加闪烁点
-   * @param twinkleList 闪烁点数据 
+   * @param twinkleList 闪烁点数据
    * @param callback
    */
   addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
@@ -272,7 +260,9 @@ export default class Point {
     remove:()=>void
     setVisible:(visible:boolean)=>void
   } {
-    return PointOverlay.create(this.map, twinkleList, callback);
+    const handle = PointOverlay.create(this.map, twinkleList, callback);
+    this.trackDisposable(handle);
+    return handle;
   }
 
   /**
@@ -295,14 +285,18 @@ export default class Point {
     if (!pointDataList || !Array.isArray(pointDataList) || pointDataList.length === 0) {
       throw new Error('Valid point info list is required');
     }
-    
+
     if (!template) {
       throw new Error('Vue template is required');
     }
 
     try {
-      const vueTemplatePoint = new VueTemplatePoint(this.map);
-      return vueTemplatePoint.addVueTemplatePoint(pointDataList, template, options);
+      if (!this.vueTemplatePoint) {
+        this.vueTemplatePoint = new VueTemplatePoint(this.map);
+      }
+      const handle = this.vueTemplatePoint.addVueTemplatePoint(pointDataList, template, options);
+      this.trackDisposable(handle);
+      return handle;
     } catch (error) {
       throw new Error(`Failed to create Vue template points: ${error}`);
     }

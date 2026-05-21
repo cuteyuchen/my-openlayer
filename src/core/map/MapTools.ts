@@ -95,10 +95,10 @@ export default class MapTools {
    * 使用 Canvas clip 实现裁剪，支持多个闭合区域
    * 注意：此方法会修改 baseLayer 的 prerender 和 postrender 事件
    */
-  static setMapClip(baseLayer: any, data: MapJSONData) {
+  static setMapClip(baseLayer: BaseLayer, data: MapJSONData) {
     const features = new GeoJSON().readFeatures(data);
 
-    baseLayer.on("prerender", (event: any) => {
+    (baseLayer as any).on("prerender", (event: any) => {
       const ctx = event.context;
 
       /** *********************高分屏坐标转换*********************/
@@ -110,21 +110,21 @@ export default class MapTools {
             event.frameState.coordinateToPixelTransform
           )
         : event.frameState.coordinateToPixelTransform;
-      
+
       ctx.save();
       ctx.beginPath();
 
-      features.forEach((feature: any) => {
+      features.forEach(feature => {
         const geometry = feature.getGeometry();
         if (!geometry) return;
 
         const type = geometry.getType();
-        const coordinates = geometry.getCoordinates();
+        const coordinates = (geometry as any).getCoordinates();
 
         // 辅助函数：绘制单个线性环
-        const drawRing = (ringCoords: any[]) => {
+        const drawRing = (ringCoords: number[][]) => {
           if (!ringCoords || ringCoords.length === 0) return;
-          
+
           for (let i = 0; i < ringCoords.length; i++) {
             const coord = ringCoords[i];
             // 手动应用变换: pixelX = x * m0 + y * m1 + m4
@@ -132,7 +132,7 @@ export default class MapTools {
             // transform 数组结构: [m0, m1, m2, m3, m4, m5]
             const pixelX = coord[0] * transform[0] + coord[1] * transform[1] + transform[4];
             const pixelY = coord[0] * transform[2] + coord[1] * transform[3] + transform[5];
-            
+
             if (i === 0) {
               ctx.moveTo(pixelX, pixelY);
             } else {
@@ -144,14 +144,14 @@ export default class MapTools {
 
         if (type === 'MultiPolygon') {
           // MultiPolygon: [Polygon, Polygon] -> Polygon: [OuterRing, InnerRing, ...]
-          coordinates.forEach((polygonCoords: any[]) => {
-            polygonCoords.forEach((ringCoords: any[]) => {
+          (coordinates as number[][][][]).forEach(polygonCoords => {
+            polygonCoords.forEach(ringCoords => {
               drawRing(ringCoords);
             });
           });
         } else if (type === 'Polygon') {
           // Polygon: [OuterRing, InnerRing, ...]
-          coordinates.forEach((ringCoords: any[]) => {
+          (coordinates as number[][][]).forEach(ringCoords => {
             drawRing(ringCoords);
           });
         }
@@ -160,7 +160,7 @@ export default class MapTools {
       ctx.clip();
     });
 
-    baseLayer.on("postrender", (event: any) => {
+    (baseLayer as any).on("postrender", (event: any) => {
       const ctx = event.context;
       ctx.restore();
     });

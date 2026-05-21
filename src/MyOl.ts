@@ -587,20 +587,33 @@ export default class MyOl {
    */
   destroy(): void {
     try {
-      // 清理事件监听（仅在已初始化时）
+      // 1. 先停掉所有动画 / 解绑事件 / 释放 Overlay，再销毁地图本身
+      if (this._selectHandler) {
+        try { this._selectHandler.destroy(); } catch (e) { this.errorHandler.warn('SelectHandler.destroy 失败:', e); }
+      }
+      if (this._line) {
+        try { this._line.destroyAllFlowLines(); } catch (e) { this.errorHandler.warn('Line.destroyAllFlowLines 失败:', e); }
+      }
+      if (this._point) {
+        try { this._point.destroyAll(); } catch (e) { this.errorHandler.warn('Point.destroyAll 失败:', e); }
+      }
+      if (this._polygon) {
+        try { this._polygon.destroyAll(); } catch (e) { this.errorHandler.warn('Polygon.destroyAll 失败:', e); }
+      }
       if (this._eventManager) {
-        this._eventManager.clear();
+        try { this._eventManager.clear(); } catch (e) { this.errorHandler.warn('EventManager.clear 失败:', e); }
       }
 
-      // 销毁功能模块
+      // 2. 释放模块引用
       this._point = undefined;
       this._line = undefined;
       this._polygon = undefined;
       this._mapTools = undefined;
       this._baseLayers = undefined;
       this._selectHandler = undefined;
+      this._eventManager = undefined;
 
-      // 销毁地图
+      // 3. 解绑 DOM 目标，OL 内部会回收 layers / interactions
       this.map.setTarget(undefined);
 
       this.errorHandler.debug('地图实例已销毁', { map: this.map });

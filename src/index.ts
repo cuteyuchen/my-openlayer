@@ -41,6 +41,8 @@ export type {
   ClusterOptions,
   MeasureHandlerType,
   VueTemplatePointOptions,
+  VueTemplatePointInstance,
+  TwinkleItem,
   MapJSONData,
   FeatureData,
   AnnotationType,
@@ -52,3 +54,6 @@ export type {
   SelectCallbackEvent,
   ProgrammaticSelectOptions
 } from './types'
+
+// Vue 模板点位状态枚举（运行时值，需要单独导出）
+export { VueTemplatePointState } from './types'

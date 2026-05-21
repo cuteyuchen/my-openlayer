@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vue-tsc *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(npm run *)",
+      "mcp__Claude_Preview__preview_start"
+    ]
+  }
+}
