@@ -2,7 +2,7 @@ import Map from "ol/Map";
 import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
-import type { FlowLineLayerHandle, FlowLineOptions, LineOptions, MapJSONData } from "../../types";
+import type { FlowLineLayerHandle, FlowLineOptions, LineOptions, MapJSONData, LayerHandle } from "../../types";
 import { ErrorHandler } from "../../utils/ErrorHandler";
 import ProjectionUtils from "../../utils/ProjectionUtils";
 import ValidationUtils from "../../utils/ValidationUtils";
@@ -85,14 +85,20 @@ export default class Line {
     this.flowLineRegistry.delete(layerName);
   }
 
-  addLine(data: MapJSONData, options?: LineOptions): VectorLayer<VectorSource> {
+  addLine(data: MapJSONData, options: LineOptions & { layerName: string }): VectorLayer<VectorSource> {
     ValidationUtils.validateRequired(data, 'GeoJSON data is required');
     const mergedOptions = this.mergeDefaultOptions(options);
     const features = new GeoJSON().readFeatures(data, ProjectionUtils.getGeoJSONReadOptions(mergedOptions));
     return this.createStaticLayer(new VectorSource({ features }), mergedOptions);
   }
 
-  addLineByUrl(url: string, options: LineOptions = {}): VectorLayer<VectorSource> {
+  /**
+   * 从 URL 加载 GeoJSON 数据并添加为静态线图层。
+   *
+   * @deprecated 推荐使用 {@link addLineByUrlAsync}，它返回 Promise，在 features 加载完成后才 resolve。
+   * 3.x 末尾会删除此方法。
+   */
+  addLineByUrl(url: string, options: LineOptions & { layerName: string }): VectorLayer<VectorSource> {
     ValidationUtils.validateNonEmptyString(url, 'Line url is required');
     const mergedOptions = this.mergeDefaultOptions(options);
     const source = new VectorSource({
@@ -102,12 +108,36 @@ export default class Line {
     return this.createStaticLayer(source, mergedOptions);
   }
 
+  /**
+   * Promise 版本：features 加载完成后 resolve。
+   */
+  addLineByUrlAsync(url: string, options: LineOptions & { layerName: string }): Promise<VectorLayer<VectorSource>> {
+    return new Promise((resolve, reject) => {
+      const layer = this.addLineByUrl(url, options);
+      const source = layer.getSource();
+      if (!source) {
+        resolve(layer);
+        return;
+      }
+      const onEnd = () => {
+        source.un('featuresloaderror' as any, onErr);
+        resolve(layer);
+      };
+      const onErr = () => {
+        source.un('featuresloadend' as any, onEnd);
+        reject(new Error(`Failed to load line GeoJSON: ${url}`));
+      };
+      source.once('featuresloadend' as any, onEnd);
+      source.once('featuresloaderror' as any, onErr);
+    });
+  }
+
   removeLineLayer(layerName: string): void {
     ValidationUtils.validateLayerName(layerName);
     MapTools.removeLayer(this.map, layerName);
   }
 
-  addFlowLine(data: MapJSONData, options: FlowLineOptions = {}): FlowLineLayerHandle | null {
+  addFlowLine(data: MapJSONData, options: FlowLineOptions & { layerName: string }): FlowLineLayerHandle | null {
     const mergedOptions = this.mergeFlowLineOptions(options);
     const layerName = mergedOptions.layerName;
 
@@ -131,7 +161,7 @@ export default class Line {
     }
   }
 
-  async addFlowLineByUrl(url: string, options: FlowLineOptions = {}): Promise<FlowLineLayerHandle | null> {
+  async addFlowLineByUrl(url: string, options: FlowLineOptions & { layerName: string }): Promise<FlowLineLayerHandle | null> {
     const mergedOptions = this.mergeFlowLineOptions(options);
 
     try {
@@ -172,5 +202,25 @@ export default class Line {
       try { handle.remove(); } catch { /* ignore */ }
     });
     this.flowLineRegistry.clear();
+  }
+
+  /**
+   * P1-1：把 addLine 返回的 VectorLayer 包成统一 LayerHandle。
+   */
+  attachLine(data: MapJSONData, options: LineOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> {
+    const layer = this.addLine(data, options);
+    const map = this.map;
+    return {
+      layer,
+      setVisible(visible: boolean) { layer.setVisible(visible); },
+      remove() { map.removeLayer(layer); }
+    };
+  }
+
+  /**
+   * P1-1：addFlowLine 已经是 AnimatedLayerHandle，attach 版本只是别名。
+   */
+  attachFlowLine(data: MapJSONData, options: FlowLineOptions & { layerName: string }): FlowLineLayerHandle | null {
+    return this.addFlowLine(data, options);
   }
 }

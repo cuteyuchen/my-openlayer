@@ -279,6 +279,15 @@ export default class MapBaseLayers {
   }
 
   /**
+   * 获取当前可见底图对应的 BaseLayer 数组（多 layer 的底图类型会返回多个）。
+   * 用于 MapTools.setMapClip 等需要直接操作底图实例的场景。
+   */
+  getCurrentBaseLayers(): BaseLayer[] {
+    if (!this.currentBaseLayerType) return [];
+    return (this.layers[this.currentBaseLayerType] ?? []) as BaseLayer[];
+  }
+
+  /**
    * 获取默认底图类型
    * @private
    */

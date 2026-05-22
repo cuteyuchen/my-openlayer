@@ -1,6 +1,6 @@
 ---
 name: infra-error-handler
-description: Unified error handling and logging utility
+description: Unified error handling and logging utility with specific error subtypes
 ---
 
 # ErrorHandler
@@ -10,7 +10,7 @@ description: Unified error handling and logging utility
 ## Import
 
 ```typescript
-import { ErrorHandler, ErrorType, MyOpenLayersError } from 'my-openlayer';
+import { ErrorHandler, ErrorType, MyOpenLayersError, LayerNotFoundError, InvalidGeoJSONError, ProjectionError } from 'my-openlayer';
 ```
 
 ## Enums and Classes
@@ -38,6 +38,54 @@ Custom error class inheriting from `Error`.
 | `type` | `ErrorType` | Error type |
 | `timestamp` | `Date` | Timestamp when error occurred |
 | `context` | `any` | Context data related to the error |
+
+### LayerNotFoundError (3.0 New)
+
+Thrown when a layer is looked up by name but does not exist on the map.
+
+```typescript
+class LayerNotFoundError extends MyOpenLayersError {
+  constructor(layerName: string, context?: any)
+}
+```
+
+### InvalidGeoJSONError (3.0 New)
+
+Thrown when GeoJSON data fails to parse or has an invalid structure.
+
+```typescript
+class InvalidGeoJSONError extends MyOpenLayersError {
+  constructor(reason: string, context?: any)
+}
+```
+
+### ProjectionError (3.0 New)
+
+Thrown when a projection cannot be resolved or a transform between two EPSG codes is unavailable.
+
+```typescript
+class ProjectionError extends MyOpenLayersError {
+  constructor(reason: string, context?: any)
+}
+```
+
+### Using Specific Error Types
+
+```typescript
+import { LayerNotFoundError, InvalidGeoJSONError, ProjectionError } from 'my-openlayer';
+
+try {
+  map.getPolygon().addPolygon(badData, { layerName: 'test' });
+} catch (error) {
+  if (error instanceof InvalidGeoJSONError) {
+    console.error('GeoJSON 格式错误:', error.message, error.context);
+  } else if (error instanceof LayerNotFoundError) {
+    console.error('图层不存在:', error.message);
+  } else if (error instanceof ProjectionError) {
+    console.error('投影错误:', error.message);
+  }
+}
+```
 
 ## Methods
 

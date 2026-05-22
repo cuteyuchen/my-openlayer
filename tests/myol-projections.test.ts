@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 import proj4 from "proj4";
 import { addCommon, clearAllProjections, get as getProjection } from "ol/proj";
 import MyOl from "../src/MyOl";
+import { ProjectionManager } from "../src/core/projection";
 import type { MapInitType } from "../src/types";
 
-type ProjectionInitializer = {
-  initializeProjections(options: MapInitType): void;
-};
-
-const initializeProjections = (MyOl as unknown as ProjectionInitializer).initializeProjections.bind(MyOl);
+// P1-3：投影初始化已抽到 ProjectionManager.initialize。
+// 旧测试用 MyOl.initializeProjections（私有静态方法）直接调，这里改成走公开 API。
+const initializeProjections = (options: MapInitType) => ProjectionManager.initialize(options);
 
 /** *********************投影测试工具*********************/
 function resetProjectionState(): void {

@@ -72,7 +72,7 @@ export interface ImageLayerData {
 }
 
 export interface MaskLayerOptions {
-  extent?: any;
+  extent?: number[];
   fillColor?: string;
   strokeWidth?: number;
   strokeColor?: string;

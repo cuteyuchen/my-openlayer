@@ -10,6 +10,7 @@ export default defineConfig({
       { text: '首页', link: '/' },
       { text: '指南', link: '/MyOl' },
       { text: 'API', link: '/MyOl' },
+      { text: 'Demo', link: '/demo/' },
       { text: 'GitHub', link: 'https://github.com/cuteyuchen/my-openlayer' }
     ],
 

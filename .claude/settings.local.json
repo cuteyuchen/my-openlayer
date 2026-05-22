@@ -4,7 +4,11 @@
       "Bash(npx vue-tsc *)",
       "Bash(echo \"EXIT=$?\")",
       "Bash(npm run *)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(echo \"TYPECHECK_EXIT=$?\")",
+      "Bash(echo \"TEST_EXIT=$?\")",
+      "Bash(echo \"BUILD_EXIT=$?\")",
+      "Bash(npm i *)"
     ]
   }
 }

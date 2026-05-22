@@ -159,5 +159,23 @@ describe('destroy 级联清理', () => {
 
       expect(() => point.destroyAll()).not.toThrow();
     });
+
+    it('P1-4: PulsePointIconOptions 同时识别新 img 和旧 src（@deprecated）', () => {
+      const map = createMapStub();
+      const point = new Point(map);
+
+      const handleNew = point.addPulsePointLayer(pointData, {
+        layerName: 'pulse-img',
+        icon: { img: '/icons/new.svg', scale: 0.8 }
+      });
+      const handleOld = point.addPulsePointLayer(pointData, {
+        layerName: 'pulse-src',
+        icon: { src: '/icons/legacy.svg', scale: 0.8 }
+      });
+
+      expect(handleNew).not.toBeNull();
+      expect(handleOld).not.toBeNull();
+      point.destroyAll();
+    });
   });
 });

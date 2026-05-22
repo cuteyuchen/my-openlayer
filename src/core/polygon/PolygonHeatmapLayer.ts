@@ -5,6 +5,7 @@ import { Heatmap } from "ol/layer";
 import VectorSource from "ol/source/Vector";
 import type { HeatMapOptions, PointData } from "../../types";
 import { ConfigManager, MapTools } from "../map";
+import { ErrorHandler } from "../../utils/ErrorHandler";
 
 /**
  * 面热力图辅助类。
@@ -36,11 +37,25 @@ export default class PolygonHeatmapLayer {
     map.addLayer(heatmapLayer);
 
     const valueKey = mergedOptions.valueKey || ConfigManager.DEFAULT_HEATMAP_VALUE_KEY;
-    const max = Math.max(...pointData.map(item => item[valueKey]));
+    // 计算归一化最大值。当数据里没有 valueKey 或值全为非数字时，max 是 NaN/-Infinity，
+    // 会导致 weight = value/max = NaN，OL 热力图整层不渲染。
+    // 此时回退到等权重 1（让用户至少看到热力图，再去补 valueKey）。
+    const numericValues = pointData
+      .map(item => Number(item[valueKey]))
+      .filter(v => Number.isFinite(v));
+    const max = numericValues.length > 0 ? Math.max(...numericValues) : 0;
+    const useFallbackWeight = max <= 0;
+    if (useFallbackWeight) {
+      ErrorHandler.getInstance().warn(
+        `[Heatmap] 数据中未找到有效的 "${valueKey}" 字段，已回退为等权重渲染。请通过 options.valueKey 指定正确字段。`
+      );
+    }
     pointData.forEach(item => {
+      const raw = Number(item[valueKey]);
+      const weight = useFallbackWeight || !Number.isFinite(raw) ? 1 : raw / max;
       heatmapLayer.getSource()!.addFeature(new Feature({
         geometry: new Point([item.lgtd, item.lttd]),
-        weight: item[valueKey] / max
+        weight
       }));
     });
 

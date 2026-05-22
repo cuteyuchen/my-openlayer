@@ -5,7 +5,7 @@ import { Text, Style, Fill, Stroke, Icon, Circle as CircleStyle } from "ol/style
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import BaseLayer from "ol/layer/Base";
-import { PointOptions, ClusterOptions, PointData,VueTemplatePointInstance,TwinkleItem, PulsePointOptions, PulsePointLayerHandle } from '../../types'
+import { PointOptions, ClusterOptions, PointData, VueTemplatePointInstance, TwinkleItem, PulsePointOptions, PulsePointLayerHandle, LayerHandle, type FeatureData } from '../../types'
 import { VueTemplatePoint } from '../vue-template-point';
 import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
@@ -122,15 +122,15 @@ export default class Point {
    */
   private createPointStyle(options: PointOptions | ClusterOptions, item?: PointData): Style {
     const style: StyleOptions = {};
-    
+
     if (options.textKey && item) {
-      style.text = this.createTextStyle(options, item[options.textKey]);
+      style.text = this.createTextStyle(options, String(item[options.textKey] ?? ''));
     }
-    
+
     if (options.img) {
       style.image = this.createIconStyle(options);
     }
-    
+
     return new Style(style);
   }
 
@@ -143,15 +143,15 @@ export default class Point {
    */
   private createClusterStyle(options: ClusterOptions, name: string): Style {
     const style: StyleOptions = {};
-    
+
     if (options.textKey) {
       style.text = this.createTextStyle(options, name);
     }
-    
+
     if (options.img) {
       style.image = this.createIconStyle(options);
     }
-    
+
     return new Style(style);
   }
 
@@ -175,24 +175,24 @@ export default class Point {
    *   img: String 图标
    * }
    */
-  addPoint(pointData: PointData[], options: PointOptions): VectorLayer<VectorSource> | null {
+  addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): VectorLayer<VectorSource> | null {
     if (!ValidationUtils.validatePointData(pointData)) {
       return null;
     }
-    
+
     const pointFeatureList: Feature[] = [];
     pointData.forEach((item) => {
       if (!ValidationUtils.validateCoordinates(item)) {
         return;
       }
-      
+
       const pointFeature = new Feature({
         rawData: item,
         type: options.layerName,
         layerName: options.layerName,
         geometry: new olPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options))
       });
-      
+
       if (options.style) {
         if (typeof options.style === 'function') {
           pointFeature.setStyle(options.style(pointFeature));
@@ -222,7 +222,7 @@ export default class Point {
   }
 
 
-  addClusterPoint(pointData: PointData[], options: ClusterOptions): VectorLayer<VectorSource> | null {
+  addClusterPoint(pointData: PointData[], options: ClusterOptions & { layerName: string }): VectorLayer<VectorSource> | null {
     if (!ValidationUtils.validatePointData(pointData)) {
       return null;
     }
@@ -240,13 +240,91 @@ export default class Point {
    * 与 addDomPoint 不同，该方法使用 VectorLayer 批量渲染点位，并通过单个
    * requestAnimationFrame 驱动闪烁圈，适合村庄预警等大量点位场景。
    */
-  addPulsePointLayer(pointData: PointData[], options: PulsePointOptions): PulsePointLayerHandle | null {
+  /**
+   * P1-1：统一 handle 形态的便捷方法。把 addPoint 返回的 VectorLayer 包成 LayerHandle。
+   *
+   * 推荐新代码使用此方法，可与 Line.attachLine / Polygon.attachPolygon 一致地管理生命周期。
+   */
+  attachPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
+    const layer = this.addPoint(pointData, options);
+    if (!layer) return null;
+    return this.toLayerHandle(layer);
+  }
+
+  /**
+   * P1-1：addPulsePointLayer 已经是 AnimatedLayerHandle，attach 版本只是别名。
+   */
+  attachPulsePointLayer(pointData: PointData[], options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null {
+    return this.addPulsePointLayer(pointData, options);
+  }
+
+  /** @internal P1-1 把 VectorLayer 包成 LayerHandle 的内部工具。 */
+  private toLayerHandle<L extends VectorLayer<VectorSource>>(layer: L): LayerHandle<L> {
+    const map = this.map;
+    const managedLayers = this.managedLayers;
+    return {
+      layer,
+      setVisible(visible: boolean) { layer.setVisible(visible); },
+      remove() {
+        managedLayers.delete(layer);
+        map.removeLayer(layer);
+      }
+    };
+  }
+
+
+  addPulsePointLayer(pointData: PointData[], options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null {
     if (!ValidationUtils.validatePointData(pointData)) {
       return null;
     }
     const handle = PointPulseLayer.create(this.map, pointData, options);
     this.trackDisposable(handle);
     return handle;
+  }
+
+  /**
+   * P1-2：从 URL 加载点位数据并添加为静态点图层。
+   *
+   * 期望 URL 返回 `PointData[]` 形态的 JSON 数组（含 lgtd / lttd）或 FeatureCollection。
+   * features 加载/解析完成后 Promise resolve 为 VectorLayer。
+   */
+  async addPointByUrl(
+    url: string,
+    options: PointOptions & { layerName: string }
+  ): Promise<VectorLayer<VectorSource> | null> {
+    ValidationUtils.validateNonEmptyString(url, 'Point url is required');
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch point data: ${response.status}`);
+    }
+    const json = await response.json();
+    const pointData: PointData[] = Array.isArray(json) ? json : (json?.features ?? []).map((f: FeatureData) => ({
+      ...f.properties,
+      lgtd: f.geometry?.coordinates?.[0],
+      lttd: f.geometry?.coordinates?.[1]
+    }));
+    return this.addPoint(pointData, options);
+  }
+
+  /**
+   * P1-2：从 URL 加载点位数据并添加为高性能闪烁点图层。
+   */
+  async addPulsePointLayerByUrl(
+    url: string,
+    options: PulsePointOptions & { layerName: string }
+  ): Promise<PulsePointLayerHandle | null> {
+    ValidationUtils.validateNonEmptyString(url, 'Pulse point url is required');
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch pulse point data: ${response.status}`);
+    }
+    const json = await response.json();
+    const pointData: PointData[] = Array.isArray(json) ? json : (json?.features ?? []).map((f: FeatureData) => ({
+      ...f.properties,
+      lgtd: f.geometry?.coordinates?.[0],
+      lttd: f.geometry?.coordinates?.[1]
+    }));
+    return this.addPulsePointLayer(pointData, options);
   }
 
 
@@ -269,16 +347,16 @@ export default class Point {
    * 添加vue组件为点位
    * @param pointDataList 点位信息列表
    * @param template vue组件模板
-   * @param Vue Vue实例
+   * @param options
    * @returns 返回控制对象，包含显示、隐藏、移除方法
    * @throws 当参数无效时抛出错误
    */
-  addVueTemplatePoint(pointDataList: PointData[], template: any, options?: {
+  addVueTemplatePoint(pointDataList: PointData[], template: object, options?: {
     positioning?: 'bottom-left' | 'bottom-center' | 'bottom-right' | 'center-left' | 'center-center' | 'center-right' | 'top-left' | 'top-center' | 'top-right',
     stopEvent?: boolean
   }): {
     setVisible: (visible: boolean) => void,
-    setOneVisibleByProp: (propName: string, propValue: any, visible: boolean) => void,
+    setOneVisibleByProp: (propName: string, propValue: unknown, visible: boolean) => void,
     remove: () => void,
     getPoints: () => VueTemplatePointInstance[]
   } {

@@ -1,7 +1,7 @@
 {
   "name": "my-openlayer",
   "private": false,
-  "version": "2.5.5",
+  "version": "3.0.0",
   "type": "module",
   "license": "MIT",
   "main": "dist/index.js",
@@ -44,7 +44,8 @@
     "publish-flat-dry": "npm run build && npm run prepare-publish && cd temp-publish && npm publish --dry-run",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "demo:build": "vite build --base /my-openlayer/demo/ --outDir demo-dist"
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",
@@ -54,12 +55,14 @@
   "devDependencies": {
     "@types/proj4": "^2.5.2",
     "@vitejs/plugin-vue": "^5.0.4",
+    "happy-dom": "^20.9.0",
     "typescript": "~5.6.2",
     "vite": "^5.4.10",
-    "vitest": "^2.1.9",
     "vite-plugin-css-modules": "^0.0.1",
     "vite-plugin-libcss": "^1.1.1",
     "vitepress": "^1.6.4",
+    "vitest": "^2.1.9",
+    "vue-router": "^4.6.4",
     "vue-tsc": "^2.0.6"
   },
   "peerDependencies": {

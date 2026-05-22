@@ -1,134 +1,139 @@
 <template>
-  <div id="app">
-    <div class="sidebar">
-      <div class="title">OpenLayers Examples</div>
-      <button 
-        v-for="(comp, key) in components" 
-        :key="key"
-        @click="currentComp = key" 
-        :class="{ active: currentComp === key }"
-      >
-        {{ getLabel(key) }}
-      </button>
-    </div>
-    <div class="content">
-      <component :is="components[currentComp]" />
-    </div>
+  <div id="app-shell">
+    <aside class="nav">
+      <div class="nav-title">my-openlayer 示例</div>
+      <div v-for="group in groupedRoutes" :key="group.key" class="nav-group">
+        <div class="nav-group-label">{{ group.label }}</div>
+        <RouterLink
+          v-for="route in group.routes"
+          :key="route.path"
+          :to="route.path"
+          class="nav-link"
+          active-class="active"
+          exact-active-class="active"
+        >
+          <span class="nav-link-name">{{ route.meta.label }}</span>
+          <span class="nav-link-blurb">{{ route.meta.blurb }}</span>
+        </RouterLink>
+      </div>
+    </aside>
+
+    <main class="content">
+      <RouterView v-slot="{ Component }">
+        <component :is="Component" />
+      </RouterView>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import MeasureTool from './components/MeasureTool.vue'
-import ShadeTest from './components/ShadeTest.vue'
-import TwinkleTest from './components/TwinkleTest.vue'
-import PulsePointTest from './components/PulsePointTest.vue'
-import ClipTest from './components/ClipTest.vue'
-import LargePolygonTest from './components/LargePolygonTest.vue'
-import SelectHandlerTest from './components/SelectHandlerTest.vue'
-import FlowLineTest from './components/FlowLineTest.vue'
+import { computed } from 'vue'
+import { RouterLink, RouterView } from 'vue-router'
+import { navRoutes } from './router'
 
-const currentComp = ref('MeasureTool')
-
-const components: Record<string, any> = {
-  MeasureTool,
-  ShadeTest,
-  TwinkleTest,
-  PulsePointTest,
-  FlowLineTest,
-  ClipTest,
-  LargePolygonTest,
-  SelectHandlerTest
-}
-
-const getLabel = (key: string) => {
-  const labels: Record<string, string> = {
-    MeasureTool: '测量工具',
-    ShadeTest: '遮罩测试',
-    TwinkleTest: '闪烁点测试',
-    PulsePointTest: '高性能闪烁点',
-    FlowLineTest: '流动线动画',
-    ClipTest: '裁剪测试',
-    LargePolygonTest: '大文件面测试',
-    SelectHandlerTest: '选择交互测试'
-  }
-  return labels[key] || key
-}
+const groupedRoutes = computed(() => {
+  const order: { key: string; label: string }[] = [
+    { key: 'overview', label: '总览' },
+    { key: 'core', label: '核心' },
+    { key: 'map', label: '地图' },
+    { key: 'interaction', label: '交互' },
+    { key: 'projection', label: '投影' }
+  ]
+  return order.map(g => ({
+    ...g,
+    routes: navRoutes.filter(r => r.meta.group === g.key)
+  }))
+})
 </script>
 
 <style>
-html, body {
+html, body, #app, #app-shell {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
-#app {
-  width: 100%;
+#app-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
   height: 100%;
-  display: flex;
 }
 
-.sidebar {
-  width: 200px;
-  background-color: #f5f5f5;
-  border-right: 1px solid #ddd;
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-  box-sizing: border-box;
+.nav {
+  background: #1e293b;
+  color: #cbd5e1;
+  overflow-y: auto;
+  padding: 14px 0;
 }
 
-.sidebar .title {
-  font-weight: bold;
-  margin-bottom: 20px;
-  text-align: center;
+.nav-title {
+  padding: 0 16px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8fafc;
+  border-bottom: 1px solid #334155;
 }
 
-.sidebar button {
-  padding: 10px;
-  margin-bottom: 5px;
-  cursor: pointer;
-  border: 1px solid #ccc;
-  background: white;
-  border-radius: 4px;
-  text-align: left;
+.nav-group {
+  padding: 10px 0 6px;
 }
 
-.sidebar button:hover {
-  background-color: #e6f7ff;
+.nav-group-label {
+  padding: 4px 16px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
 }
 
-.sidebar button.active {
-  background-color: #1890ff;
-  color: white;
-  border-color: #1890ff;
+.nav-link {
+  display: block;
+  padding: 8px 16px;
+  text-decoration: none;
+  color: #cbd5e1;
+  line-height: 1.3;
+}
+
+.nav-link:hover {
+  background: #334155;
+  color: #f8fafc;
+}
+
+.nav-link.active {
+  background: #3b82f6;
+  color: #f8fafc;
+}
+
+.nav-link-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nav-link-blurb {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.nav-link.active .nav-link-blurb {
+  color: #dbeafe;
 }
 
 .content {
-  flex: 1;
   position: relative;
   overflow: hidden;
 }
 
-/* Common map style for components */
-.map-container {
-  width: 100%;
-  height: 100%;
+button {
+  cursor: pointer;
 }
-
-.component-toolbar {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 100;
-  background: white;
-  padding: 10px;
-  border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
-  display: flex;
-  gap: 10px;
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 </style>

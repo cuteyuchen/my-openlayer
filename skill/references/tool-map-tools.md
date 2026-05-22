@@ -121,15 +121,28 @@ fitByData(
 
 #### setMapClip
 
-Set map clipping area (Canvas-based clipping).
+Set map clipping area for a **single layer** (Canvas-based clipping).
 
 ```typescript
-static setMapClip(baseLayer: Layer, data: MapJSONData): Layer
+static setMapClip(baseLayer: BaseLayer, data: MapJSONData): BaseLayer
 ```
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `baseLayer` | `Layer` | Layer to be clipped |
+| `baseLayer` | `BaseLayer` | Layer to be clipped |
+| `data` | `MapJSONData` | GeoJSON data defining clip shape |
+
+#### clipMap (3.0 New)
+
+Clip **all layers** on the map (base layers + annotation + user vector layers). This is the batch version of `setMapClip` — every layer gets a prerender/postrender Canvas clip. If one layer fails, the rest continue.
+
+```typescript
+clipMap(data: MapJSONData): void
+static clipMap(map: Map, data: MapJSONData): void
+```
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
 | `data` | `MapJSONData` | GeoJSON data defining clip shape |
 
 ## Usage Examples
@@ -179,23 +192,15 @@ tools.fitByData(geoJsonData, {
 ### Map Clipping
 
 ```typescript
-// Create base layer
+// Clip a single base layer
 const baseLayer = new TileLayer({ ... });
-
-// Define clip area (e.g., a polygon)
-const clipPolygon = {
-  type: 'FeatureCollection',
-  features: [{
-    type: 'Feature',
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[...]]
-    }
-  }]
-};
-
-// Apply clip
-// Note: This modifies baseLayer's render behavior to show only within clipPolygon
 MapTools.setMapClip(baseLayer, clipPolygon);
 map.addLayer(baseLayer);
+
+// 3.0: Clip ALL layers on the map at once (base + annotation + user layers)
+const tools = map.getTools();
+tools.clipMap(clipPolygon);
+
+// Or use the static version
+MapTools.clipMap(map.map, clipPolygon);
 ```

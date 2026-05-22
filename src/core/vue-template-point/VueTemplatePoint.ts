@@ -450,11 +450,25 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
     if (this.state === VueTemplatePointState.DESTROYED) {
       throw new Error('Cannot update props on destroyed DOM point');
     }
-    
+
     try {
-      // 重新创建Vue应用实例
+      // 重新创建Vue应用实例。
+      // 注意：createVueApp 把 options.props 当 Vue 组件的 props 声明（非传值），
+      // 根组件没有父组件传值，因此必须把每个值包成 { default: value } 才能被
+      // Vue 当 prop 默认值消费，render 里才能读到。
       this.destroyVueApp();
-      this.options.props = { ...this.options.props, ...newProps };
+      const normalized: Record<string, any> = { ...this.options.props };
+      for (const key of Object.keys(newProps)) {
+        const value = newProps[key];
+        // 已经是 { type, default } 形式则原样合并，否则包装为默认值
+        const isAlreadyDeclaration =
+          value !== null
+          && typeof value === 'object'
+          && (Object.prototype.hasOwnProperty.call(value, 'default')
+            || Object.prototype.hasOwnProperty.call(value, 'type'));
+        normalized[key] = isAlreadyDeclaration ? value : { default: value };
+      }
+      this.options.props = normalized;
       this.createVueApp();
     } catch (error) {
       this.handleError('Failed to update props', error, { newProps });

@@ -36,6 +36,42 @@ export class MyOpenLayersError extends Error {
 }
 
 /**
+ * P2-2：具体错误子类，方便调用方用 instanceof 判分支。
+ */
+export class LayerNotFoundError extends MyOpenLayersError {
+  constructor(layerName: string, context?: any) {
+    super(
+      `Layer '${layerName}' not found. 请检查 layerName 拼写、图层是否已被 remove，或在 fitView / removeLayer 调用前先 await *ByUrlAsync。`,
+      ErrorType.LAYER_ERROR,
+      { layerName, ...context }
+    );
+    this.name = 'LayerNotFoundError';
+  }
+}
+
+export class InvalidGeoJSONError extends MyOpenLayersError {
+  constructor(reason: string, context?: any) {
+    super(
+      `Invalid GeoJSON data: ${reason}. 请检查数据是否为标准 GeoJSON FeatureCollection / Feature / Geometry。`,
+      ErrorType.DATA_ERROR,
+      context
+    );
+    this.name = 'InvalidGeoJSONError';
+  }
+}
+
+export class ProjectionError extends MyOpenLayersError {
+  constructor(reason: string, context?: any) {
+    super(
+      `Projection error: ${reason}. 请确认 EPSG code 已通过 ProjectionManager.register 或 options.projection 注册。`,
+      ErrorType.MAP_ERROR,
+      context
+    );
+    this.name = 'ProjectionError';
+  }
+}
+
+/**
  * 错误处理工具类
  */
 export class ErrorHandler {

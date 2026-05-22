@@ -4,6 +4,7 @@ import { SelectEvent } from "ol/interaction/Select";
 import { click, pointerMove, platformModifierKeyOnly } from "ol/events/condition";
 import Feature, { FeatureLike } from "ol/Feature";
 import VectorLayer from "ol/layer/Vector";
+import BaseLayer from "ol/layer/Base";
 import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
 import Collection from 'ol/Collection';
 import { getUid } from "ol/util";
@@ -229,7 +230,7 @@ export default class SelectHandler {
   /**
    * 通过属性选择要素
    */
-  selectByProperty(propertyName: string, propertyValue: any, options?: ProgrammaticSelectOptions): this {
+  selectByProperty(propertyName: string, propertyValue: unknown, options?: ProgrammaticSelectOptions): this {
     try {
       if (!propertyName) throw new Error('属性名称不能为空');
 
@@ -319,7 +320,7 @@ export default class SelectHandler {
     return selectedFeatures;
   }
 
-  private findFeaturesByProperty(key: string, value: any, layerName?: string): Feature[] {
+  private findFeaturesByProperty(key: string, value: unknown, layerName?: string): Feature[] {
     const selectedFeatures: Feature[] = [];
     const layers = this.map.getLayers().getArray();
     for (const layer of layers) {
@@ -422,7 +423,7 @@ export default class SelectHandler {
     }
   }
 
-  private getSelectCondition(mode: SelectMode): any {
+  private getSelectCondition(mode: SelectMode): (event: import("ol/MapBrowserEvent").default<any>) => boolean {
     switch (mode) {
       case 'click': return click;
       case 'hover': return pointerMove;
@@ -431,9 +432,9 @@ export default class SelectHandler {
     }
   }
 
-  private createLayerFilter(layerNames?: string[]): ((layer: any) => boolean) | undefined {
+  private createLayerFilter(layerNames?: string[]): ((layer: BaseLayer) => boolean) | undefined {
     if (!layerNames || layerNames.length === 0) return undefined;
-    return (layer: any) => {
+    return (layer: BaseLayer) => {
       const layerName = layer.get('layerName') || layer.get('name');
       return layerNames.includes(layerName);
     };

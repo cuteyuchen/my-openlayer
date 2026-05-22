@@ -107,9 +107,17 @@ interface FeatureData {
 
 ## Methods
 
+### attachLine (3.0 Recommended)
+
+Add a line feature layer, returning a unified `LayerHandle`. Preferred over `addLine` in new code.
+
+```typescript
+attachLine(data: MapJSONData, options?: LineOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
+```
+
 ### addLine
 
-Add a line feature layer.
+Add a line feature layer (legacy API, still works).
 
 ```typescript
 addLine(data: MapJSONData, options?: LineOptions): VectorLayer<VectorSource>
@@ -170,6 +178,22 @@ Load animated flow line data from a URL.
 
 ```typescript
 addFlowLineByUrl(url: string, options?: FlowLineOptions): Promise<FlowLineLayerHandle | null>
+```
+
+### addLineByUrlAsync (3.0 New)
+
+Load line data from a URL and resolve after features are loaded. Preferred over `addLineByUrl` when you need to access features or trigger `fitView` after load.
+
+```typescript
+addLineByUrlAsync(url: string, options?: LineOptions): Promise<VectorLayer<VectorSource> | null>
+```
+
+### destroyAllFlowLines (3.0)
+
+Destroy all flow line animations created by this `Line` instance. Called automatically by `MyOl.destroy()`.
+
+```typescript
+destroyAllFlowLines(): void
 ```
 
 ### removeFlowLineLayer

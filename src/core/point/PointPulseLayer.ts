@@ -95,7 +95,7 @@ export default class PointPulseLayer {
 
     const createStyles = (feature: Feature): Style[] => {
       const rawData = feature.get('rawData') as PointData | undefined;
-      const level = rawData?.[levelKey] ?? 'default';
+      const level = String(rawData?.[levelKey] ?? 'default');
       const progress = frameIndex / Math.max(1, pulseOptions.frameCount - 1);
       const [minRadius, maxRadius] = pulseOptions.radius;
       const radius = minRadius + (maxRadius - minRadius) * progress;
@@ -123,9 +123,11 @@ export default class PointPulseLayer {
         styles.push(pulseStyle);
       }
 
-      const text = options.textVisible && options.textKey && rawData ? rawData[options.textKey] ?? '' : '';
+      const text = options.textVisible && options.textKey && rawData ? String(rawData[options.textKey] ?? '') : '';
+      // P1-4: icon.img 是新名，icon.src 保留兼容（@deprecated）
+      const iconImg = options.icon?.img ?? options.icon?.src;
       const staticCacheKey = [
-        options.img ?? options.icon?.src ?? '',
+        options.img ?? iconImg ?? '',
         options.scale ?? options.icon?.scale ?? ConfigManager.DEFAULT_POINT_ICON_SCALE,
         options.iconColor ?? options.icon?.color ?? '',
         text
@@ -136,8 +138,8 @@ export default class PointPulseLayer {
         return styles;
       }
 
-      const pointStyleOptions: any = {};
-      const iconSrc = options.img ?? options.icon?.src;
+      const pointStyleOptions: { image?: Icon | CircleStyle; text?: Text } = {};
+      const iconSrc = options.img ?? iconImg;
       if (iconSrc) {
         pointStyleOptions.image = new Icon({
           src: iconSrc,

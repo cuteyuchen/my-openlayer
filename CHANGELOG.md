@@ -1,5 +1,73 @@
 # Changelog
 
+## [3.0.0] - 2026-05-22
+
+### 🚀 BREAKING CHANGE: 总览
+
+3.0 在保持向后兼容的前提下统一了 API 形态、加强了类型约束、把投影管理抽成独立类。所有 2.x 用户都应**配合 [`docs/MIGRATION-3.0.md`](./docs/MIGRATION-3.0.md) 阅读升级**。
+
+升级核心结论：
+
+- 大多数旧 API 都标了 `@deprecated` 但**仍能工作**，3.x 末尾才彻底移除
+- 所有公开 `add*` 方法签名上 `layerName` 现在是**必填**（编译时强制）
+- 推荐用新的 `attach*` / `*ByUrlAsync` 系列，返回统一 `LayerHandle` / Promise
+
+### ✨ Features
+
+- **handle**：新增统一 [`LayerHandle`](./src/types/handle.ts) 与 `AnimatedLayerHandle` 接口；`PulsePointLayerHandle`、`FlowLineLayerHandle` 显式继承动画句柄契约。新代码记一次 `{ layer, remove, setVisible }` 即可跨 Point / Line / Polygon 复用。
+- **attach\***：Point / Line / Polygon 各新增 `attachPoint` / `attachLine` / `attachPolygon` / `attachPolygonByUrl` 等方法，返回统一 `LayerHandle`。
+- **\*ByUrlAsync**：`Polygon.addPolygonByUrlAsync`、`Line.addLineByUrlAsync` 返回 Promise，在 features 加载完成后才 resolve，fitView / 拿 features 列表更可靠。
+- **Point \*ByUrl**：新增 `Point.addPointByUrl` / `Point.addPulsePointLayerByUrl`，从 URL 直接异步加载点位数据。
+- **ProjectionManager**：投影注册逻辑从 `MyOl` 抽到独立 [`ProjectionManager`](./src/core/projection/ProjectionManager.ts) 类，对外暴露 `register / initialize / resolveViewProjection`。用户现在可在 MyOl 实例之外注册任意 EPSG。
+- **ConfigManager.setDefaults**：运行时修改全局默认配置（如线宽、闪烁颜色），所有未提供该字段的后续调用都生效。配 `resetDefaults` 恢复。
+- **错误体系**：新增 `LayerNotFoundError` / `InvalidGeoJSONError` / `ProjectionError` 三个具体子类，方便调用方 `instanceof` 判别。
+- **类型导出**：补齐 `TwinkleItem` / `VueTemplatePointInstance` / `MeasureHandlerType` 等遗漏类型；运行时枚举 `VueTemplatePointState` 也导出。
+
+### 🐛 Bug Fixes
+
+- **destroy 泄漏（P0-1）**：`MyOl.destroy()` 现在会级联调用 `SelectHandler.destroy / Line.destroyAllFlowLines / Point.destroyAll / Polygon.destroyAll`，确保所有 rAF / Overlay / Vue 实例 / Select interaction 释放。
+- **Point/Polygon 句柄注册表**：`Point` / `Polygon` 内部新增 `managedLayers` / `managedDisposables` 注册表，所有 `add*` 都会登记；`destroyAll` 一次性回收。
+- **VueTemplatePoint 实例复用**：`Point.addVueTemplatePoint` 之前每次调用都 `new VueTemplatePoint(map)` 丢弃引用，现在改为单例复用并随 `destroyAll` 一起清理。
+- **Polygon `[key:string]:any` 删除**：`removePolygonLayer` 不再依赖动态属性赋值。
+
+### 🔒 Hardening
+
+- 公开 `add*` 方法签名上 `layerName` 变成必填（用 `Options & { layerName: string }` 形式），不动 interface 本身保证 2.x 用户的 options 对象赋值不报错。
+- `MapTools.setMapClip` 的 `baseLayer` 类型从 `any` 收紧为 `BaseLayer`；坐标数组从 `any[]` 收紧为 `number[][]` / `number[][][]`。
+- `PulsePointIconOptions.src` 标 `@deprecated`，统一改名为 `img`（PointPulseLayer 同时识别两者）。
+
+### 📝 Documentation
+
+- 新增 [`docs/MIGRATION-3.0.md`](./docs/MIGRATION-3.0.md) 迁移指南。
+- 旧 `addPolygonByUrl` / `addLineByUrl` / `Point.addVueTemplatePoint` 单实例化等行为变更在 JSDoc 中标注 `@deprecated`。
+
+### 🧪 Tests
+
+- 新增 5 个测试文件，共 40 个用例：`destroy-leak`、`config-defaults`、`async-url-api`、`layer-handle`、`config-defaults`，覆盖 P0/P1/P2 所有改动点。
+
+---
+
+## [2.5.5] - Unreleased（P0 补丁版）
+
+### 🐛 Bug Fixes (P0)
+
+- **destroy 级联清理**：`MyOl.destroy()` 现在会依次调用 `SelectHandler.destroy / Line.destroyAllFlowLines / Point.destroyAll / Polygon.destroyAll / EventManager.clear`，每一步独立 try/catch，确保所有 RAF、Overlay、Vue app、Select interaction 真正释放。
+- **Point/Polygon 句柄注册表**：`Point.addPoint / addClusterPoint / addPulsePointLayer / addDomPoint / addVueTemplatePoint` 与 `Polygon.addPolygon / addBorderPolygon / addImageLayer / addHeatmap / addMaskLayer / setOutLayer` 创建的图层都注册到内部表，便于 `destroyAll()` 一次性回收。
+- **VueTemplatePoint 实例复用**：`Point.addVueTemplatePoint` 之前每次都 `new VueTemplatePoint(map)` 丢弃引用导致内存泄漏，现改为单例复用。
+- **死代码清理**：删除 `Point.ts` 注释段（旧 `addTwinkleLayerFromPolygon` 实现）；删除 `Polygon` 的 `[key:string]:any` 索引签名，重写 `removePolygonLayer`。
+
+### 🔒 Hardening (P0)
+
+- `MapTools.setMapClip` 的 `baseLayer` 类型从 `any` 收紧到 `BaseLayer`；坐标数组从 `any[]` 收紧为 `number[][]` / `number[][][]`。
+
+### ✨ Type Exports (P0)
+
+- 补齐 `TwinkleItem` / `VueTemplatePointInstance` / `MeasureHandlerType` 等遗漏类型；导出运行时枚举 `VueTemplatePointState`。
+
+### 🧪 Tests (P0)
+
+- 新增 `tests/destroy-leak.test.ts`，4 个用例覆盖 `Line.destroyAllFlowLines` / `Point.destroyAll` / `Polygon.destroyAll` / `removePolygonLayer`。
+
 ## [2.5.4] - 2026-05-18
 
 ### 🐛 Bug Fixes

@@ -3,10 +3,10 @@
  */
 export interface FeatureData {
   type: string;
-  properties: any;
+  properties: Record<string, unknown>;
   geometry: {
     type: "Polygon" | "MultiPolygon" | "Point" | "LineString" | "MultiLineString" | "MultiPoint" | "GeometryCollection";
-    coordinates: any[];
+    coordinates: number[] | number[][] | number[][][] | number[][][][];
   }
 }
 
@@ -37,18 +37,18 @@ export type OptionsType = {
   mapClipData?: MapJSONData;
   dataProjection?: string;
   featureProjection?: string;
-  projectionOptOptions?: any;
-  style?: any;
+  projectionOptOptions?: Record<string, unknown>;
+  style?: Style | Style[] | ((feature: FeatureLike) => Style | Style[]);
   strokeColor?: string | number[];
   strokeWidth?: number;
   lineDash?: number[];
   lineDashOffset?: number;
   fillColor?: string;
-  fillColorCallBack?: (feature: any) => string;
+  fillColorCallBack?: (feature: FeatureLike) => string;
   withDefaultStroke?: boolean;
   withDefaultFill?: boolean;
   textVisible?: boolean;
-  textCallBack?: (feature: any) => string;
+  textCallBack?: (feature: FeatureLike) => string;
   textFont?: string;
   textFillColor?: string;
   textStrokeColor?: string;
@@ -61,3 +61,7 @@ export type OptionsType = {
   type?: string;
   mask?: boolean;
 };
+
+// 兼容旧代码的内联 import
+import type { FeatureLike } from "ol/Feature";
+import type { Style } from "ol/style";

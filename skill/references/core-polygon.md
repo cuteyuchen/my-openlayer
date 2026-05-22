@@ -69,9 +69,17 @@ Image layer data.
 
 ## Methods
 
+### attachPolygon (3.0 Recommended)
+
+Add a polygon layer, returning a unified `LayerHandle`. Preferred over `addPolygon` in new code.
+
+```typescript
+attachPolygon(data: MapJSONData, options?: PolygonOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
+```
+
 ### addPolygon
 
-Add a polygon layer.
+Add a polygon layer (legacy API, still works).
 
 ```typescript
 addPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource>
@@ -160,7 +168,28 @@ setOutLayer(data: MapJSONData, options?: {
 Add a regular mask layer through `PolygonMaskLayer`.
 
 ```typescript
-addMaskLayer(data: any, options?: MaskLayerOptions): VectorLayer<VectorSource>
+addMaskLayer(data: MapJSONData, options?: MaskLayerOptions): VectorLayer<VectorSource>
+```
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `data` | `MapJSONData` | GeoJSON data for the mask boundary |
+| `options` | `MaskLayerOptions` | Configuration: `fillColor`, `strokeColor`, `zIndex` (default 12), `opacity`, `visible`, `layerName` |
+
+### addPolygonByUrlAsync (3.0 New)
+
+Load polygon data from a URL and resolve after features are loaded. Preferred over `addPolygonByUrl` when you need to access features or trigger `fitView` after load.
+
+```typescript
+addPolygonByUrlAsync(url: string, options?: PolygonOptions): Promise<VectorLayer<VectorSource> | null>
+```
+
+### destroyAll (3.0)
+
+Destroy all layers created by this `Polygon` instance. Called automatically by `MyOl.destroy()`.
+
+```typescript
+destroyAll(): void
 ```
 
 ### removePolygonLayer

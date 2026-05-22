@@ -220,7 +220,15 @@ getMapOptions(): Readonly<MapInitType>
 
 #### destroy
 
-Destroys the map instance, clearing all event listeners and resources.
+Destroys the map instance and **cascades cleanup to all sub-modules** (3.0 behavior):
+
+1. `SelectHandler.destroy()` — disables selection, clears all selected/rendered state
+2. `Line.destroyAllFlowLines()` — stops all rAF loops, removes flow line layers
+3. `Point.destroyAll()` — removes all point layers, stops pulse animations, unmounts Vue overlays
+4. `Polygon.destroyAll()` — removes all polygon/mask/heatmap/image layers
+5. `EventManager.clear()` — removes all event listeners
+
+Each step is wrapped in its own try/catch, so a failure in one module does not prevent others from being cleaned up.
 
 ```typescript
 destroy(): void

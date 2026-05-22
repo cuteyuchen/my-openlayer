@@ -44,7 +44,7 @@ export default class PointClusterLayer {
     const clusterLayer = new VectorLayer({
       layerName: options.layerName,
       source: clusterSource,
-      style: (feature: any) => {
+      style: (feature: Feature) => {
         if (options.style) {
           if (typeof options.style === 'function') {
             return options.style(feature);

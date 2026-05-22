@@ -76,6 +76,22 @@ Get current base layer type.
 getCurrentBaseLayerType(): string | null
 ```
 
+#### getCurrentBaseLayers (3.0 New)
+
+Get the `BaseLayer[]` array for the currently visible base layer type. Useful for `MapTools.setMapClip` when you need to clip only the base layers.
+
+```typescript
+getCurrentBaseLayers(): BaseLayer[]
+```
+
+```typescript
+import { MapTools } from 'my-openlayer';
+
+// Clip only the current base layers (not annotation or user layers)
+const baseLayers = map.getMapBaseLayers().getCurrentBaseLayers();
+baseLayers.forEach(layer => MapTools.setMapClip(layer, clipData));
+```
+
 #### removeLayersByType
 
 Remove layers of specified type.

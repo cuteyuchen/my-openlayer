@@ -5,15 +5,14 @@ import { MapJSONData } from "../../types";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
-// import { Fill, Style } from "ol/style";
-// import { getVectorContext } from "ol/render";
 import BaseLayer from "ol/layer/Base";
 import ImageLayer from "ol/layer/Image";
 import ImageSource from "ol/source/Image";
+import ImageStatic from "ol/source/ImageStatic";
 import { ErrorHandler, ErrorType } from "../../utils/ErrorHandler";
 import ValidationUtils from "../../utils/ValidationUtils";
 import ProjectionUtils from "../../utils/ProjectionUtils";
-import { createEmpty, extend, isEmpty } from "ol/extent";
+import { createEmpty, extend, isEmpty, type Extent } from "ol/extent";
 import { multiply as multiplyTransform } from "ol/transform";
 
 /**
@@ -26,7 +25,7 @@ export default class MapTools {
 
   constructor(map: Map) {
     this.errorHandler = ErrorHandler.getInstance();
-    
+
     try {
       ValidationUtils.validateMap(map);
       this.map = map;
@@ -65,9 +64,9 @@ export default class MapTools {
   static getLayerByLayerName(map: Map, layerName: string | string[]): (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] {
     ValidationUtils.validateMap(map);
     ValidationUtils.validateLayerNameParam(layerName);
-    
+
     const targetLayer: (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] = [];
-    
+
     try {
       const layers = map.getLayers().getArray();
       layers.forEach((layer: BaseLayer) => {
@@ -86,7 +85,7 @@ export default class MapTools {
       ErrorHandler.getInstance().error('Error getting layers:', error);
       throw new Error('Failed to retrieve layers from map');
     }
-    
+
     return targetLayer;
   }
 
@@ -169,6 +168,39 @@ export default class MapTools {
   }
 
   /**
+   * 用 GeoJSON 区域裁剪地图上**所有**图层（底图 + 注记 + 用户 vector 层）。
+   *
+   * 每个图层都会绑定 prerender/postrender 进行 canvas clip。这是 setMapClip
+   * 的批量版本，用于"整张地图只在某区域内可见"的需求（例如行政区聚焦）。
+   *
+   * 实例方法 mapTools.clipMap(data) 会自动用当前 map。
+   */
+  clipMap(data: MapJSONData): void {
+    if (!this.map) {
+      throw new Error('Map instance is not available');
+    }
+    MapTools.clipMap(this.map, data);
+  }
+
+  /**
+   * 用 GeoJSON 区域裁剪地图上所有图层（静态版本）。
+   * @param map 地图实例
+   * @param data 裁剪边界 GeoJSON
+   */
+  static clipMap(map: Map, data: MapJSONData): void {
+    if (!map) {
+      throw new Error('Map instance is required');
+    }
+    map.getLayers().getArray().forEach(layer => {
+      try {
+        MapTools.setMapClip(layer, data);
+      } catch (error) {
+        ErrorHandler.getInstance().warn('clipMap: 单层裁剪失败，跳过', { layer, error });
+      }
+    });
+  }
+
+  /**
    * 移除图层
    * @param layerName 图层名称
    * @throws 当参数无效时抛出错误
@@ -190,7 +222,7 @@ export default class MapTools {
     if (!map) {
       throw new Error('Map instance is required');
     }
-    
+
     try {
       const layers = MapTools.getLayerByLayerName(map, layerName);
       layers.forEach(layer => {
@@ -226,15 +258,15 @@ export default class MapTools {
     if (!map) {
       throw new Error('Map instance is required');
     }
-    
+
     if (typeof layerName !== 'string') {
       throw new Error('Layer name must be a string');
     }
-    
+
     if (typeof visible !== 'boolean') {
       throw new Error('Visible parameter must be a boolean');
     }
-    
+
     try {
       const layers = MapTools.getLayerByLayerName(map, layerName);
       layers.forEach(layer => {
@@ -254,6 +286,7 @@ export default class MapTools {
    * @param lttd 纬度
    * @param zoom 缩放级别
    * @param duration 动画时长
+   * @param projection
    * @returns 定位是否成功
    */
   locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000, projection?: {
@@ -271,7 +304,7 @@ export default class MapTools {
     if (!isValidCoordinate) {
       return false;
     }
-    
+
     try {
       const center = ProjectionUtils.transformCoordinate([lgtd, lttd], projection);
       this.map.getView().animate({ center, zoom, duration });
@@ -407,10 +440,10 @@ export default class MapTools {
     const overallExtent = createEmpty();
     let hasValidExtent = false;
 
-    layers.forEach((layer: any) => {
+    layers.forEach((layer) => {
       try {
-        const source = layer?.getSource?.();
-        const extent = source?.getExtent?.();
+        const source = (layer as VectorLayer<VectorSource> | ImageLayer<ImageSource>)?.getSource?.();
+        const extent = (source as VectorSource)?.getExtent?.() ?? (source instanceof ImageStatic ? source.getImageExtent() : undefined);
         if (extent && !isEmpty(extent)) {
           extend(overallExtent, extent);
           hasValidExtent = true;
@@ -432,7 +465,7 @@ export default class MapTools {
    */
   private static executeFit(
     map: Map,
-    extent: any,
+    extent: Extent,
     fitOptions?: {
       padding?: [number, number, number, number];
       maxZoom?: number;
@@ -457,5 +490,5 @@ export default class MapTools {
     }
   }
 
-  
+
 }

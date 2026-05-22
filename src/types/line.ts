@@ -1,6 +1,7 @@
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import type { BaseOptions, StyleOptions, TextOptions } from "./base";
+import type { AnimatedLayerHandle } from "./handle";
 import type { MapJSONData } from "./common";
 
 export interface LineOptions extends BaseOptions, StyleOptions, TextOptions {
@@ -10,7 +11,7 @@ export interface LineOptions extends BaseOptions, StyleOptions, TextOptions {
 export interface LineData {
   type: string;
   coordinates: number[][];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface FlowLineOptions extends LineOptions {
@@ -32,7 +33,7 @@ export interface FlowLineOptions extends LineOptions {
   trailLength?: number;
 }
 
-export interface FlowLineLayerHandle {
+export interface FlowLineLayerHandle extends AnimatedLayerHandle<VectorLayer<VectorSource>> {
   layer: VectorLayer<VectorSource>;
   animationLayer: VectorLayer<VectorSource>;
   start: () => void;

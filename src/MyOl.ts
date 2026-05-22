@@ -1,18 +1,11 @@
 "use strict";
 
 // OpenLayers 核心导入
-import { register as olProj4Register } from 'ol/proj/proj4'
-import {
-  Projection as olProjProjection,
-  addProjection as olProjAddProjection,
-  fromLonLat as olProjFromLonLat,
-  get as olProjGetProjection
-} from 'ol/proj'
 import View from "ol/View";
 import Map from "ol/Map";
 import { defaults as defaultControls } from 'ol/control'
 import BaseLayer from "ol/layer/Base";
-import proj4 from "proj4";
+import { fromLonLat as olProjFromLonLat } from 'ol/proj';
 
 // 内部模块导入
 import { Polygon } from "./core/polygon";
@@ -20,6 +13,7 @@ import { Point } from "./core/point";
 import { Line } from "./core/line";
 import { MapBaseLayers, MapTools, EventManager, ConfigManager } from "./core/map";
 import { SelectHandler } from "./core/select";
+import { ProjectionManager } from "./core/projection";
 import { ErrorHandler, MyOpenLayersError, ErrorType } from './utils/ErrorHandler';
 
 // 类型定义导入
@@ -52,19 +46,10 @@ export default class MyOl {
   // 默认配置
   static readonly DefaultOptions: MapInitType = ConfigManager.DEFAULT_MYOL_OPTIONS;
 
-  // 坐标系配置
-  private static readonly PROJECTIONS = {
-    WGS84: "EPSG:4326",
-    CGCS2000: "EPSG:4490",
-    CGCS2000_3_DEGREE: "EPSG:4549"
-  } as const;
-
-  /** *********************内置投影定义*********************/
-  private static readonly PROJECTION_DEFINITIONS = {
-    [MyOl.PROJECTIONS.WGS84]: "+title=WGS 84 (long/lat) +proj=longlat +ellps=WGS84 +datum=WGS84 +units=degrees",
-    [MyOl.PROJECTIONS.CGCS2000]: "+proj=longlat +ellps=GRS80 +no_defs",
-    [MyOl.PROJECTIONS.CGCS2000_3_DEGREE]: "+proj=tmerc +lat_0=0 +lon_0=120 +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +units=m +no_defs"
-  } as const;
+  /**
+   * @deprecated 请使用 ProjectionManager.PROJECTIONS 代替
+   */
+  private static readonly PROJECTIONS = ProjectionManager.PROJECTIONS;
 
   /**
    * 构造函数
@@ -90,7 +75,7 @@ export default class MyOl {
       this.validateConstructorParams(id, this.options);
 
       // 初始化坐标系
-      MyOl.initializeProjections(this.options);
+      ProjectionManager.initialize(this.options);
 
       // 准备图层
       const layers: BaseLayer[] = Array.isArray(this.options.layers) ? this.options.layers : [];
@@ -151,85 +136,6 @@ export default class MyOl {
   }
 
   /**
-   * 初始化坐标系
-   * @private
-   */
-  private static initializeProjections(options: MapInitType): void {
-    /** *********************投影定义初始化*********************/
-    MyOl.ensureProj4Definition(MyOl.PROJECTIONS.WGS84, MyOl.PROJECTION_DEFINITIONS[MyOl.PROJECTIONS.WGS84]);
-    MyOl.ensureProj4Definition(MyOl.PROJECTIONS.CGCS2000, MyOl.PROJECTION_DEFINITIONS[MyOl.PROJECTIONS.CGCS2000]);
-    MyOl.ensureProj4Definition(MyOl.PROJECTIONS.CGCS2000_3_DEGREE, MyOl.PROJECTION_DEFINITIONS[MyOl.PROJECTIONS.CGCS2000_3_DEGREE]);
-
-    if (options.projection?.code && options.projection.def) {
-      proj4.defs(options.projection.code, options.projection.def);
-    }
-
-    // 注册到 OpenLayers
-    olProj4Register(proj4);
-
-    // 添加 CGCS2000 投影
-    const cgsc2000 = new olProjProjection({
-      code: MyOl.PROJECTIONS.CGCS2000,
-      extent: [-180, -90, 180, 90],
-      worldExtent: [-180, -90, 180, 90],
-      units: "degrees"
-    });
-    olProjAddProjection(cgsc2000);
-
-    if (options.projection?.code) {
-      MyOl.applyCustomProjectionMetadata(options.projection);
-    }
-  }
-
-  /**
-   * 缺失时注册 proj4 投影定义，避免生产构建依赖第三方模块默认副作用。
-   * @private
-   */
-  private static ensureProj4Definition(code: string, definition: string): void {
-    if (!proj4.defs(code)) {
-      proj4.defs(code, definition);
-    }
-  }
-
-  /**
-   * 应用用户显式提供的投影元数据。
-   * @private
-   */
-  private static applyCustomProjectionMetadata(projection: NonNullable<MapInitType["projection"]>): void {
-    const { code, extent, worldExtent, units } = projection;
-    const registeredProjection = olProjGetProjection(code);
-
-    /** *********************自定义投影元数据初始化*********************/
-    if (units) {
-      olProjAddProjection(new olProjProjection({
-        code,
-        extent: extent ?? registeredProjection?.getExtent(),
-        worldExtent: worldExtent ?? registeredProjection?.getWorldExtent(),
-        units
-      }));
-      return;
-    }
-
-    if (registeredProjection) {
-      if (extent) {
-        registeredProjection.setExtent(extent);
-      }
-      if (worldExtent) {
-        registeredProjection.setWorldExtent(worldExtent);
-      }
-      return;
-    }
-
-    if (extent || worldExtent) {
-      olProjAddProjection(new olProjProjection({
-        code,
-        extent,
-        worldExtent
-      }));
-    }
-  }
-
-  /**
    * 创建地图控件
    * @private
    */
@@ -269,10 +175,10 @@ export default class MyOl {
   static createView(options: MapInitType = MyOl.DefaultOptions): View {
     try {
       /** *********************静态视图投影初始化*********************/
-      MyOl.initializeProjections(options);
+      ProjectionManager.initialize(options);
 
-      const code = options.projection?.code ?? MyOl.PROJECTIONS.CGCS2000;
-      const projection = MyOl.resolveViewProjection(options, code);
+      const code = options.projection?.code ?? ProjectionManager.DEFAULT_PROJECTION;
+      const projection = ProjectionManager.resolveViewProjection(options, code);
 
       const viewOptions = {
         projection,
@@ -291,31 +197,6 @@ export default class MyOl {
         { options }
       );
     }
-  }
-
-  /**
-   * 解析视图投影，优先复用已注册投影，避免丢失 proj4 推导的单位信息。
-   * @private
-   */
-  private static resolveViewProjection(options: MapInitType, code: string): olProjProjection {
-    const registeredProjection = olProjGetProjection(code);
-
-    /** *********************视图投影初始化*********************/
-    if (
-      registeredProjection
-      && !options.projection?.extent
-      && !options.projection?.worldExtent
-      && !options.projection?.units
-    ) {
-      return registeredProjection;
-    }
-
-    return new olProjProjection({
-      code,
-      extent: options.projection?.extent ?? registeredProjection?.getExtent() ?? [-180, -90, 180, 90],
-      worldExtent: options.projection?.worldExtent ?? registeredProjection?.getWorldExtent() ?? [-180, -90, 180, 90],
-      units: options.projection?.units ?? registeredProjection?.getUnits() ?? "degrees"
-    });
   }
 
   /**

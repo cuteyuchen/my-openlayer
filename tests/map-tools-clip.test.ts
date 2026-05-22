@@ -69,3 +69,40 @@ describe('MapTools.setMapClip', () => {
     expect(context.clip).toHaveBeenCalled();
   });
 });
+
+describe('MapTools.clipMap', () => {
+  it('遍历 map.getLayers() 上每一层并绑定 prerender + postrender', () => {
+    const layerA = createLayerStub();
+    const layerB = createLayerStub();
+    const layerC = createLayerStub();
+    const layers = [layerA, layerB, layerC];
+    const mapStub = {
+      getLayers: () => ({ getArray: () => layers })
+    } as any;
+
+    MapTools.clipMap(mapStub, clipData);
+
+    // 每层都被绑定了 prerender + postrender，即每层 .on 调用 2 次
+    [layerA, layerB, layerC].forEach(l => {
+      expect(l.on).toHaveBeenCalledTimes(2);
+      const types = (l.on as any).mock.calls.map((c: any[]) => c[0]);
+      expect(types).toContain('prerender');
+      expect(types).toContain('postrender');
+    });
+  });
+
+  it('单层抛错不影响其它层继续裁剪', () => {
+    const ok1 = createLayerStub();
+    const bad = {
+      on: vi.fn(() => { throw new Error('boom'); })
+    };
+    const ok2 = createLayerStub();
+    const mapStub = {
+      getLayers: () => ({ getArray: () => [ok1, bad, ok2] })
+    } as any;
+
+    expect(() => MapTools.clipMap(mapStub, clipData)).not.toThrow();
+    expect(ok1.on).toHaveBeenCalledTimes(2);
+    expect(ok2.on).toHaveBeenCalledTimes(2);
+  });
+});

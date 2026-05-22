@@ -1,4 +1,4 @@
-import Feature from "ol/Feature";
+import Feature, { type FeatureLike } from "ol/Feature";
 import { Fill, Stroke, Style, Text } from "ol/style";
 import type { FeatureColorUpdateOptions, PolygonOptions } from "../../types";
 
@@ -6,7 +6,7 @@ import type { FeatureColorUpdateOptions, PolygonOptions } from "../../types";
  * 面图层样式工厂。
  */
 export default class PolygonStyleFactory {
-  static getFeatureText(feature: Feature, options: PolygonOptions | FeatureColorUpdateOptions): string {
+  static getFeatureText(feature: FeatureLike, options: PolygonOptions | FeatureColorUpdateOptions): string {
     if (options.textCallBack) {
       return options.textCallBack(feature) || '';
     }
@@ -16,7 +16,7 @@ export default class PolygonStyleFactory {
     return '';
   }
 
-  static createStyle(options: PolygonOptions): any {
+  static createStyle(options: PolygonOptions): Style | Style[] | ((feature: FeatureLike) => Style | Style[]) {
     if (options.style) {
       return options.style;
     }
@@ -45,7 +45,7 @@ export default class PolygonStyleFactory {
       return baseStyle;
     }
 
-    return (feature: Feature) => {
+    return (feature: FeatureLike) => {
       const styles: Style[] = [];
       if (baseStyle) {
         styles.push(baseStyle);

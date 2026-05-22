@@ -1,11 +1,11 @@
 ---
 name: infra-config-manager
-description: Centralized configuration and constant management
+description: Centralized configuration, constant management, and runtime default overrides
 ---
 
 # ConfigManager
 
-`ConfigManager` provides centralized management for default configurations and constants across the map component. It ensures consistency in default values throughout the application.
+`ConfigManager` provides centralized management for default configurations and constants across the map component. In 3.0, it also supports **runtime default overrides** via `setDefaults` / `resetDefaults`, so users can change global defaults without modifying source code.
 
 ## Import
 
@@ -37,6 +37,42 @@ import { ConfigManager } from 'my-openlayer';
 | :--- | :--- | :--- | :--- |
 | `DEFAULT_POLYGON_OPTIONS` | `object` | Default polygon style configuration | `{ zIndex: 11, visible: true, textFont: '14px Calibri,sans-serif', textFillColor: '#FFF', textStrokeColor: '#409EFF', textStrokeWidth: 2 }` |
 | `DEFAULT_POLYGON_COLOR_MAP` | `object` | Default polygon color map (for graduated rendering) | `{ '0': 'rgba(255, 0, 0, 0.6)', '1': 'rgba(245, 154, 35, 0.6)', ... }` |
+| `DEFAULT_MASK_OPTIONS` | `object` | Default mask layer configuration | `{ fillColor: 'rgba(0, 0, 0, 0.5)', opacity: 1, visible: true, layerName: 'maskLayer', zIndex: 12 }` |
+
+## Runtime Default Override Methods (3.0 New)
+
+### setDefaults
+
+Override a group of default values at runtime. All subsequent calls that use these defaults (via `ConfigManager.DEFAULT_*` getters) will see the merged result. Uses deep merge — only the keys you pass are overwritten.
+
+```typescript
+static setDefaults<K extends keyof DefaultsRegistry>(group: K, partial: Partial<DefaultsRegistry[K]>): void
+```
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `group` | `string` | Default group name, e.g. `'LINE_OPTIONS'`, `'POINT_TEXT_OPTIONS'`, `'MASK_OPTIONS'` |
+| `partial` | `object` | Partial override object. Unmentioned keys keep their current value. |
+
+### getDefaults
+
+Get a deep copy of the current defaults for a group (including any `setDefaults` overrides). Safe to read — the returned copy cannot be accidentally mutated.
+
+```typescript
+static getDefaults<K extends keyof DefaultsRegistry>(group: K): DefaultsRegistry[K]
+```
+
+### resetDefaults
+
+Reset one or all default groups back to the built-in values.
+
+```typescript
+static resetDefaults(group?: keyof DefaultsRegistry): void
+```
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `group` | `string` (optional) | If omitted, resets **all** groups. If provided, resets only that group. |
 
 ## Usage Examples
 
@@ -53,6 +89,30 @@ const pointOptions = {
 
 // Get default line options
 const lineOptions = ConfigManager.DEFAULT_LINE_OPTIONS;
+```
+
+### Runtime Override (3.0)
+
+```typescript
+import { ConfigManager } from 'my-openlayer';
+
+// All subsequent addLine calls use strokeWidth: 4 as default
+ConfigManager.setDefaults('LINE_OPTIONS', { strokeWidth: 4 });
+
+// All subsequent addPoint text uses 16px font
+ConfigManager.setDefaults('POINT_TEXT_OPTIONS', {
+  textFont: '16px Calibri,sans-serif',
+  textOffsetY: 24
+});
+
+// Verify current defaults
+const current = ConfigManager.getDefaults('LINE_OPTIONS');
+console.log(current.strokeWidth); // 4
+
+// Restore to built-in
+ConfigManager.resetDefaults('LINE_OPTIONS');
+// Or reset everything
+ConfigManager.resetDefaults();
 ```
 
 ### Use in Custom Component

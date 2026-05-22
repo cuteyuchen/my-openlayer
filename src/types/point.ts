@@ -1,6 +1,7 @@
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import type { BaseOptions, StyleOptions, TextOptions } from "./base";
+import type { AnimatedLayerHandle } from "./handle";
 
 export interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
   textKey?: string;
@@ -12,7 +13,7 @@ export interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
 export interface PointData {
   lgtd: number;
   lttd: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ClusterOptions extends PointOptions {
@@ -21,6 +22,13 @@ export interface ClusterOptions extends PointOptions {
 }
 
 export interface PulsePointIconOptions {
+  /**
+   * 图标资源 URL。
+   */
+  img?: string;
+  /**
+   * @deprecated 请使用 `img` 字段，3.x 末尾会移除。
+   */
   src?: string;
   scale?: number;
   color?: string;
@@ -44,7 +52,7 @@ export interface PulsePointOptions extends PointOptions {
   };
 }
 
-export interface PulsePointLayerHandle {
+export interface PulsePointLayerHandle extends AnimatedLayerHandle<VectorLayer<VectorSource>> {
   layer: VectorLayer<VectorSource>;
   source: VectorSource;
   start: () => void;
@@ -57,5 +65,5 @@ export interface PulsePointLayerHandle {
 export interface TwinkleItem extends PointData {
   className?: string;
   element?: HTMLElement | ((item: TwinkleItem) => HTMLElement);
-  [key: string]: any;
+  [key: string]: unknown;
 }

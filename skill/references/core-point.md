@@ -94,12 +94,20 @@ Inherits from `PointOptions`, so it follows the same `img`, `scale`, `iconColor`
 
 ## Methods
 
-### addPoint
+### attachPoint (3.0 Recommended)
 
-Add an ordinary point layer.
+Add an ordinary point layer, returning a unified `LayerHandle`. Preferred over `addPoint` in new code.
 
 ```typescript
-addPoint(pointData: PointData[], options: PointOptions): VectorLayer<VectorSource> | null
+attachPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+```
+
+### addPoint
+
+Add an ordinary point layer (legacy API, still works).
+
+```typescript
+addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): VectorLayer<VectorSource> | null
 ```
 
 - **pointData**: Array of point data.
@@ -139,7 +147,23 @@ addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
 Add a high-performance pulse point layer.
 
 ```typescript
-addPulsePointLayer(pointData: PointData[], options: PulsePointOptions): PulsePointLayerHandle | null
+addPulsePointLayer(pointData: PointData[], options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null
+```
+
+### addPointByUrl (3.0 New)
+
+Load point data from a URL and add as a point layer. Returns `Promise`.
+
+```typescript
+addPointByUrl(url: string, options: PointOptions & { layerName: string }): Promise<VectorLayer<VectorSource> | null>
+```
+
+### addPulsePointLayerByUrl (3.0 New)
+
+Load point data from a URL and add as a pulse point layer. Returns `Promise`.
+
+```typescript
+addPulsePointLayerByUrl(url: string, options: PulsePointOptions & { layerName: string }): Promise<PulsePointLayerHandle | null>
 ```
 
 - **pointData**: Array of point data.

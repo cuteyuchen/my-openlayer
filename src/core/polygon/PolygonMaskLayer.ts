@@ -2,6 +2,7 @@ import Feature from "ol/Feature";
 import GeoJSON from "ol/format/GeoJSON";
 import { Geometry, LinearRing } from "ol/geom";
 import Map from "ol/Map";
+import View from "ol/View";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Fill, Stroke, Style } from "ol/style";
@@ -17,21 +18,21 @@ import { ConfigManager } from "../map";
 export default class PolygonMaskLayer {
   static setOutLayer(map: Map, data: MapJSONData, options?: {
     layerName?: string;
-    extent?: any;
+    extent?: number[];
     fillColor?: string;
     strokeWidth?: number;
     strokeColor?: string;
     zIndex?: number;
   }) {
-    function getCoordsGroup(geom: any) {
-      let group: any[] = [];
+    function getCoordsGroup(geom: Geometry) {
+      let group: number[][][] = [];
       const geomType = geom.getType();
       if (geomType === 'LineString') {
-        group.push(geom.getCoordinates());
+        group.push((geom as any).getCoordinates());
       } else if (geomType === 'MultiLineString' || geomType === 'Polygon') {
-        group = geom.getCoordinates();
+        group = (geom as any).getCoordinates();
       } else if (geomType === 'MultiPolygon') {
-        geom.getPolygons().forEach((poly: any) => {
+        (geom as any).getPolygons().forEach((poly: any) => {
           group = group.concat(poly.getCoordinates());
         });
       } else {
@@ -40,8 +41,8 @@ export default class PolygonMaskLayer {
       return group;
     }
 
-    function erase(geometries: Geometry[], view: any) {
-      let allParts: any[] = [];
+    function erase(geometries: Geometry[], view: View) {
+      let allParts: number[][][] = [];
       geometries.forEach(geom => {
         const parts = getCoordsGroup(geom);
         if (parts && parts.length > 0) {
@@ -96,7 +97,7 @@ export default class PolygonMaskLayer {
     return vtLayer;
   }
 
-  static addMaskLayer(map: Map, data: any, options?: MaskLayerOptions): VectorLayer<VectorSource> {
+  static addMaskLayer(map: Map, data: MapJSONData, options?: MaskLayerOptions): VectorLayer<VectorSource> {
     ValidationUtils.validateMaskData(data);
     const mergedOptions: MaskLayerOptions = {
       ...ConfigManager.DEFAULT_MASK_OPTIONS,
@@ -114,7 +115,9 @@ export default class PolygonMaskLayer {
         }) : undefined
       }),
       opacity: mergedOptions.opacity!,
-      visible: mergedOptions.visible!
+      visible: mergedOptions.visible!,
+      // 显式传 zIndex，否则被天地图底图（zIndex 9）盖住，用户看不到 mask
+      zIndex: mergedOptions.zIndex
     });
     maskLayer.set('layerName', mergedOptions.layerName);
     map.addLayer(maskLayer);

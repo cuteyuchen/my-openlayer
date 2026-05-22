@@ -18,7 +18,7 @@ export interface BaseOptions {
   /**
    * @deprecated 新项目请使用 dataProjection / featureProjection。
    */
-  projectionOptOptions?: any;
+  projectionOptOptions?: Record<string, unknown>;
   style?: Style | Style[] | ((feature: FeatureLike) => Style | Style[]);
 }
 
@@ -31,7 +31,7 @@ export interface StyleOptions {
   lineDash?: number[];
   lineDashOffset?: number;
   fillColor?: string;
-  fillColorCallBack?: (feature: Feature) => string;
+  fillColorCallBack?: (feature: FeatureLike) => string;
   withDefaultStroke?: boolean;
   withDefaultFill?: boolean;
 }
@@ -41,7 +41,7 @@ export interface StyleOptions {
  */
 export interface TextOptions {
   textVisible?: boolean;
-  textCallBack?: (feature: Feature) => string;
+  textCallBack?: (feature: FeatureLike) => string;
   textFont?: string;
   textFillColor?: string;
   textStrokeColor?: string;

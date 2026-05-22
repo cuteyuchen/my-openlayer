@@ -33,4 +33,5 @@ temp-publish/
 # VitePress
 docs/.vitepress/dist
 docs/.vitepress/cache
+demo-dist
 .cursor/

@@ -104,11 +104,11 @@ selectByIds(featureIds: string[], options?: ProgrammaticSelectOptions): this
 Programmatically select features by property.
 
 ```typescript
-selectByProperty(propertyName: string, propertyValue: any, options?: ProgrammaticSelectOptions): this
+selectByProperty(propertyName: string, propertyValue: unknown, options?: ProgrammaticSelectOptions): this
 ```
 
 - **propertyName**: Property name.
-- **propertyValue**: Property value.
+- **propertyValue**: Property value (any type — compared with `===`).
 - **options**: Programmatic selection options.
 - **Returns**: `SelectHandler` instance.
 
