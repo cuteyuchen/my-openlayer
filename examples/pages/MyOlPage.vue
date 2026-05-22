@@ -25,13 +25,13 @@ import { MyOl } from '../../src'
 import type { MyOl as MyOlType } from '../../src'
 import DemoLayout from '../shared/DemoLayout.vue'
 import { demoLog } from '../shared/useDemoLog'
+import { getDemoTiandituToken } from '../shared/demoEnv'
 
 const PAGE = 'MyOl'
 const layoutRef = ref<InstanceType<typeof DemoLayout> | null>(null)
 const myOl = shallowRef<MyOlType | null>(null)
 
-const tiandituToken =
-  (import.meta as any).env?.VITE_TIANDITU_TOKEN || 'YOUR_TIANDITU_TOKEN_HERE'
+const tiandituToken = getDemoTiandituToken()
 
 function build() {
   const container = layoutRef.value?.mapContainer
@@ -41,10 +41,10 @@ function build() {
   }
   try {
     myOl.value = new MyOl(container, {
-      token: tiandituToken,
+      ...(tiandituToken ? { token: tiandituToken } : {}),
       center: [119.9, 29.98],
       zoom: 9,
-      annotation: true
+      annotation: !!tiandituToken
     })
     // 默认切到影像底图，跟其他 demo 页保持一致
     try { myOl.value.getMapBaseLayers().switchBaseLayer('img_c') } catch { /* token 缺失时静默 */ }

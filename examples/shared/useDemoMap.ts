@@ -11,6 +11,7 @@ import { onBeforeUnmount, onMounted, ref, shallowRef, type Ref } from 'vue'
 import { MyOl } from '../../src'
 import type { MyOl as MyOlType, MapInitType, TiandituType } from '../../src'
 import { demoLog } from './useDemoLog'
+import { getDemoTiandituToken } from './demoEnv'
 
 export interface UseDemoMapOptions extends Partial<MapInitType> {
   /** 容器 ref，必填。模板里挂到 <div ref="..." />。 */
@@ -27,9 +28,7 @@ export function useDemoMap(options: UseDemoMapOptions) {
   const myOl = shallowRef<MyOlType | null>(null)
   const ready = ref(false)
 
-  // 天地图 token 从环境变量取，没配置就用占位符（地图仍可生成，但底图不显示）
-  const tiandituToken =
-    (import.meta as any).env?.VITE_TIANDITU_TOKEN || 'YOUR_TIANDITU_TOKEN_HERE'
+  const tiandituToken = getDemoTiandituToken()
 
   onMounted(() => {
     if (!options.containerRef.value) {
@@ -40,10 +39,10 @@ export function useDemoMap(options: UseDemoMapOptions) {
     const { containerRef, pageName, baseLayer = 'img_c', ...rest } = options
     try {
       myOl.value = new MyOl(containerRef.value, {
-        token: tiandituToken,
+        ...(tiandituToken ? { token: tiandituToken } : {}),
         center: [119.9, 29.98],
         zoom: 9,
-        annotation: true,
+        annotation: !!tiandituToken,
         ...rest
       })
       // 默认切到影像底图（demos 在影像下视觉对比更清晰）

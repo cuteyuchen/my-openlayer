@@ -8,7 +8,8 @@
       "Bash(echo \"TYPECHECK_EXIT=$?\")",
       "Bash(echo \"TEST_EXIT=$?\")",
       "Bash(echo \"BUILD_EXIT=$?\")",
-      "Bash(npm i *)"
+      "Bash(npm i *)",
+      "Bash(git tag *)"
     ]
   }
 }
