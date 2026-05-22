@@ -1,6 +1,7 @@
 name: Deploy VitePress site + Examples demo to Pages
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -34,8 +35,19 @@ jobs:
       - name: Build VitePress docs
         run: npm run docs:build
 
+      - name: Validate Tianditu token
+        run: |
+          if [ -z "$VITE_TIANDITU_TOKEN" ]; then
+            echo "Missing GitHub Actions secret: TIANDITU_TOKEN"
+            exit 1
+          fi
+        env:
+          VITE_TIANDITU_TOKEN: ${{ secrets.TIANDITU_TOKEN }}
+
       - name: Build examples demo
         run: npm run demo:build
+        env:
+          VITE_TIANDITU_TOKEN: ${{ secrets.TIANDITU_TOKEN }}
 
       - name: Merge demo into docs dist
         run: cp -r demo-dist docs/.vitepress/dist/demo
