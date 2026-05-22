@@ -78,6 +78,23 @@ pnpm add my-openlayer
 - **proj4**: ^2.7.5
 - **@turf/turf**: ^7.2.0
 
+## CC Switch 技能仓库
+
+本仓库已按 CC Switch 技能仓库结构提供 `my-openlayer-helper`：
+
+```txt
+skills/my-openlayer-helper/SKILL.md
+```
+
+在 CC Switch 的“添加技能仓库”中填写：
+
+```txt
+仓库 URL：cuteyuchen/my-openlayer
+分支：main
+```
+
+CC Switch 扫描后会识别到 `my-openlayer-helper`。后续更新只需要同步本仓库，使用者在 CC Switch 中刷新/更新技能即可。
+
 ## 快速上手
 
 ### 1. 初始化地图
