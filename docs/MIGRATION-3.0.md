@@ -202,8 +202,8 @@ try {
 | 旧 API | 替代品 |
 |---|---|
 | `add*` 不传 `layerName`（仅使用 `ConfigManager.DEFAULT_*.layerName`） | `add*` 显式传 `layerName` |
-| `addPolygonByUrl`（同步返回 layer） | `await addPolygonByUrl`（Promise<LayerHandle>） |
-| `addLineByUrl`（同步返回 layer） | `await addLineByUrl`（Promise<LayerHandle>） |
+| `addPolygonByUrl`（同步返回 layer） | `await addPolygonByUrl`（Promise&lt;LayerHandle&gt;） |
+| `addLineByUrl`（同步返回 layer） | `await addLineByUrl`（Promise&lt;LayerHandle&gt;） |
 | `MyOl.getView` | `MyOl.createView` |
 | `PulsePointIconOptions.src` | `PulsePointIconOptions.img` |
 | `(MyOl as any).initializeProjections` | `ProjectionManager.initialize` |
