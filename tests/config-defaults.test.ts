@@ -37,8 +37,8 @@ describe('ConfigManager.setDefaults', () => {
     expect(ConfigManager.DEFAULT_LINE_OPTIONS.strokeWidth).toBe(7);
 
     const line = new Line(createMapStub());
-    const layer = line.addLine(lineData, { layerName: 'l1' });
-    expect(layer).toBeInstanceOf(VectorLayer);
+    const handle = line.addLine(lineData, { layerName: 'l1' });
+    expect(handle.layer).toBeInstanceOf(VectorLayer);
 
     // 重置后回到原默认
     ConfigManager.resetDefaults('LINE_OPTIONS');

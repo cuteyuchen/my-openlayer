@@ -8,15 +8,15 @@
 
 升级核心结论：
 
-- 大多数旧 API 都标了 `@deprecated` 但**仍能工作**，3.x 末尾才彻底移除
+- 真实图层类 `add*` 返回值从原始 OpenLayers layer 改为统一 `LayerHandle`
 - 所有公开 `add*` 方法签名上 `layerName` 现在是**必填**（编译时强制）
-- 推荐用新的 `attach*` / `*ByUrlAsync` 系列，返回统一 `LayerHandle` / Promise
+- `addPointByUrl` / `addLineByUrl` / `addPolygonByUrl` 统一异步返回完整 Handle
 
 ### ✨ Features
 
-- **handle**：新增统一 [`LayerHandle`](./src/types/handle.ts) 与 `AnimatedLayerHandle` 接口；`PulsePointLayerHandle`、`FlowLineLayerHandle` 显式继承动画句柄契约。新代码记一次 `{ layer, remove, setVisible }` 即可跨 Point / Line / Polygon 复用。
-- **attach\***：Point / Line / Polygon 各新增 `attachPoint` / `attachLine` / `attachPolygon` / `attachPolygonByUrl` 等方法，返回统一 `LayerHandle`。
-- **\*ByUrlAsync**：`Polygon.addPolygonByUrlAsync`、`Line.addLineByUrlAsync` 返回 Promise，在 features 加载完成后才 resolve，fitView / 拿 features 列表更可靠。
+- **handle**：新增统一 [`LayerHandle`](./src/types/handle.ts)、`AnimatedLayerHandle` 与 `ControlHandle` 接口；真实图层 add* 返回 `{ layer, remove, setVisible }`，非图层点位返回 `{ target, remove, setVisible }`。
+- **add\***：Point / Line / Polygon 的真实图层 add 方法统一返回 `LayerHandle`；`PulsePointLayerHandle`、`FlowLineLayerHandle` 显式继承动画句柄契约。
+- **\*ByUrl**：`Point.addPointByUrl`、`Line.addLineByUrl`、`Polygon.addPolygonByUrl` 统一先获取 JSON，再调用对应 add 方法并返回 Promise Handle。
 - **Point \*ByUrl**：新增 `Point.addPointByUrl` / `Point.addPulsePointLayerByUrl`，从 URL 直接异步加载点位数据。
 - **ProjectionManager**：投影注册逻辑从 `MyOl` 抽到独立 [`ProjectionManager`](./src/core/projection/ProjectionManager.ts) 类，对外暴露 `register / initialize / resolveViewProjection`。用户现在可在 MyOl 实例之外注册任意 EPSG。
 - **ConfigManager.setDefaults**：运行时修改全局默认配置（如线宽、闪烁颜色），所有未提供该字段的后续调用都生效。配 `resetDefaults` 恢复。
@@ -39,7 +39,7 @@
 ### 📝 Documentation
 
 - 新增 [`docs/MIGRATION-3.0.md`](./docs/MIGRATION-3.0.md) 迁移指南。
-- 旧 `addPolygonByUrl` / `addLineByUrl` / `Point.addVueTemplatePoint` 单实例化等行为变更在 JSDoc 中标注 `@deprecated`。
+- `addPolygonByUrl` / `addLineByUrl` / `Point.addVueTemplatePoint` 等破坏性返回值变化已写入迁移指南。
 
 ### 🧪 Tests
 

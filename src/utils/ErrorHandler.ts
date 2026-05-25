@@ -41,7 +41,7 @@ export class MyOpenLayersError extends Error {
 export class LayerNotFoundError extends MyOpenLayersError {
   constructor(layerName: string, context?: any) {
     super(
-      `Layer '${layerName}' not found. 请检查 layerName 拼写、图层是否已被 remove，或在 fitView / removeLayer 调用前先 await *ByUrlAsync。`,
+      `Layer '${layerName}' not found. 请检查 layerName 拼写、图层是否已被 remove，或在 fitView / removeLayer 调用前先 await *ByUrl。`,
       ErrorType.LAYER_ERROR,
       { layerName, ...context }
     );

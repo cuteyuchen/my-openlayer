@@ -94,24 +94,32 @@ constructor(map: Map)
 添加普通点图层。
 
 ```typescript
-addPoint(pointData: PointData[], options: PointOptions): VectorLayer<VectorSource> | null
+addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
 - **pointData**: 点位数据数组。
 - **options**: 配置选项。
-- **返回值**: 创建的向量图层，如果数据无效返回 `null`。
+- **返回值**: `{ layer, remove(), setVisible() }` 形态的统一句柄；如果数据无效返回 `null`。
 
 ### addClusterPoint
 
 添加聚合点图层。
 
 ```typescript
-addClusterPoint(pointData: PointData[], options: ClusterOptions): VectorLayer<VectorSource> | null
+addClusterPoint(pointData: PointData[], options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
 - **pointData**: 点位数据数组。
 - **options**: 聚合配置选项。
-- **返回值**: 创建的聚合图层。
+- **返回值**: `{ layer, remove(), setVisible() }` 形态的统一句柄。
+
+### addPointByUrl
+
+从 URL 加载点位数据，支持 `PointData[]` 数组或 GeoJSON FeatureCollection。
+
+```typescript
+addPointByUrl(url: string, options: PointOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>> | null>
+```
 
 ### addDomPoint
 
@@ -119,6 +127,7 @@ addClusterPoint(pointData: PointData[], options: ClusterOptions): VectorLayer<Ve
 
 ```typescript
 addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
+  target: Overlay[],
   anchors: Overlay[],
   remove: () => void,
   setVisible: (visible: boolean) => void
@@ -127,7 +136,7 @@ addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
 
 - **twinkleList**: 包含经纬度和类名的数据列表。
 - **callback**: 点击回调函数。
-- **返回值**: 控制对象，包含 `remove` 和 `setVisible` 方法。
+- **返回值**: 控制对象，包含 `target`、`anchors`、`remove` 和 `setVisible`。
 
 ### addPulsePointLayer
 
@@ -141,12 +150,21 @@ addPulsePointLayer(pointData: PointData[], options: PulsePointOptions): PulsePoi
 - **options**: 闪烁点配置选项，复用 `addPoint` 的图标、文本和图层参数习惯。
 - **返回值**: 控制对象，包含动画启停、显隐、数据更新和移除方法；如果数据无效返回 `null`。
 
+### addPulsePointLayerByUrl
+
+从 URL 加载点位数据并添加高性能闪烁点图层。
+
+```typescript
+addPulsePointLayerByUrl(url: string, options: PulsePointOptions & { layerName: string }): Promise<PulsePointLayerHandle | null>
+```
+
 ### addVueTemplatePoint
 
 添加 Vue 组件作为点位。
 
 ```typescript
 addVueTemplatePoint(pointDataList: PointData[], template: any, options?: VueTemplatePointOptions): {
+  target: VueTemplatePointInstance[],
   setVisible: (visible: boolean) => void,
   setOneVisibleByProp: (propName: string, propValue: any, visible: boolean) => void,
   remove: () => void,
@@ -157,7 +175,7 @@ addVueTemplatePoint(pointDataList: PointData[], template: any, options?: VueTemp
 - **pointDataList**: 点位数据列表。
 - **template**: Vue 组件。
 - **options**: 配置选项。
-- **返回值**: 控制对象，包含显示/隐藏和移除方法。
+- **返回值**: 控制对象，包含 `target`、显示/隐藏、按属性显示/隐藏和移除方法。
 
 ## 使用示例
 

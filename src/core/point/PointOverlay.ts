@@ -1,13 +1,13 @@
 import Overlay from 'ol/Overlay';
 import Map from 'ol/Map';
-import type { TwinkleItem } from '../../types';
+import type { ControlHandle, TwinkleItem } from '../../types';
 import { ConfigManager } from '../map';
 
 /**
  * DOM 点位覆盖物构建器。
  */
 export default class PointOverlay {
-  static create(map: Map, twinkleList: TwinkleItem[], callback?: Function) {
+  static create(map: Map, twinkleList: TwinkleItem[], callback?: Function): ControlHandle<Overlay[]> & { anchors: Overlay[] } {
     let anchors: Overlay[] = [];
     twinkleList.forEach(twinkleItem => {
       let element: HTMLElement;
@@ -42,13 +42,14 @@ export default class PointOverlay {
     });
 
     return {
+      target: anchors,
       anchors,
       remove: () => {
         anchors.forEach(anchor => {
           anchor.getElement()?.remove();
           map.removeOverlay(anchor);
         });
-        anchors = [];
+        anchors.splice(0, anchors.length);
       },
       setVisible: (visible: boolean) => {
         anchors.forEach(anchor => {

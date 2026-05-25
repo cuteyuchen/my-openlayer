@@ -1,7 +1,7 @@
 import { Map as OLMap } from 'ol'
 import Overlay from 'ol/Overlay'
 import { Coordinate } from 'ol/coordinate'
-import { VueTemplatePointOptions, VueApp, VueLegacyInstance, VueTemplatePointState, VueTemplatePointInstance } from '../../types'
+import { ControlHandle, VueTemplatePointOptions, VueApp, VueLegacyInstance, VueTemplatePointState, VueTemplatePointInstance } from '../../types'
 import { ErrorHandler, ErrorType } from '../../utils/ErrorHandler'
 import ValidationUtils from '../../utils/ValidationUtils'
 import { ConfigManager } from '../map'
@@ -96,10 +96,8 @@ export default class VueTemplatePoint {
   addVueTemplatePoint(pointDataList: any[], template: any, options?: {
     positioning?: 'bottom-left' | 'bottom-center' | 'bottom-right' | 'center-left' | 'center-center' | 'center-right' | 'top-left' | 'top-center' | 'top-right',
     stopEvent?: boolean
-  }): {
-    setVisible: (visible: boolean) => void,
+  }): ControlHandle<VueTemplatePointInstance[]> & {
     setOneVisibleByProp: (propName: string, propValue: any, visible: boolean) => void,
-    remove: () => void,
     getPoints: () => VueTemplatePointInstance[]
   } {
     if (!pointDataList || !Array.isArray(pointDataList) || pointDataList.length === 0) {
@@ -138,6 +136,7 @@ export default class VueTemplatePoint {
       });
       
       return {
+        target: instances,
         setVisible: (visible: boolean) => {
           instances.forEach((instance: VueTemplatePointInstance) => {
             instance.setVisible(visible);

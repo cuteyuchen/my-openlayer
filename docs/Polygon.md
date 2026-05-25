@@ -69,7 +69,7 @@ const polygon = new Polygon(map: Map);
 添加多边形图层。
 
 ```typescript
-addPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource>
+addPolygon(data: MapJSONData, options: PolygonOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
 ```
 
 | 参数 | 类型 | 说明 |
@@ -82,7 +82,7 @@ addPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSourc
 从 URL 加载多边形图层。
 
 ```typescript
-addPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource>
+addPolygonByUrl(url: string, options: PolygonOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>>>
 ```
 
 ### addBorderPolygon
@@ -90,7 +90,8 @@ addPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource
 添加边界图层（通常用于行政区划边界，支持镂空效果）。
 
 ```typescript
-addBorderPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource>
+addBorderPolygon(data: MapJSONData, options?: PolygonOptions): LayerHandle<VectorLayer<VectorSource>>
+addBorderPolygonByUrl(url: string, options?: PolygonOptions): Promise<LayerHandle<VectorLayer<VectorSource>>>
 ```
 
 ### updateFeatureColor
@@ -116,7 +117,7 @@ updateFeatureColor(
 添加静态图片图层（如叠加平面图、卫星图）。
 
 ```typescript
-addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<any>
+addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): LayerHandle<ImageLayer<any>>
 ```
 
 ### addHeatmap
@@ -124,7 +125,15 @@ addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<a
 添加热力图。
 
 ```typescript
-addHeatmap(pointData: PointData[], options?: HeatMapOptions): Heatmap
+addHeatmap(pointData: PointData[], options?: HeatMapOptions): LayerHandle<BaseLayer>
+```
+
+### addMaskLayer
+
+添加遮罩图层。
+
+```typescript
+addMaskLayer(data: MapJSONData, options?: MaskLayerOptions): LayerHandle<VectorLayer<VectorSource>>
 ```
 
 ### setOutLayer

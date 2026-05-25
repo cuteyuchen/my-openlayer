@@ -107,20 +107,12 @@ interface FeatureData {
 
 ## Methods
 
-### attachLine (3.0 Recommended)
-
-Add a line feature layer, returning a unified `LayerHandle`. Preferred over `addLine` in new code.
-
-```typescript
-attachLine(data: MapJSONData, options?: LineOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
-```
-
 ### addLine
 
-Add a line feature layer (legacy API, still works).
+Add a line feature layer, returning a unified `LayerHandle`.
 
 ```typescript
-addLine(data: MapJSONData, options?: LineOptions): VectorLayer<VectorSource>
+addLine(data: MapJSONData, options: LineOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
 ```
 
 | Parameter | Type | Description |
@@ -135,7 +127,7 @@ addLine(data: MapJSONData, options?: LineOptions): VectorLayer<VectorSource>
 Load and add a line feature layer from a URL.
 
 ```typescript
-addLineByUrl(url: string, options?: LineOptions): VectorLayer<VectorSource>
+addLineByUrl(url: string, options: LineOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>>>
 ```
 
 | Parameter | Type | Description |
@@ -143,7 +135,7 @@ addLineByUrl(url: string, options?: LineOptions): VectorLayer<VectorSource>
 | `url` | `string` | URL address of GeoJSON data |
 | `options` | `LineOptions` | Layer configuration options |
 
-**Returns**: The created `VectorLayer` instance.
+**Returns**: A Promise resolving to the created `LayerHandle`.
 
 ### removeLineLayer
 
@@ -178,14 +170,6 @@ Load animated flow line data from a URL.
 
 ```typescript
 addFlowLineByUrl(url: string, options?: FlowLineOptions): Promise<FlowLineLayerHandle | null>
-```
-
-### addLineByUrlAsync (3.0 New)
-
-Load line data from a URL and resolve after features are loaded. Preferred over `addLineByUrl` when you need to access features or trigger `fitView` after load.
-
-```typescript
-addLineByUrlAsync(url: string, options?: LineOptions): Promise<VectorLayer<VectorSource> | null>
 ```
 
 ### destroyAllFlowLines (3.0)

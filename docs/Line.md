@@ -65,18 +65,18 @@ interface FlowLineLayerHandle {
 ### addLine
 
 ```typescript
-addLine(data: MapJSONData, options?: LineOptions): VectorLayer<VectorSource>
+addLine(data: MapJSONData, options: LineOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
 ```
 
-添加静态线图层。
+添加静态线图层，返回统一 `LayerHandle`。
 
 ### addLineByUrl
 
 ```typescript
-addLineByUrl(url: string, options?: LineOptions): VectorLayer<VectorSource>
+addLineByUrl(url: string, options: LineOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>>>
 ```
 
-从 URL 加载并添加静态线图层。
+从 URL 加载 GeoJSON 后添加静态线图层，await 后返回完整 `LayerHandle`。
 
 ### removeLineLayer
 

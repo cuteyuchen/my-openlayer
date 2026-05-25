@@ -58,6 +58,20 @@ export default class Polygon {
     return layer;
   }
 
+  /** *********************统一句柄：OL 图层*********************/
+  private toLayerHandle<L extends BaseLayer>(layer: L): LayerHandle<L> {
+    const map = this.map;
+    const managedLayers = this.managedLayers;
+    return {
+      layer,
+      setVisible(visible: boolean) { layer.setVisible(visible); },
+      remove() {
+        managedLayers.delete(layer);
+        map.removeLayer(layer);
+      }
+    };
+  }
+
   /**
    * 销毁本实例创建的所有图层。供 MyOl.destroy 调用。
    */
@@ -81,7 +95,7 @@ export default class Polygon {
    * @returns 创建的图层实例
    * @throws 当数据格式无效时抛出错误
    */
-  addBorderPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource> {
+  addBorderPolygon(data: MapJSONData, options?: PolygonOptions): LayerHandle<VectorLayer<VectorSource>> {
     ValidationUtils.validateGeoJSONData(data);
 
     const mergedOptions: PolygonOptions & { layerName: string } = {
@@ -90,13 +104,13 @@ export default class Polygon {
       layerName: options?.layerName ?? 'border'
     };
 
-    const layer = this.addPolygon(data, mergedOptions);
+    const handle = this.addPolygon(data, mergedOptions);
 
     if (mergedOptions.mask) {
       this.setOutLayer(data);
     }
 
-    return layer;
+    return handle;
   }
 
   /**
@@ -106,16 +120,14 @@ export default class Polygon {
    * @returns 创建的图层实例
    * @throws 当数据格式无效时抛出错误
    */
-  addBorderPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource> {
+  async addBorderPolygonByUrl(url: string, options?: PolygonOptions): Promise<LayerHandle<VectorLayer<VectorSource>>> {
     const mergedOptions: PolygonOptions & { layerName: string } = {
       fillColor: 'rgba(255, 255, 255, 0)',
       ...options,
       layerName: options?.layerName ?? 'border'
     };
 
-    const layer = this.addPolygonByUrl(url, mergedOptions);
-
-    return layer;
+    return this.addPolygonByUrl(url, mergedOptions);
   }
 
 
@@ -126,7 +138,8 @@ export default class Polygon {
    * @returns 创建的矢量图层
    * @throws 当数据格式无效时抛出错误
    */
-  addPolygon(dataJSON: MapJSONData, options: PolygonOptions & { layerName: string }): VectorLayer<VectorSource> {
+  /** *********************创建多边形图层*********************/
+  private createPolygonLayer(dataJSON: MapJSONData, options: PolygonOptions & { layerName: string }): VectorLayer<VectorSource> {
     ValidationUtils.validateGeoJSONData(dataJSON);
 
     const mergedOptions: PolygonOptions = {
@@ -180,94 +193,20 @@ export default class Polygon {
     return layer;
   }
 
-  /**
-   * 从URL添加多边形图层
-   * @param url 数据URL
-   * @param options 图层配置选项
-   * @returns 创建的矢量图层（features 仍在异步加载中）
-   * @deprecated 推荐使用 {@link addPolygonByUrlAsync}，它返回 Promise，在 features 加载完成后才 resolve，并能正确触发 fitView。3.x 末尾会删除此方法。
-   */
-  addPolygonByUrl(url: string, options: PolygonOptions & { layerName: string }): VectorLayer<VectorSource> {
-    const mergedOptions: PolygonOptions = {
-      ...ConfigManager.DEFAULT_POLYGON_OPTIONS,
-      ...options
-    };
-
-    // 如果指定了图层名称，先移除同名图层
-    if (mergedOptions.layerName) {
-      new MapTools(this.map).removeLayer(mergedOptions.layerName);
-    }
-
-    const format = new GeoJSON(ProjectionUtils.getGeoJSONReadOptions(mergedOptions));
-
-    // 优化：在解析 Feature 时直接注入 layerName，利用解析过程的遍历，避免解析后的二次循环
-    if (mergedOptions.layerName) {
-      const originalReadFeatureFromObject = (format as any).readFeatureFromObject;
-      (format as any).readFeatureFromObject = function (object: any, options: any) {
-        const feature = originalReadFeatureFromObject.call(this, object, options);
-        feature.set('layerName', mergedOptions.layerName, true); // true 表示静默设置，不触发事件
-        return feature;
-      };
-    }
-
-    const source = new VectorSource({
-      url,
-      format
-    });
-
-    const layer = new VectorLayer({
-      properties: {
-        name: mergedOptions.layerName,
-        layerName: mergedOptions.layerName
-      },
-      source,
-      style: PolygonStyleFactory.createStyle(mergedOptions),
-      zIndex: mergedOptions.zIndex
-    });
-
-    layer.setVisible(mergedOptions.visible!);
-    this.map.addLayer(layer);
-    this.trackLayer(layer);
-
-    // 如果需要适应视图
-    if (mergedOptions.fitView) {
-      source.once('featuresloadend', () => {
-        this.fitViewToLayer(layer);
-      });
-    }
-
-    return layer;
+  /** *********************添加多边形图层*********************/
+  addPolygon(dataJSON: MapJSONData, options: PolygonOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> {
+    return this.toLayerHandle(this.createPolygonLayer(dataJSON, options));
   }
 
-  /**
-   * 从URL添加多边形图层（Promise 版本）。
-   *
-   * 与同步版 {@link addPolygonByUrl} 不同，此方法在 features 加载完成后才 resolve，
-   * 方便后续操作（fitView / setOutLayer / 拿 features 列表）。
-   *
-   * @param url GeoJSON 数据 URL
-   * @param options 图层配置选项
-   * @returns Promise，features 加载完成后 resolve 为 VectorLayer；加载失败 reject
-   */
-  addPolygonByUrlAsync(url: string, options: PolygonOptions & { layerName: string }): Promise<VectorLayer<VectorSource>> {
-    return new Promise((resolve, reject) => {
-      const layer = this.addPolygonByUrl(url, options);
-      const source = layer.getSource();
-      if (!source) {
-        resolve(layer);
-        return;
-      }
-      const onLoadEnd = () => {
-        source.un('featuresloaderror' as any, onLoadError);
-        resolve(layer);
-      };
-      const onLoadError = () => {
-        source.un('featuresloadend' as any, onLoadEnd);
-        reject(new Error(`Failed to load polygon GeoJSON: ${url}`));
-      };
-      source.once('featuresloadend' as any, onLoadEnd);
-      source.once('featuresloaderror' as any, onLoadError);
-    });
+  /** *********************从 URL 添加多边形图层*********************/
+  async addPolygonByUrl(url: string, options: PolygonOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>>> {
+    ValidationUtils.validateNonEmptyString(url, 'Polygon url is required');
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch polygon GeoJSON: ${response.status}`);
+    }
+    const json = await response.json();
+    return this.addPolygon(json as MapJSONData, options);
   }
 
   /**
@@ -354,10 +293,10 @@ export default class Polygon {
    * @returns 创建的图片图层
    * @throws 当数据格式无效时抛出错误
    */
-  addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<any> {
+  addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): LayerHandle<ImageLayer<any>> {
     const layer = PolygonImageLayer.addImageLayer(this.map, imageData, options);
     this.trackLayer(layer);
-    return layer;
+    return this.toLayerHandle(layer);
   }
 
   /**
@@ -370,7 +309,7 @@ export default class Polygon {
     if (layer) {
       this.trackLayer(layer);
     }
-    return layer;
+    return this.toLayerHandle(layer);
   }
 
   /**
@@ -380,10 +319,10 @@ export default class Polygon {
    * @returns 创建的遮罩图层
    * @throws 当数据格式无效时抛出错误
    */
-  addMaskLayer(data: MapJSONData, options?: MaskLayerOptions): VectorLayer<VectorSource> {
+  addMaskLayer(data: MapJSONData, options?: MaskLayerOptions): LayerHandle<VectorLayer<VectorSource>> {
     const layer = PolygonMaskLayer.addMaskLayer(this.map, data, options);
     this.trackLayer(layer);
-    return layer;
+    return this.toLayerHandle(layer);
   }
 
   removePolygonLayer(layerName: string) {
@@ -396,34 +335,4 @@ export default class Polygon {
     });
   }
 
-  /**
-   * P1-1：把 addPolygon 返回的 VectorLayer 包成统一 LayerHandle。
-   *
-   * 推荐新代码使用此方法，得到与 Point / Line 一致的 `{ layer, remove, setVisible }`。
-   */
-  attachPolygon(data: MapJSONData, options: PolygonOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> {
-    const layer = this.addPolygon(data, options);
-    return this.toLayerHandle(layer);
-  }
-
-  /**
-   * P1-1：Promise 版本，features 加载完成后才 resolve。
-   */
-  attachPolygonByUrl(url: string, options: PolygonOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>>> {
-    return this.addPolygonByUrlAsync(url, options).then(layer => this.toLayerHandle(layer));
-  }
-
-  /** @internal P1-1 把 VectorLayer 包成 LayerHandle 的内部工具。 */
-  private toLayerHandle<L extends VectorLayer<VectorSource>>(layer: L): LayerHandle<L> {
-    const map = this.map;
-    const managedLayers = this.managedLayers;
-    return {
-      layer,
-      setVisible(visible: boolean) { layer.setVisible(visible); },
-      remove() {
-        managedLayers.delete(layer);
-        map.removeLayer(layer);
-      }
-    };
-  }
 }

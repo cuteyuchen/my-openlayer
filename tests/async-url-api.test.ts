@@ -1,8 +1,8 @@
 /**
  * P1-2 回归测试：异步 *ByUrl API。
  *
- * 旧 *ByUrl 方法同步返回 layer，但 features 仍在加载；新 *ByUrlAsync 返回 Promise，
- * 在 features 加载完成后才 resolve，且加载失败会 reject。
+ * 3.0 *ByUrl 方法统一先获取 JSON，再调用对应 add* 返回 Handle。
+ * 不再保留 *ByUrlAsync 双入口。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BaseLayer from 'ol/layer/Base';
@@ -66,20 +66,24 @@ describe('P1-2 异步 *ByUrl API', () => {
     vi.restoreAllMocks();
   });
 
-  it('Polygon.addPolygonByUrlAsync resolve 一个 VectorLayer', async () => {
+  it('Polygon.addPolygonByUrl resolve 一个 LayerHandle', async () => {
     const map = createMapStub();
     const polygon = new Polygon(map);
-    // VectorSource 的 url 加载在测试环境不会真的 fetch，但我们至少确保 Promise wrapper 不抛错。
-    // 这里只验证函数签名与 Promise 行为。
-    const promise = polygon.addPolygonByUrlAsync('/polygon.json', { layerName: 'poly-async' });
-    expect(promise).toBeInstanceOf(Promise);
+    const handle = await polygon.addPolygonByUrl('/polygon.json', { layerName: 'poly-async' });
+    expect(handle.layer).toBeInstanceOf(VectorLayer);
+  });
+
+  it('Polygon 不再暴露 addPolygonByUrlAsync', () => {
+    const map = createMapStub();
+    const polygon = new Polygon(map);
+    expect('addPolygonByUrlAsync' in polygon).toBe(false);
   });
 
   it('Point.addPointByUrl 从 PointData[] 数组 URL 加载', async () => {
     const map = createMapStub();
     const point = new Point(map);
-    const layer = await point.addPointByUrl('/point.json', { layerName: 'point-async' });
-    expect(layer).toBeInstanceOf(VectorLayer);
+    const handle = await point.addPointByUrl('/point.json', { layerName: 'point-async' });
+    expect(handle?.layer).toBeInstanceOf(VectorLayer);
     point.destroyAll();
   });
 
@@ -115,10 +119,16 @@ describe('P1-2 异步 *ByUrl API', () => {
     point.destroyAll();
   });
 
-  it('Line.addLineByUrlAsync 返回 Promise', () => {
+  it('Line.addLineByUrl 返回 Promise<LayerHandle>', async () => {
     const map = createMapStub();
     const line = new Line(map);
-    const promise = line.addLineByUrlAsync('/line.json', { layerName: 'line-async' });
-    expect(promise).toBeInstanceOf(Promise);
+    const handle = await line.addLineByUrl('/line.json', { layerName: 'line-async' });
+    expect(handle.layer).toBeInstanceOf(VectorLayer);
+  });
+
+  it('Line 不再暴露 addLineByUrlAsync', () => {
+    const map = createMapStub();
+    const line = new Line(map);
+    expect('addLineByUrlAsync' in line).toBe(false);
   });
 });

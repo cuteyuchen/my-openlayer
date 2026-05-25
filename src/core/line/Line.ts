@@ -71,6 +71,16 @@ export default class Line {
     return layer;
   }
 
+  /** *********************统一句柄：静态线图层*********************/
+  private toLayerHandle<L extends VectorLayer<VectorSource>>(layer: L): LayerHandle<L> {
+    const map = this.map;
+    return {
+      layer,
+      setVisible(visible: boolean) { layer.setVisible(visible); },
+      remove() { map.removeLayer(layer); }
+    };
+  }
+
   /**
    * 注册流动线句柄。
    */
@@ -85,51 +95,28 @@ export default class Line {
     this.flowLineRegistry.delete(layerName);
   }
 
-  addLine(data: MapJSONData, options: LineOptions & { layerName: string }): VectorLayer<VectorSource> {
+  /** *********************创建静态线图层*********************/
+  private createLineLayer(data: MapJSONData, options: LineOptions & { layerName: string }): VectorLayer<VectorSource> {
     ValidationUtils.validateRequired(data, 'GeoJSON data is required');
     const mergedOptions = this.mergeDefaultOptions(options);
     const features = new GeoJSON().readFeatures(data, ProjectionUtils.getGeoJSONReadOptions(mergedOptions));
     return this.createStaticLayer(new VectorSource({ features }), mergedOptions);
   }
 
-  /**
-   * 从 URL 加载 GeoJSON 数据并添加为静态线图层。
-   *
-   * @deprecated 推荐使用 {@link addLineByUrlAsync}，它返回 Promise，在 features 加载完成后才 resolve。
-   * 3.x 末尾会删除此方法。
-   */
-  addLineByUrl(url: string, options: LineOptions & { layerName: string }): VectorLayer<VectorSource> {
-    ValidationUtils.validateNonEmptyString(url, 'Line url is required');
-    const mergedOptions = this.mergeDefaultOptions(options);
-    const source = new VectorSource({
-      url,
-      format: new GeoJSON(ProjectionUtils.getGeoJSONReadOptions(mergedOptions))
-    });
-    return this.createStaticLayer(source, mergedOptions);
+  /** *********************添加静态线图层*********************/
+  addLine(data: MapJSONData, options: LineOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> {
+    return this.toLayerHandle(this.createLineLayer(data, options));
   }
 
-  /**
-   * Promise 版本：features 加载完成后 resolve。
-   */
-  addLineByUrlAsync(url: string, options: LineOptions & { layerName: string }): Promise<VectorLayer<VectorSource>> {
-    return new Promise((resolve, reject) => {
-      const layer = this.addLineByUrl(url, options);
-      const source = layer.getSource();
-      if (!source) {
-        resolve(layer);
-        return;
-      }
-      const onEnd = () => {
-        source.un('featuresloaderror' as any, onErr);
-        resolve(layer);
-      };
-      const onErr = () => {
-        source.un('featuresloadend' as any, onEnd);
-        reject(new Error(`Failed to load line GeoJSON: ${url}`));
-      };
-      source.once('featuresloadend' as any, onEnd);
-      source.once('featuresloaderror' as any, onErr);
-    });
+  /** *********************从 URL 添加静态线图层*********************/
+  async addLineByUrl(url: string, options: LineOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>>> {
+    ValidationUtils.validateNonEmptyString(url, 'Line url is required');
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch line GeoJSON: ${response.status}`);
+    }
+    const json = await response.json();
+    return this.addLine(json as MapJSONData, options);
   }
 
   removeLineLayer(layerName: string): void {
@@ -204,23 +191,4 @@ export default class Line {
     this.flowLineRegistry.clear();
   }
 
-  /**
-   * P1-1：把 addLine 返回的 VectorLayer 包成统一 LayerHandle。
-   */
-  attachLine(data: MapJSONData, options: LineOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> {
-    const layer = this.addLine(data, options);
-    const map = this.map;
-    return {
-      layer,
-      setVisible(visible: boolean) { layer.setVisible(visible); },
-      remove() { map.removeLayer(layer); }
-    };
-  }
-
-  /**
-   * P1-1：addFlowLine 已经是 AnimatedLayerHandle，attach 版本只是别名。
-   */
-  attachFlowLine(data: MapJSONData, options: FlowLineOptions & { layerName: string }): FlowLineLayerHandle | null {
-    return this.addFlowLine(data, options);
-  }
 }

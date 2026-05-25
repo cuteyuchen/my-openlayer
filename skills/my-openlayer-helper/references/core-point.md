@@ -94,20 +94,12 @@ Inherits from `PointOptions`, so it follows the same `img`, `scale`, `iconColor`
 
 ## Methods
 
-### attachPoint (3.0 Recommended)
-
-Add an ordinary point layer, returning a unified `LayerHandle`. Preferred over `addPoint` in new code.
-
-```typescript
-attachPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
-```
-
 ### addPoint
 
-Add an ordinary point layer (legacy API, still works).
+Add an ordinary point layer, returning a unified `LayerHandle`.
 
 ```typescript
-addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): VectorLayer<VectorSource> | null
+addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
 - **pointData**: Array of point data.
@@ -119,7 +111,7 @@ addPoint(pointData: PointData[], options: PointOptions & { layerName: string }):
 Add a cluster point layer.
 
 ```typescript
-addClusterPoint(pointData: PointData[], options: ClusterOptions): VectorLayer<VectorSource> | null
+addClusterPoint(pointData: PointData[], options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
 - **pointData**: Array of point data.
@@ -132,6 +124,7 @@ Add DOM element points (Overlay).
 
 ```typescript
 addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
+  target: Overlay[],
   anchors: Overlay[],
   remove: () => void,
   setVisible: (visible: boolean) => void
@@ -155,7 +148,7 @@ addPulsePointLayer(pointData: PointData[], options: PulsePointOptions & { layerN
 Load point data from a URL and add as a point layer. Returns `Promise`.
 
 ```typescript
-addPointByUrl(url: string, options: PointOptions & { layerName: string }): Promise<VectorLayer<VectorSource> | null>
+addPointByUrl(url: string, options: PointOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>> | null>
 ```
 
 ### addPulsePointLayerByUrl (3.0 New)
@@ -176,6 +169,7 @@ Add Vue components as points.
 
 ```typescript
 addVueTemplatePoint(pointDataList: PointData[], template: any, options?: VueTemplatePointOptions): {
+  target: VueTemplatePointInstance[],
   setVisible: (visible: boolean) => void,
   setOneVisibleByProp: (propName: string, propValue: any, visible: boolean) => void,
   remove: () => void,

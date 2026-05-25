@@ -5,7 +5,8 @@ import { Text, Style, Fill, Stroke, Icon, Circle as CircleStyle } from "ol/style
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import BaseLayer from "ol/layer/Base";
-import { PointOptions, ClusterOptions, PointData, VueTemplatePointInstance, TwinkleItem, PulsePointOptions, PulsePointLayerHandle, LayerHandle, type FeatureData } from '../../types'
+import Overlay from 'ol/Overlay';
+import { PointOptions, ClusterOptions, PointData, VueTemplatePointInstance, TwinkleItem, PulsePointOptions, PulsePointLayerHandle, LayerHandle, ControlHandle, type FeatureData } from '../../types'
 import { VueTemplatePoint } from '../vue-template-point';
 import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
@@ -175,7 +176,8 @@ export default class Point {
    *   img: String 图标
    * }
    */
-  addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): VectorLayer<VectorSource> | null {
+  /** *********************创建普通点图层*********************/
+  private createPointLayer(pointData: PointData[], options: PointOptions & { layerName: string }): VectorLayer<VectorSource> | null {
     if (!ValidationUtils.validatePointData(pointData)) {
       return null;
     }
@@ -222,7 +224,8 @@ export default class Point {
   }
 
 
-  addClusterPoint(pointData: PointData[], options: ClusterOptions & { layerName: string }): VectorLayer<VectorSource> | null {
+  /** *********************创建聚合点图层*********************/
+  private createClusterPointLayer(pointData: PointData[], options: ClusterOptions & { layerName: string }): VectorLayer<VectorSource> | null {
     if (!ValidationUtils.validatePointData(pointData)) {
       return null;
     }
@@ -234,31 +237,21 @@ export default class Point {
     return layer;
   }
 
-  /**
-   * 添加高性能闪烁点图层。
-   *
-   * 与 addDomPoint 不同，该方法使用 VectorLayer 批量渲染点位，并通过单个
-   * requestAnimationFrame 驱动闪烁圈，适合村庄预警等大量点位场景。
-   */
-  /**
-   * P1-1：统一 handle 形态的便捷方法。把 addPoint 返回的 VectorLayer 包成 LayerHandle。
-   *
-   * 推荐新代码使用此方法，可与 Line.attachLine / Polygon.attachPolygon 一致地管理生命周期。
-   */
-  attachPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
-    const layer = this.addPoint(pointData, options);
+  /** *********************添加普通点*********************/
+  addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
+    const layer = this.createPointLayer(pointData, options);
     if (!layer) return null;
     return this.toLayerHandle(layer);
   }
 
-  /**
-   * P1-1：addPulsePointLayer 已经是 AnimatedLayerHandle，attach 版本只是别名。
-   */
-  attachPulsePointLayer(pointData: PointData[], options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null {
-    return this.addPulsePointLayer(pointData, options);
+  /** *********************添加聚合点*********************/
+  addClusterPoint(pointData: PointData[], options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
+    const layer = this.createClusterPointLayer(pointData, options);
+    if (!layer) return null;
+    return this.toLayerHandle(layer);
   }
 
-  /** @internal P1-1 把 VectorLayer 包成 LayerHandle 的内部工具。 */
+  /** @internal 把 VectorLayer 包成 LayerHandle 的内部工具。 */
   private toLayerHandle<L extends VectorLayer<VectorSource>>(layer: L): LayerHandle<L> {
     const map = this.map;
     const managedLayers = this.managedLayers;
@@ -272,7 +265,12 @@ export default class Point {
     };
   }
 
-
+  /**
+   * 添加高性能闪烁点图层。
+   *
+   * 与 addDomPoint 不同，该方法使用 VectorLayer 批量渲染点位，并通过单个
+   * requestAnimationFrame 驱动闪烁圈，适合村庄预警等大量点位场景。
+   */
   addPulsePointLayer(pointData: PointData[], options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null {
     if (!ValidationUtils.validatePointData(pointData)) {
       return null;
@@ -286,12 +284,12 @@ export default class Point {
    * P1-2：从 URL 加载点位数据并添加为静态点图层。
    *
    * 期望 URL 返回 `PointData[]` 形态的 JSON 数组（含 lgtd / lttd）或 FeatureCollection。
-   * features 加载/解析完成后 Promise resolve 为 VectorLayer。
+   * features 加载/解析完成后 Promise resolve 为 LayerHandle。
    */
   async addPointByUrl(
     url: string,
     options: PointOptions & { layerName: string }
-  ): Promise<VectorLayer<VectorSource> | null> {
+  ): Promise<LayerHandle<VectorLayer<VectorSource>> | null> {
     ValidationUtils.validateNonEmptyString(url, 'Point url is required');
     const response = await fetch(url);
     if (!response.ok) {
@@ -327,17 +325,12 @@ export default class Point {
     return this.addPulsePointLayer(pointData, options);
   }
 
-
   /**
    * 添加闪烁点
    * @param twinkleList 闪烁点数据
    * @param callback
    */
-  addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
-    anchors: import('ol/Overlay').default[],
-    remove:()=>void
-    setVisible:(visible:boolean)=>void
-  } {
+  addDomPoint(twinkleList: TwinkleItem[], callback?: Function): ControlHandle<Overlay[]> & { anchors: Overlay[] } {
     const handle = PointOverlay.create(this.map, twinkleList, callback);
     this.trackDisposable(handle);
     return handle;
@@ -354,10 +347,8 @@ export default class Point {
   addVueTemplatePoint(pointDataList: PointData[], template: object, options?: {
     positioning?: 'bottom-left' | 'bottom-center' | 'bottom-right' | 'center-left' | 'center-center' | 'center-right' | 'top-left' | 'top-center' | 'top-right',
     stopEvent?: boolean
-  }): {
-    setVisible: (visible: boolean) => void,
+  }): ControlHandle<VueTemplatePointInstance[]> & {
     setOneVisibleByProp: (propName: string, propValue: unknown, visible: boolean) => void,
-    remove: () => void,
     getPoints: () => VueTemplatePointInstance[]
   } {
     if (!pointDataList || !Array.isArray(pointDataList) || pointDataList.length === 0) {

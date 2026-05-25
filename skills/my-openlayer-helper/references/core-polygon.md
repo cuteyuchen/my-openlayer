@@ -69,20 +69,12 @@ Image layer data.
 
 ## Methods
 
-### attachPolygon (3.0 Recommended)
-
-Add a polygon layer, returning a unified `LayerHandle`. Preferred over `addPolygon` in new code.
-
-```typescript
-attachPolygon(data: MapJSONData, options?: PolygonOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
-```
-
 ### addPolygon
 
-Add a polygon layer (legacy API, still works).
+Add a polygon layer, returning a unified `LayerHandle`.
 
 ```typescript
-addPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource>
+addPolygon(data: MapJSONData, options: PolygonOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
 ```
 
 | Parameter | Type | Description |
@@ -95,7 +87,7 @@ addPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSourc
 Load polygon layer from URL.
 
 ```typescript
-addPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource>
+addPolygonByUrl(url: string, options: PolygonOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>>>
 ```
 
 ### addBorderPolygon
@@ -103,7 +95,7 @@ addPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource
 Add border layer (usually for administrative boundaries, supports cutout effect).
 
 ```typescript
-addBorderPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<VectorSource>
+addBorderPolygon(data: MapJSONData, options?: PolygonOptions): LayerHandle<VectorLayer<VectorSource>>
 ```
 
 ### addBorderPolygonByUrl
@@ -111,7 +103,7 @@ addBorderPolygon(data: MapJSONData, options?: PolygonOptions): VectorLayer<Vecto
 Load border polygon data from a URL.
 
 ```typescript
-addBorderPolygonByUrl(url: string, options?: PolygonOptions): VectorLayer<VectorSource>
+addBorderPolygonByUrl(url: string, options?: PolygonOptions): Promise<LayerHandle<VectorLayer<VectorSource>>>
 ```
 
 ### updateFeatureColor
@@ -137,7 +129,7 @@ updateFeatureColor(
 Add static image layer (e.g., overlaying floor plans, satellite images).
 
 ```typescript
-addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<any>
+addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): LayerHandle<ImageLayer<any>>
 ```
 
 ### addHeatmap
@@ -145,7 +137,7 @@ addImageLayer(imageData: ImageLayerData, options?: PolygonOptions): ImageLayer<a
 Add heatmap.
 
 ```typescript
-addHeatmap(pointData: PointData[], options?: HeatMapOptions): Heatmap
+addHeatmap(pointData: PointData[], options?: HeatMapOptions): LayerHandle<BaseLayer>
 ```
 
 ### setOutLayer
@@ -168,21 +160,13 @@ setOutLayer(data: MapJSONData, options?: {
 Add a regular mask layer through `PolygonMaskLayer`.
 
 ```typescript
-addMaskLayer(data: MapJSONData, options?: MaskLayerOptions): VectorLayer<VectorSource>
+addMaskLayer(data: MapJSONData, options?: MaskLayerOptions): LayerHandle<VectorLayer<VectorSource>>
 ```
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `data` | `MapJSONData` | GeoJSON data for the mask boundary |
 | `options` | `MaskLayerOptions` | Configuration: `fillColor`, `strokeColor`, `zIndex` (default 12), `opacity`, `visible`, `layerName` |
-
-### addPolygonByUrlAsync (3.0 New)
-
-Load polygon data from a URL and resolve after features are loaded. Preferred over `addPolygonByUrl` when you need to access features or trigger `fitView` after load.
-
-```typescript
-addPolygonByUrlAsync(url: string, options?: PolygonOptions): Promise<VectorLayer<VectorSource> | null>
-```
 
 ### destroyAll (3.0)
 

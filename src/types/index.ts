@@ -1,5 +1,5 @@
 export type { BaseOptions, StyleOptions, TextOptions } from './base';
-export type { LayerHandle, AnimatedLayerHandle } from './handle';
+export type { LayerHandle, AnimatedLayerHandle, ControlHandle } from './handle';
 export type { FeatureData, MapJSONData, OptionsType, MeasureHandlerType, EventType } from './common';
 export type {
   MapInitType,

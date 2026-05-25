@@ -1,6 +1,6 @@
 # my-openlayer 3.0 迁移指南
 
-3.0 在保持向后兼容的前提下完成了一次系统性的 API 改造。**绝大多数 2.x 代码不改一行就能跑**，但你会看到一些 `@deprecated` 警告，并能享受到新的统一 API、Promise 异步、运行时配置覆盖等能力。本指南分三段：
+3.0 完成了一次系统性的 API 改造。图层类 `add*` 返回值会从原始 OpenLayers layer 改成统一 Handle；迁移后可以用同一套 `remove()` / `setVisible()` 管理生命周期。本指南分三段：
 
 1. **必须改的**（编译错误）
 2. **推荐改的**（用新 API 写新代码）
@@ -28,25 +28,50 @@ line.addLine(data, { layerName: 'my-line', strokeColor: 'red' })
 
 `PointOptions / LineOptions / PolygonOptions` interface **本身**没改（`layerName?: string` 仍然可选），所以已有的工厂函数、配置对象不受影响 —— 只是公开方法签名收紧了。
 
-### 1.2 移除的旧 API
+### 1.2 `add*` 返回值改为 Handle
 
-无。3.0 没有删除任何 2.x API，全部 `@deprecated` 而非删除。
+真实图层类 `add*` 不再直接返回 OpenLayers layer，而是返回统一 `LayerHandle`。
+
+```ts
+// ❌ 2.x
+const layer = line.addLine(data, { layerName: 'l1' })
+layer.getSource()
+layer.setVisible(false)
+
+// ✅ 3.0
+const handle = line.addLine(data, { layerName: 'l1' })
+handle.layer.getSource()
+handle.setVisible(false)
+handle.remove()
+```
+
+`addDomPoint` / `addVueTemplatePoint` 不是 OL 图层，3.0 返回 `ControlHandle`：
+
+```ts
+const domHandle = point.addDomPoint(points)
+domHandle.target       // Overlay[]
+domHandle.anchors      // 兼容原字段
+
+const vueHandle = point.addVueTemplatePoint(points, Component)
+vueHandle.target       // VueTemplatePointInstance[]
+vueHandle.getPoints()  // 兼容原方法
+```
 
 ---
 
 ## 2. 推荐改的（用新 API 写新代码）
 
-### 2.1 用 `attach*` 替代 `add*` 拿统一句柄
+### 2.1 用 `add*` 拿统一句柄
 
-新代码推荐统一用 `attach*` 系列：
+新代码统一用 `add*` 系列：
 
 ```ts
 import type { LayerHandle } from 'my-openlayer'
 
 // 跨 Point / Line / Polygon 一致的形态
-const pointHandle: LayerHandle | null = myOl.getPoint().attachPoint(data, { layerName: 'p1' })
-const lineHandle:  LayerHandle        = myOl.getLine().attachLine(data, { layerName: 'l1' })
-const polyHandle:  LayerHandle        = myOl.getPolygon().attachPolygon(data, { layerName: 'r1' })
+const pointHandle: LayerHandle | null = myOl.getPoint().addPoint(data, { layerName: 'p1' })
+const lineHandle:  LayerHandle        = myOl.getLine().addLine(data, { layerName: 'l1' })
+const polyHandle:  LayerHandle        = myOl.getPolygon().addPolygon(data, { layerName: 'r1' })
 
 // 统一生命周期
 pointHandle?.setVisible(false)
@@ -58,27 +83,25 @@ pointHandle?.remove()
 ```ts
 import type { AnimatedLayerHandle } from 'my-openlayer'
 
-const flowHandle: AnimatedLayerHandle | null = myOl.getLine().attachFlowLine(data, { layerName: 'flow' })
+const flowHandle: AnimatedLayerHandle | null = myOl.getLine().addFlowLine(data, { layerName: 'flow' })
 flowHandle?.start()
 flowHandle?.pause?.()
 flowHandle?.remove()
 ```
 
-### 2.2 用 `*ByUrlAsync` 替代 `*ByUrl` 拿 Promise
+### 2.2 `*ByUrl` 统一异步返回 Handle
 
-旧的 `*ByUrl` 同步返回 layer，但 features 仍在异步加载，导致 `fitView` 经常失败、`getFeatures().length === 0`。3.0 新增 Promise 版本：
+旧的 `Line.addLineByUrl` / `Polygon.addPolygonByUrl` 同步返回 layer，但 features 仍在异步加载，导致 `fitView` 经常失败、`getFeatures().length === 0`。3.0 改为先 `fetch` JSON，再调用对应 add 方法：
 
 ```ts
 // ❌ 2.x：返回 layer 时 features 还在路上
 const layer = polygon.addPolygonByUrl('/boundary.geojson', { layerName: 'b' })
 // layer.getSource().getFeatures().length === 0  ← 经常踩坑
 
-// ✅ 3.0：features 加载完成后才 resolve
-const layer = await polygon.addPolygonByUrlAsync('/boundary.geojson', { layerName: 'b' })
-console.log(layer.getSource().getFeatures().length) // 准确
+// ✅ 3.0：await 后拿到完整 LayerHandle
+const handle = await polygon.addPolygonByUrl('/boundary.geojson', { layerName: 'b' })
+console.log(handle.layer.getSource()?.getFeatures().length) // 准确
 ```
-
-同理 `Line.addLineByUrlAsync`。`Line.addFlowLineByUrl` 早就是 Promise，行为不变。
 
 ### 2.3 Point 新增 `*ByUrl` Promise API
 
@@ -86,7 +109,7 @@ console.log(layer.getSource().getFeatures().length) // 准确
 
 ```ts
 // 从 URL 加载点位（自动识别 PointData[] 数组或 GeoJSON FeatureCollection）
-const layer = await myOl.getPoint().addPointByUrl('/points.json', { layerName: 'p1' })
+const handle = await myOl.getPoint().addPointByUrl('/points.json', { layerName: 'p1' })
 
 const handle = await myOl.getPoint().addPulsePointLayerByUrl('/villages.json', {
   layerName: 'villages',
@@ -179,8 +202,8 @@ try {
 | 旧 API | 替代品 |
 |---|---|
 | `add*` 不传 `layerName`（仅使用 `ConfigManager.DEFAULT_*.layerName`） | `add*` 显式传 `layerName` |
-| `addPolygonByUrl`（同步） | `addPolygonByUrlAsync`（Promise） |
-| `addLineByUrl`（同步） | `addLineByUrlAsync`（Promise） |
+| `addPolygonByUrl`（同步返回 layer） | `await addPolygonByUrl`（Promise<LayerHandle>） |
+| `addLineByUrl`（同步返回 layer） | `await addLineByUrl`（Promise<LayerHandle>） |
 | `MyOl.getView` | `MyOl.createView` |
 | `PulsePointIconOptions.src` | `PulsePointIconOptions.img` |
 | `(MyOl as any).initializeProjections` | `ProjectionManager.initialize` |
@@ -190,7 +213,7 @@ try {
 ## 4. 升级前后检查清单
 
 - [ ] 所有 `add*` 调用都显式传 `layerName`（TS 编译会提示）
-- [ ] `addPolygonByUrl` / `addLineByUrl` 后立刻取 features / fit view 的地方，改成 `await *Async` 版本
+- [ ] `addPolygonByUrl` / `addLineByUrl` 调用处加 `await`，并通过 `handle.layer` 访问底层图层
 - [ ] `MyOl.destroy()` 调用后是否真的需要重建地图（destroy 已强化级联清理，老代码可能不再需要手动 stop 各 handle）
 - [ ] 自定义投影注册：尝试迁移到 `ProjectionManager.register` 集中管理
 - [ ] 全局样式默认值：用 `ConfigManager.setDefaults` 替代多处复制 options

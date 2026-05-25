@@ -7,7 +7,7 @@ description: "Initialize my-openlayer maps, add points/lines/polygons, configure
 
 1. **Initialize** the map via `MyOl` constructor with a container ID and options.
 2. **Access modules** through lazy-loaded getters (`getPoint()`, `getLine()`, `getPolygon()`, `getTools()`).
-3. **Add features** using `attach*` (recommended, returns unified `LayerHandle`) or legacy `add*` methods.
+3. **Add features** using `add*` methods. In 3.0 real layer methods return unified `LayerHandle`; Overlay/Vue point methods return `ControlHandle`.
 4. **Clean up** by calling `destroy()` — 3.0 `destroy()` cascades to all sub-modules automatically.
 
 ### Quick Start
@@ -31,8 +31,8 @@ const map = new MyOl('map-container', {
   token: 'YOUR_TIANDITU_TOKEN'
 });
 
-// 2. Add point markers (3.0 recommended: attach* returns unified LayerHandle)
-const handle = map.getPoint().attachPoint(
+// 2. Add point markers (3.0 add* returns unified LayerHandle)
+const handle = map.getPoint().addPoint(
   [{ lgtd: 120.15, lttd: 30.27, name: 'Hangzhou HQ' }],
   { layerName: 'offices', img: '/icons/marker.png', textKey: 'name', scale: 0.8 }
 );
@@ -77,9 +77,9 @@ onUnmounted(() => {
 ## Core Components
 
 - [MyOl](references/core-my-ol.md) — Map initialization, configuration, module access, and `destroy()` cascade.
-- [Point](references/core-point.md) — Point features, clustering, high-performance pulse markers, Vue template points, and `attachPoint` / `destroyAll`.
-- [Line](references/core-line.md) — Polyline features, animated flow lines, `attachLine`, `addLineByUrlAsync`, and `destroyAllFlowLines`.
-- [Polygon](references/core-polygon.md) — Polygon features, heatmaps, image layers, mask layers, `attachPolygon`, `addPolygonByUrlAsync`, and `destroyAll`.
+- [Point](references/core-point.md) — Point features, clustering, high-performance pulse markers, Vue template points, unified `add*` handles, and `destroyAll`.
+- [Line](references/core-line.md) — Polyline features, animated flow lines, async `addLineByUrl`, and `destroyAllFlowLines`.
+- [Polygon](references/core-polygon.md) — Polygon features, heatmaps, image layers, mask layers, async `addPolygonByUrl`, and `destroyAll`.
 - [VueTemplatePoint](references/core-vue-template-point.md) — Vue components rendered as map overlays, with fixed `updateProps` in 3.0.
 
 ## Map Tools
