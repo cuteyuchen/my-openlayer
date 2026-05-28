@@ -88,7 +88,6 @@ onUnmounted(() => {
 - [MeasureHandler](references/tool-measure-handler.md) — Distance and area measurement.
 - [SelectHandler](references/tool-select-handler.md) — Feature click/hover/ctrl selection with `selectByIds`, `selectByProperty`, and `destroy`.
 - [MapBaseLayers](references/tool-map-base-layers.md) — Base layer switching (Tianditu vector/image/terrain), annotation management, `getCurrentBaseLayers`.
-- [RiverLayerManager](references/tool-river-layer-manager.md) — Specialized river system layers.
 
 ## Infrastructure
 

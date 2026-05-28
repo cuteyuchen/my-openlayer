@@ -31,8 +31,7 @@ export default defineConfig({
           { text: 'Point 点要素', link: '/Point' },
           { text: 'Line 线要素', link: '/Line' },
           { text: 'Polygon 面要素', link: '/Polygon' },
-          { text: 'VueTemplatePoint Vue点位', link: '/VueTemplatePoint' },
-          { text: 'RiverLayerManager 河流图层', link: '/RiverLayerManager' }
+          { text: 'VueTemplatePoint Vue点位', link: '/VueTemplatePoint' }
         ]
       },
       {

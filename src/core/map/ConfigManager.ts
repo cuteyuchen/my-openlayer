@@ -29,9 +29,6 @@ interface DefaultsRegistry {
   MAP_LAYERS_OPTIONS: { zIndex: number; annotation: boolean; mapClip: boolean; mapClipData: any };
   MYOL_OPTIONS: { layers: any; zoom: number; center: number[]; extent: any };
   VUE_TEMPLATE_POINT_OPTIONS: { positioning: Positioning; stopEvent: boolean; visible: boolean; zIndex: number };
-  RIVER_LEVEL_WIDTH_MAP: Record<number, number>;
-  RIVER_LAYERS_BY_ZOOM_OPTIONS: { type: string; levelCount: number; zoomOffset: number; strokeColor: string; strokeWidth: number; visible: boolean; zIndex: number; layerName: string; removeExisting: boolean };
-  RIVER_WIDTH_BY_LEVEL_OPTIONS: { type: string; layerName: string; strokeColor: string; strokeWidth: number; visible: boolean; zIndex: number; removeExisting: boolean };
 }
 
 const BUILTIN_DEFAULTS: DefaultsRegistry = {
@@ -102,16 +99,7 @@ const BUILTIN_DEFAULTS: DefaultsRegistry = {
   },
   MAP_LAYERS_OPTIONS: { zIndex: 9, annotation: false, mapClip: false, mapClipData: undefined },
   MYOL_OPTIONS: { layers: undefined, zoom: 10, center: [119.81, 29.969], extent: undefined },
-  VUE_TEMPLATE_POINT_OPTIONS: { positioning: 'center-center', stopEvent: false, visible: true, zIndex: 1 },
-  RIVER_LEVEL_WIDTH_MAP: { 1: 2, 2: 1, 3: 0.5, 4: 0.5, 5: 0.5 },
-  RIVER_LAYERS_BY_ZOOM_OPTIONS: {
-    type: 'river', levelCount: 5, zoomOffset: 8, strokeColor: 'rgb(0,113,255)', strokeWidth: 3,
-    visible: true, zIndex: 15, layerName: 'riverLayer', removeExisting: false
-  },
-  RIVER_WIDTH_BY_LEVEL_OPTIONS: {
-    type: 'river', layerName: 'river', strokeColor: 'rgba(3, 122, 255, 1)', strokeWidth: 2,
-    visible: true, zIndex: 15, removeExisting: false
-  }
+  VUE_TEMPLATE_POINT_OPTIONS: { positioning: 'center-center', stopEvent: false, visible: true, zIndex: 1 }
 };
 
 /**
@@ -193,9 +181,6 @@ export default class ConfigManager {
   static get DEFAULT_MAP_LAYERS_OPTIONS() { return currentDefaults.MAP_LAYERS_OPTIONS; }
   static get DEFAULT_MYOL_OPTIONS() { return currentDefaults.MYOL_OPTIONS; }
   static get DEFAULT_VUE_TEMPLATE_POINT_OPTIONS() { return currentDefaults.VUE_TEMPLATE_POINT_OPTIONS; }
-  static get DEFAULT_RIVER_LEVEL_WIDTH_MAP() { return currentDefaults.RIVER_LEVEL_WIDTH_MAP; }
-  static get DEFAULT_RIVER_LAYERS_BY_ZOOM_OPTIONS() { return currentDefaults.RIVER_LAYERS_BY_ZOOM_OPTIONS; }
-  static get DEFAULT_RIVER_WIDTH_BY_LEVEL_OPTIONS() { return currentDefaults.RIVER_WIDTH_BY_LEVEL_OPTIONS; }
 
   /**
    * 合并配置选项
