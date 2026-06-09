@@ -117,6 +117,30 @@ const handle = await myOl.getPoint().addPulsePointLayerByUrl('/villages.json', {
 })
 ```
 
+### 2.3.1 点 API 支持 GeoJSON 直接输入
+
+3.0 点 API（`addPoint` / `addClusterPoint` / `addPulsePointLayer`）现在直接接受标准 GeoJSON 点数据，无需手动将 `FeatureCollection` 转为 `PointData[]`：
+
+```ts
+// ❌ 3.0 之前：需要手动转换
+const fc = await fetch('/stations.geojson').then(r => r.json())
+const pointData = fc.features.map(f => ({
+  ...f.properties,
+  lgtd: f.geometry.coordinates[0],
+  lttd: f.geometry.coordinates[1]
+}))
+point.addPoint(pointData, { layerName: 'stations' })
+
+// ✅ 3.0：直接传 GeoJSON
+const fc = await fetch('/stations.geojson').then(r => r.json())
+point.addPoint(fc, { layerName: 'stations' })
+
+// 也支持单个 Feature、MultiPoint geometry 等形态
+point.addPoint({ type: 'Feature', properties: { name: 'A' }, geometry: { type: 'Point', coordinates: [120, 30] } }, { layerName: 'single' })
+```
+
+`*ByUrl` 方法内部已统一使用同一套标准化逻辑，不再各自手写 JSON 映射。
+
 ### 2.4 投影注册抽到 `ProjectionManager`
 
 2.x 用 `options.projection` 注册自定义投影。3.0 仍然支持，**外加**一个独立入口：

@@ -7,7 +7,7 @@ description: "Initialize my-openlayer maps, add points/lines/polygons, configure
 
 1. **Initialize** the map via `MyOl` constructor with a container ID and options.
 2. **Access modules** through lazy-loaded getters (`getPoint()`, `getLine()`, `getPolygon()`, `getTools()`).
-3. **Add features** using `add*` methods. In 3.0 real layer methods return unified `LayerHandle`; Overlay/Vue point methods return `ControlHandle`.
+3. **Add features** using `add*` methods. In 3.0 real layer methods return unified `LayerHandle`; Overlay/Vue point methods return `ControlHandle`. Point APIs (`addPoint`, `addClusterPoint`, `addPulsePointLayer`) accept both `PointData[]` and standard GeoJSON (FeatureCollection, Feature, MultiPoint geometry). Use `MyOl.addGeoJSON(data, options)` to render mixed geometry types (point/line/polygon) in one call, with automatic grouping and per-feature styling.
 4. **Clean up** by calling `destroy()` — 3.0 `destroy()` cascades to all sub-modules automatically.
 
 ### Quick Start
@@ -60,6 +60,38 @@ onUnmounted(() => {
 });
 ```
 
+### addGeoJSON — Mixed Geometry Rendering
+
+```typescript
+// Auto-detect point/line/polygon, group by property
+const handle = map.addGeoJSON(mixedGeoJSON, {
+  layerName: 'risk',
+  groupBy: 'level',
+  point: { textKey: 'name', textVisible: true },
+  line: { strokeColor: '#3b82f6', strokeWidth: 3 },
+  polygon: { fillColor: 'rgba(239,68,68,0.15)' }
+});
+
+// Per-feature styling via callback
+// props = original feature properties (without lgtd/lttd)
+// ctx  = { datasetKey, groupKey, feature: FeatureData, index }
+map.addGeoJSON(points, {
+  layerName: 'styled',
+  point: {
+    styleByProperties: (props, ctx) => ({
+      circleColor: props.risk === 'high' ? '#ef4444' : '#22c55e',
+      circleRadius: ctx.index === 0 ? 10 : 6
+    })
+  }
+});
+
+// Handle operations
+handle.setVisible(false);
+handle.setGroupVisible('high', false);
+handle.removeGroup('low');
+handle.remove();
+```
+
 ### Error Recovery
 
 - **Container not found**: Ensure the DOM element exists before `new MyOl(...)`. In Vue, initialize inside `onMounted`, never in `setup`.
@@ -73,6 +105,7 @@ onUnmounted(() => {
 - **Mask layer not visible**: 3.0 fixes the default `zIndex` for `addMaskLayer` to 12 (above Tianditu base at 9). If upgrading from 2.x and the mask was previously invisible, no code change needed.
 - **destroy() cascade**: In 3.0, `MyOl.destroy()` automatically calls `SelectHandler.destroy()`, `Line.destroyAllFlowLines()`, `Point.destroyAll()`, and `Polygon.destroyAll()`. You do not need to manually clean up sub-module handles before calling `destroy()`.
 - **updateProps on VueTemplatePoint**: 3.0 fixes `updateProps` to correctly pass prop values (previously they were placed in the prop declaration position). Call `instance.updateProps({ label: 'new value' })` and the Vue component will re-render with the new value.
+- **Unified error types**: All thrown errors use `MyOpenLayersError` with an `ErrorType` tag (`VALIDATION_ERROR`, `MAP_ERROR`, `LAYER_ERROR`, `COORDINATE_ERROR`, `DATA_ERROR`, `COMPONENT_ERROR`). Catch and `instanceof` check to distinguish error categories. Subclasses `LayerNotFoundError`, `InvalidGeoJSONError`, `ProjectionError` are available for finer-grained handling.
 
 ## Core Components
 

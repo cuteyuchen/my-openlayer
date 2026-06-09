@@ -101,11 +101,11 @@ export default class VueTemplatePoint {
     getPoints: () => VueTemplatePointInstance[]
   } {
     if (!pointDataList || !Array.isArray(pointDataList) || pointDataList.length === 0) {
-      throw new Error('Valid point info list is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Valid point info list is required', ErrorType.VALIDATION_ERROR);
     }
-    
+
     if (!template) {
-      throw new Error('Vue template is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Vue template is required', ErrorType.VALIDATION_ERROR);
     }
 
     try {
@@ -113,7 +113,7 @@ export default class VueTemplatePoint {
       
       pointDataList.forEach((pointData: any) => {
         if (!ValidationUtils.validateLngLat(pointData.lgtd, pointData.lttd)) {
-          throw new Error('Valid longitude and latitude are required for each point');
+          throw ErrorHandler.getInstance().createAndHandleError('Valid longitude and latitude are required for each point', ErrorType.VALIDATION_ERROR);
         }
         
         const pointOptions: VueTemplatePointOptions = {
@@ -159,7 +159,7 @@ export default class VueTemplatePoint {
         getPoints: () => instances
       };
     } catch (error) {
-      throw new Error(`Failed to create Vue template points: ${error}`);
+      throw ErrorHandler.getInstance().createAndHandleError(`Failed to create Vue template points: ${error}`, ErrorType.COMPONENT_ERROR);
     }
   }
 
@@ -262,7 +262,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
     ValidationUtils.validateRequired(Template, 'Template is required in options');
     
     if (typeof lgtd !== 'number' || typeof lttd !== 'number') {
-      throw new Error('Longitude and lttd must be numbers');
+      throw ErrorHandler.getInstance().createAndHandleError('Longitude and lttd must be numbers', ErrorType.VALIDATION_ERROR);
     }
     
     ValidationUtils.validateCoordinate(lgtd, lttd);
@@ -318,7 +318,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
     const { Template, props } = this.options;
     
     if (!Vue) {
-      throw new Error('Vue is not available. Please ensure Vue is installed in your project.');
+      throw ErrorHandler.getInstance().createAndHandleError('Vue is not available. Please ensure Vue is installed in your project.', ErrorType.COMPONENT_ERROR);
     }
     
     // 清空DOM内容，确保没有残留
@@ -344,7 +344,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
         }) as VueLegacyInstance;
       }
     } catch (error) {
-      throw new Error(`Failed to create Vue app: ${error}`);
+      throw ErrorHandler.getInstance().createAndHandleError(`Failed to create Vue app: ${error}`, ErrorType.COMPONENT_ERROR);
     }
   }
 
@@ -388,7 +388,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
    */
   setVisible(visible: boolean): void {
     if (this.state === VueTemplatePointState.DESTROYED) {
-      throw new Error('Cannot set visibility on destroyed DOM point');
+      throw ErrorHandler.getInstance().createAndHandleError('Cannot set visibility on destroyed DOM point', ErrorType.COMPONENT_ERROR);
     }
     
     ValidationUtils.validateType(visible, 'boolean', 'Visible parameter must be a boolean');
@@ -418,7 +418,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
    */
   updatePosition(lgtd: number, lttd: number): void {
     if (this.state === VueTemplatePointState.DESTROYED) {
-      throw new Error('Cannot update position on destroyed DOM point');
+      throw ErrorHandler.getInstance().createAndHandleError('Cannot update position on destroyed DOM point', ErrorType.COMPONENT_ERROR);
     }
     
     ValidationUtils.validateCoordinate(lgtd, lttd);
@@ -447,7 +447,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
    */
   updateProps(newProps: Record<string, any>): void {
     if (this.state === VueTemplatePointState.DESTROYED) {
-      throw new Error('Cannot update props on destroyed DOM point');
+      throw ErrorHandler.getInstance().createAndHandleError('Cannot update props on destroyed DOM point', ErrorType.COMPONENT_ERROR);
     }
 
     try {
@@ -482,7 +482,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
    */
   setStyle(styles: Partial<CSSStyleDeclaration>): void {
     if (this.state === VueTemplatePointState.DESTROYED) {
-      throw new Error('Cannot set style on destroyed DOM point');
+      throw ErrorHandler.getInstance().createAndHandleError('Cannot set style on destroyed DOM point', ErrorType.COMPONENT_ERROR);
     }
     
     try {
@@ -500,7 +500,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
    */
   addClass(className: string): void {
     if (this.state === VueTemplatePointState.DESTROYED) {
-      throw new Error('Cannot add class to destroyed DOM point');
+      throw ErrorHandler.getInstance().createAndHandleError('Cannot add class to destroyed DOM point', ErrorType.COMPONENT_ERROR);
     }
     
     ValidationUtils.validateNonEmptyString(className, 'Valid class name is required');
@@ -520,7 +520,7 @@ class VueTemplatePointInstanceImpl implements VueTemplatePointInstance {
    */
   removeClass(className: string): void {
     if (this.state === VueTemplatePointState.DESTROYED) {
-      throw new Error('Cannot remove class from destroyed DOM point');
+      throw ErrorHandler.getInstance().createAndHandleError('Cannot remove class from destroyed DOM point', ErrorType.COMPONENT_ERROR);
     }
     
     ValidationUtils.validateNonEmptyString(className, 'Valid class name is required');

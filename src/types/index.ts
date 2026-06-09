@@ -15,6 +15,7 @@ export type {
 export type {
   PointOptions,
   PointData,
+  PointJSONInput,
   ClusterOptions,
   PulsePointIconOptions,
   PulsePointOptions,
@@ -31,6 +32,16 @@ export type {
   PolygonOptions,
   FeatureColorUpdateOptions
 } from './polygon';
+export type {
+  AddGeoJSONInput,
+  GeoJSONGeometryType,
+  GeoJSONGroupBy,
+  GeoJSONLayerName,
+  AddGeoJSONPointOptions,
+  AddGeoJSONOptions,
+  GeoJSONGroupHandle,
+  GeoJSONRenderHandle
+} from './geojson';
 export type {
   SelectOptions,
   SelectMode,

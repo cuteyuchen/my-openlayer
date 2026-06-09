@@ -10,7 +10,7 @@ import Collection from 'ol/Collection';
 import { getUid } from "ol/util";
 import EventManager from "../map/EventManager";
 import ValidationUtils from "../../utils/ValidationUtils";
-import { ErrorHandler, MyOpenLayersError, ErrorType } from "../../utils/ErrorHandler";
+import { ErrorHandler, ErrorType } from "../../utils/ErrorHandler";
 import { SelectOptions, SelectMode, SelectCallbackEvent, ProgrammaticSelectOptions } from "../../types";
 
 /**
@@ -123,14 +123,11 @@ export default class SelectHandler {
       return this;
 
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `启用要素选择失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.COMPONENT_ERROR,
-          { mode, options }
-        )
+      throw this.errorHandler.createAndHandleError(
+        `启用要素选择失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.COMPONENT_ERROR,
+        { mode, options }
       );
-      throw error;
     }
   }
 
@@ -156,13 +153,10 @@ export default class SelectHandler {
       return this;
 
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `禁用要素选择失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.COMPONENT_ERROR
-        )
+      throw this.errorHandler.createAndHandleError(
+        `禁用要素选择失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.COMPONENT_ERROR
       );
-      throw error;
     }
   }
 
@@ -216,14 +210,11 @@ export default class SelectHandler {
       this.applySelection(selectedFeatures, options);
       return this;
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `通过ID选择要素失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.COMPONENT_ERROR,
-          { featureIds, options }
-        )
+      throw this.errorHandler.createAndHandleError(
+        `通过ID选择要素失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.COMPONENT_ERROR,
+        { featureIds, options }
       );
-      throw error;
     }
   }
 
@@ -232,7 +223,7 @@ export default class SelectHandler {
    */
   selectByProperty(propertyName: string, propertyValue: unknown, options?: ProgrammaticSelectOptions): this {
     try {
-      if (!propertyName) throw new Error('属性名称不能为空');
+      if (!propertyName) throw ErrorHandler.getInstance().createAndHandleError('属性名称不能为空', ErrorType.VALIDATION_ERROR);
 
       const selectedFeatures = this.findFeaturesByProperty(propertyName, propertyValue, options?.layerName);
       if (selectedFeatures.length === 0) return this;
@@ -240,14 +231,11 @@ export default class SelectHandler {
       this.applySelection(selectedFeatures, options);
       return this;
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `通过属性选择要素失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.COMPONENT_ERROR,
-          { propertyName, propertyValue, options }
-        )
+      throw this.errorHandler.createAndHandleError(
+        `通过属性选择要素失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.COMPONENT_ERROR,
+        { propertyName, propertyValue, options }
       );
-      throw error;
     }
   }
 
@@ -414,11 +402,9 @@ export default class SelectHandler {
       this.clearSelection();
       this.errorHandler.debug('选择处理器已销毁');
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `销毁选择处理器失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.COMPONENT_ERROR
-        )
+      this.errorHandler.createAndHandleError(
+        `销毁选择处理器失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.COMPONENT_ERROR
       );
     }
   }

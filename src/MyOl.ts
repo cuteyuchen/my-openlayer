@@ -14,10 +14,16 @@ import { Line } from "./core/line";
 import { MapBaseLayers, MapTools, EventManager, ConfigManager } from "./core/map";
 import { SelectHandler } from "./core/select";
 import { ProjectionManager } from "./core/projection";
-import { ErrorHandler, MyOpenLayersError, ErrorType } from './utils/ErrorHandler';
+import { ErrorHandler, ErrorType, MyOpenLayersError } from './utils/ErrorHandler';
 
 // 类型定义导入
 import { MapInitType, MapLayersOptions } from './types'
+import type {
+  AddGeoJSONInput,
+  AddGeoJSONOptions,
+  GeoJSONRenderHandle,
+} from './types'
+import { renderGeoJSON } from './core/geojson'
 
 /**
  * MyOl 地图核心类
@@ -100,14 +106,15 @@ export default class MyOl {
       this.initializeEventListeners();
 
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `地图初始化失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.MAP_ERROR,
-          { id, options }
-        )
+      // 已处理过的 MyOpenLayersError 直接抛出，避免二次包装和重复触发回调
+      if (error instanceof MyOpenLayersError) {
+        throw error;
+      }
+      throw this.errorHandler.createAndHandleError(
+        `地图初始化失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.MAP_ERROR,
+        { id, options }
       );
-      throw error;
     }
   }
 
@@ -117,21 +124,21 @@ export default class MyOl {
    */
   private validateConstructorParams(id: string | HTMLElement, options: MapInitType): void {
     if (!id) {
-      throw new Error('地图容器 ID 或 HTMLElement 不能为空');
+      throw ErrorHandler.getInstance().createAndHandleError('地图容器 ID 或 HTMLElement 不能为空', ErrorType.VALIDATION_ERROR);
     }
 
     if (typeof id === 'string' && id.trim() === '') {
-      throw new Error('地图容器 ID 必须是非空字符串');
+      throw ErrorHandler.getInstance().createAndHandleError('地图容器 ID 必须是非空字符串', ErrorType.VALIDATION_ERROR);
     }
 
     if (!options || typeof options !== 'object') {
-      throw new Error('地图配置选项不能为空');
+      throw ErrorHandler.getInstance().createAndHandleError('地图配置选项不能为空', ErrorType.VALIDATION_ERROR);
     }
 
     // 检查 DOM 元素是否存在
     const element = typeof id === 'string' ? document.getElementById(id) : id;
     if (!element) {
-      throw new Error(typeof id === 'string' ? `找不到 ID 为 '${id}' 的 DOM 元素` : '提供的 DOM 元素无效');
+      throw ErrorHandler.getInstance().createAndHandleError(typeof id === 'string' ? `找不到 ID 为 '${id}' 的 DOM 元素` : '提供的 DOM 元素无效', ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -161,9 +168,7 @@ export default class MyOl {
 
     // 地图错误事件
     eventManager.on('error', (eventData) => {
-      this.errorHandler.handleError(
-        new MyOpenLayersError('地图渲染错误', ErrorType.MAP_ERROR, { error: eventData.error })
-      );
+      this.errorHandler.createAndHandleError('地图渲染错误', ErrorType.MAP_ERROR, { error: eventData.error });
     });
   }
 
@@ -191,7 +196,11 @@ export default class MyOl {
 
       return new View(viewOptions);
     } catch (error) {
-      throw new MyOpenLayersError(
+      // 已处理过的 MyOpenLayersError 直接抛出，避免二次包装和重复触发回调
+      if (error instanceof MyOpenLayersError) {
+        throw error;
+      }
+      throw ErrorHandler.getInstance().createAndHandleError(
         `视图创建失败: ${error instanceof Error ? error.message : '未知错误'}`,
         ErrorType.MAP_ERROR,
         { options }
@@ -225,10 +234,8 @@ export default class MyOl {
       }
       return this._polygon;
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(  '面要素模块初始化失败',  ErrorType.COMPONENT_ERROR,  { error })
-     );
-      throw error;
+      if (error instanceof MyOpenLayersError) throw error;
+      throw this.errorHandler.createAndHandleError('面要素模块初始化失败', ErrorType.COMPONENT_ERROR, { error });
     }
   }
 
@@ -258,14 +265,8 @@ export default class MyOl {
       }
       return this._baseLayers;
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          '基础图层模块初始化失败',
-          ErrorType.COMPONENT_ERROR,
-          { error }
-        )
-      );
-      throw error;
+      if (error instanceof MyOpenLayersError) throw error;
+      throw this.errorHandler.createAndHandleError('基础图层模块初始化失败', ErrorType.COMPONENT_ERROR, { error });
     }
   }
 
@@ -281,10 +282,8 @@ export default class MyOl {
       }
       return this._point;
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError( '点要素模块初始化失败', ErrorType.COMPONENT_ERROR, { error })
-      );
-      throw error;
+      if (error instanceof MyOpenLayersError) throw error;
+      throw this.errorHandler.createAndHandleError('点要素模块初始化失败', ErrorType.COMPONENT_ERROR, { error });
     }
   }
 
@@ -300,10 +299,8 @@ export default class MyOl {
       }
       return this._line;
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError('线要素模块初始化失败',  ErrorType.COMPONENT_ERROR,  { error })
-      );
-      throw error;
+      if (error instanceof MyOpenLayersError) throw error;
+      throw this.errorHandler.createAndHandleError('线要素模块初始化失败', ErrorType.COMPONENT_ERROR, { error });
     }
   }
 
@@ -319,10 +316,8 @@ export default class MyOl {
       }
       return this._selectHandler;
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError('要素选择模块初始化失败', ErrorType.COMPONENT_ERROR, { error })
-      );
-      throw error;
+      if (error instanceof MyOpenLayersError) throw error;
+      throw this.errorHandler.createAndHandleError('要素选择模块初始化失败', ErrorType.COMPONENT_ERROR, { error });
     }
   }
 
@@ -338,8 +333,8 @@ export default class MyOl {
       }
       return this._mapTools;
     } catch (error) {
-      this.errorHandler.handleError(new MyOpenLayersError(  '工具模块初始化失败',  ErrorType.COMPONENT_ERROR,  { error }  ) );
-      throw error;
+      if (error instanceof MyOpenLayersError) throw error;
+      throw this.errorHandler.createAndHandleError('工具模块初始化失败', ErrorType.COMPONENT_ERROR, { error });
     }
   }
 
@@ -354,19 +349,22 @@ export default class MyOl {
   resetPosition(duration: number = 3000): void {
     try {
       if (!this.options.center) {
-        throw new Error('未设置中心点，无法重置位置');
+        this.errorHandler.createAndHandleError('未设置中心点，无法重置位置', ErrorType.MAP_ERROR);
+        return;
       }
 
       const [longitude, latitude] = this.options.center;
       this.locationAction(longitude, latitude, this.options.zoom, duration);
 
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `重置地图位置失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.MAP_ERROR,
-          { center: this.options.center, duration }
-        )
+      if (error instanceof MyOpenLayersError) {
+        return;
+      }
+
+      this.errorHandler.createAndHandleError(
+        `重置地图位置失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.MAP_ERROR,
+        { center: this.options.center, duration }
       );
     }
   }
@@ -377,6 +375,7 @@ export default class MyOl {
    * @param latitude 纬度
    * @param zoom 缩放级别
    * @param duration 动画持续时间（毫秒）
+   * @param projection
    */
   locationAction(longitude: number, latitude: number, zoom: number = 20, duration: number = 3000, projection?: {
     dataProjection?: string;
@@ -385,21 +384,21 @@ export default class MyOl {
     try {
       // 参数验证
       if (typeof longitude !== 'number' || typeof latitude !== 'number') {
-        throw new Error('经纬度必须是数字类型');
+        throw ErrorHandler.getInstance().createAndHandleError('经纬度必须是数字类型', ErrorType.VALIDATION_ERROR);
       }
 
       const hasProjection = !!projection?.dataProjection || !!projection?.featureProjection;
       if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
-        throw new Error('经纬度必须是有效数字');
+        throw ErrorHandler.getInstance().createAndHandleError('经纬度必须是有效数字', ErrorType.VALIDATION_ERROR);
       }
 
       if (!hasProjection) {
         if (longitude < -180 || longitude > 180) {
-          throw new Error('经度值必须在 -180 到 180 之间');
+          throw ErrorHandler.getInstance().createAndHandleError('经度值必须在 -180 到 180 之间', ErrorType.COORDINATE_ERROR);
         }
 
         if (latitude < -90 || latitude > 90) {
-          throw new Error('纬度值必须在 -90 到 90 之间');
+          throw ErrorHandler.getInstance().createAndHandleError('纬度值必须在 -90 到 90 之间', ErrorType.COORDINATE_ERROR);
         }
       }
       this.getTools().locationAction(longitude, latitude, zoom, duration, projection);
@@ -413,15 +412,38 @@ export default class MyOl {
       });
 
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `地图定位失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.MAP_ERROR,
-          { longitude, latitude, zoom, duration }
-        )
+      // 已处理过的 MyOpenLayersError 直接抛出，避免二次包装和重复触发回调
+      if (error instanceof MyOpenLayersError) {
+        throw error;
+      }
+      throw this.errorHandler.createAndHandleError(
+        `地图定位失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.MAP_ERROR,
+        { longitude, latitude, zoom, duration }
       );
-      throw error;
     }
+  }
+
+  // ==========================================
+  // 综合 GeoJSON 渲染
+  // ==========================================
+
+  /**
+   * 综合 GeoJSON 渲染方法。
+   *
+   * 自动识别点/线/面几何类型，按分组创建图层，返回统一句柄。
+   * 支持单个 GeoJSON、GeoJSON 数组、或 `{ key: json }` 对象。
+   *
+   * @param data GeoJSON 输入数据
+   * @param options 配置选项（含 layerName、groupBy、各类型样式）
+   * @returns GeoJSONRenderHandle 统一句柄
+   */
+  addGeoJSON(data: AddGeoJSONInput, options: AddGeoJSONOptions): GeoJSONRenderHandle {
+    return renderGeoJSON(data, options, {
+      getPoint: () => this.getPoint(),
+      getLine: () => this.getLine(),
+      getPolygon: () => this.getPolygon(),
+    });
   }
 
   // ==========================================
@@ -500,11 +522,9 @@ export default class MyOl {
       this.errorHandler.debug('地图实例已销毁', { map: this.map });
 
     } catch (error) {
-      this.errorHandler.handleError(
-        new MyOpenLayersError(
-          `销毁地图失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          ErrorType.MAP_ERROR
-        )
+      this.errorHandler.createAndHandleError(
+        `销毁地图失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        ErrorType.MAP_ERROR
       );
     }
   }

@@ -2,6 +2,8 @@
  * 验证工具类
  * 统一管理参数校验逻辑，错误记录由调用方或 ErrorHandler 负责。
  */
+import { ErrorHandler, ErrorType } from './ErrorHandler';
+
 export default class ValidationUtils {
   /**
    * 判断值是否为有效数字。
@@ -120,7 +122,7 @@ export default class ValidationUtils {
    */
   static validateLayerName(layerName: string): void {
     if (!ValidationUtils.isValidLayerName(layerName)) {
-      throw new Error('Layer name is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Layer name is required', ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -129,13 +131,13 @@ export default class ValidationUtils {
    */
   static validateImageData(imageData: any, allowEmptyImg: boolean = false): void {
     if (!imageData) {
-      throw new Error('Invalid image data: imageData is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Invalid image data: imageData is required', ErrorType.VALIDATION_ERROR);
     }
     if (!allowEmptyImg && !imageData.img) {
-      throw new Error('Invalid image data: img is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Invalid image data: img is required', ErrorType.VALIDATION_ERROR);
     }
     if (imageData.extent && !ValidationUtils.isValidExtent(imageData.extent)) {
-      throw new Error('Invalid extent: must be an array of 4 numbers [minX, minY, maxX, maxY]');
+      throw ErrorHandler.getInstance().createAndHandleError('Invalid extent: must be an array of 4 numbers [minX, minY, maxX, maxY]', ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -144,7 +146,7 @@ export default class ValidationUtils {
    */
   static validateMaskData(data: any): void {
     if (data === undefined || data === null) {
-      throw new Error('Mask data is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Mask data is required', ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -160,7 +162,7 @@ export default class ValidationUtils {
    */
   static validateRequired(value: any, message: string): void {
     if (value === undefined || value === null || value === '') {
-      throw new Error(message);
+      throw ErrorHandler.getInstance().createAndHandleError(message, ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -169,15 +171,15 @@ export default class ValidationUtils {
    */
   static validateCoordinate(longitude: number, latitude: number): void {
     if (!ValidationUtils.isFiniteNumber(longitude) || !ValidationUtils.isFiniteNumber(latitude)) {
-      throw new Error('Longitude and latitude must be valid numbers');
+      throw ErrorHandler.getInstance().createAndHandleError('Longitude and latitude must be valid numbers', ErrorType.VALIDATION_ERROR);
     }
 
     if (longitude < -180 || longitude > 180) {
-      throw new Error('Longitude must be between -180 and 180');
+      throw ErrorHandler.getInstance().createAndHandleError('Longitude must be between -180 and 180', ErrorType.VALIDATION_ERROR);
     }
 
     if (latitude < -90 || latitude > 90) {
-      throw new Error('Latitude must be between -90 and 90');
+      throw ErrorHandler.getInstance().createAndHandleError('Latitude must be between -90 and 90', ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -186,7 +188,7 @@ export default class ValidationUtils {
    */
   static validateType(value: any, expectedType: string, message: string): void {
     if (typeof value !== expectedType) {
-      throw new Error(message);
+      throw ErrorHandler.getInstance().createAndHandleError(message, ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -195,7 +197,7 @@ export default class ValidationUtils {
    */
   static validateNonEmptyString(str: string, message: string): void {
     if (!ValidationUtils.isValidLayerName(str)) {
-      throw new Error(message);
+      throw ErrorHandler.getInstance().createAndHandleError(message, ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -204,7 +206,7 @@ export default class ValidationUtils {
    */
   static validateMap(map: any): void {
     if (!map) {
-      throw new Error('Map instance is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is required', ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -213,7 +215,7 @@ export default class ValidationUtils {
    */
   static validateMeasureType(type: string): void {
     if (type !== 'LineString' && type !== 'Polygon') {
-      throw new Error('Invalid measure type. Must be "LineString" or "Polygon"');
+      throw ErrorHandler.getInstance().createAndHandleError('Invalid measure type. Must be "LineString" or "Polygon"', ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -222,7 +224,7 @@ export default class ValidationUtils {
    */
   static validatePositiveNumber(value: number, message: string): void {
     if (!ValidationUtils.isFiniteNumber(value) || value <= 0) {
-      throw new Error(message);
+      throw ErrorHandler.getInstance().createAndHandleError(message, ErrorType.VALIDATION_ERROR);
     }
   }
 
@@ -233,7 +235,7 @@ export default class ValidationUtils {
     const isValidString = typeof layerName === 'string' && layerName.trim().length > 0;
     const isValidArray = Array.isArray(layerName) && layerName.length > 0 && layerName.every(ValidationUtils.isValidLayerName);
     if (!isValidString && !isValidArray) {
-      throw new Error('Valid layer name is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Valid layer name is required', ErrorType.VALIDATION_ERROR);
     }
   }
 }

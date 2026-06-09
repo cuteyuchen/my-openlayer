@@ -19,6 +19,10 @@ export { ErrorHandler, MyOpenLayersError, ErrorType, LayerNotFoundError, Invalid
 // 验证工具
 export { default as ValidationUtils } from './utils/ValidationUtils'
 
+// GeoJSON 数据标准化
+export { normalizePointData } from './utils/GeoJSONProcessor'
+export type { PointJSONInput } from './types'
+
 // 类型定义 - 基础接口
 export type { BaseOptions, StyleOptions, TextOptions, LayerHandle, AnimatedLayerHandle } from './types'
 
@@ -46,6 +50,14 @@ export type {
   TwinkleItem,
   MapJSONData,
   FeatureData,
+  AddGeoJSONInput,
+  GeoJSONGeometryType,
+  GeoJSONGroupBy,
+  GeoJSONLayerName,
+  AddGeoJSONPointOptions,
+  AddGeoJSONOptions,
+  GeoJSONGroupHandle,
+  GeoJSONRenderHandle,
   AnnotationType,
   TiandituType,
   MapLayers,

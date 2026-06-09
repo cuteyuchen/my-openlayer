@@ -17,7 +17,7 @@ import {
   FeatureColorUpdateOptions,
   LayerHandle
 } from '../../types'
-import { ErrorHandler, InvalidGeoJSONError, LayerNotFoundError } from '../../utils/ErrorHandler';
+import { ErrorHandler, ErrorType, InvalidGeoJSONError, LayerNotFoundError } from '../../utils/ErrorHandler';
 import ProjectionUtils from '../../utils/ProjectionUtils';
 import ValidationUtils from '../../utils/ValidationUtils';
 import { ConfigManager, MapTools } from "../map";
@@ -44,7 +44,7 @@ export default class Polygon {
    */
   constructor(map: Map) {
     if (!map) {
-      throw new Error('Map instance is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is required', ErrorType.MAP_ERROR);
     }
     this.map = map;
   }
@@ -203,7 +203,7 @@ export default class Polygon {
     ValidationUtils.validateNonEmptyString(url, 'Polygon url is required');
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Failed to fetch polygon GeoJSON: ${response.status}`);
+      throw ErrorHandler.getInstance().createAndHandleError(`Failed to fetch polygon GeoJSON: ${response.status}`, ErrorType.DATA_ERROR);
     }
     const json = await response.json();
     return this.addPolygon(json as MapJSONData, options);
@@ -241,7 +241,7 @@ export default class Polygon {
 
     const layer = layers[0];
     if (!(layer instanceof VectorLayer)) {
-      throw new Error(`Layer '${layerName}' is not a vector layer`);
+      throw ErrorHandler.getInstance().createAndHandleError(`Layer '${layerName}' is not a vector layer`, ErrorType.LAYER_ERROR);
     }
 
     const mergedOptions: FeatureColorUpdateOptions = {

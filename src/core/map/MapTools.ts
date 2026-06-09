@@ -49,7 +49,7 @@ export default class MapTools {
    */
   getLayerByLayerName(layerName: string | string[]): (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] {
     if (!this.map) {
-      throw new Error('Map instance is not available');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is not available', ErrorType.MAP_ERROR);
     }
     return MapTools.getLayerByLayerName(this.map, layerName);
   }
@@ -83,7 +83,7 @@ export default class MapTools {
       });
     } catch (error) {
       ErrorHandler.getInstance().error('Error getting layers:', error);
-      throw new Error('Failed to retrieve layers from map');
+      throw ErrorHandler.getInstance().createAndHandleError('Failed to retrieve layers from map', ErrorType.LAYER_ERROR);
     }
 
     return targetLayer;
@@ -177,7 +177,7 @@ export default class MapTools {
    */
   clipMap(data: MapJSONData): void {
     if (!this.map) {
-      throw new Error('Map instance is not available');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is not available', ErrorType.MAP_ERROR);
     }
     MapTools.clipMap(this.map, data);
   }
@@ -189,7 +189,7 @@ export default class MapTools {
    */
   static clipMap(map: Map, data: MapJSONData): void {
     if (!map) {
-      throw new Error('Map instance is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is required', ErrorType.MAP_ERROR);
     }
     map.getLayers().getArray().forEach(layer => {
       try {
@@ -207,7 +207,7 @@ export default class MapTools {
    */
   removeLayer(layerName: string | string[]): void {
     if (!this.map) {
-      throw new Error('Map instance is not available');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is not available', ErrorType.MAP_ERROR);
     }
     MapTools.removeLayer(this.map, layerName);
   }
@@ -220,7 +220,7 @@ export default class MapTools {
    */
   static removeLayer(map: Map, layerName: string | string[]): void {
     if (!map) {
-      throw new Error('Map instance is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is required', ErrorType.MAP_ERROR);
     }
 
     try {
@@ -230,7 +230,7 @@ export default class MapTools {
       });
     } catch (error) {
       ErrorHandler.getInstance().error('Error removing layers:', error);
-      throw new Error('Failed to remove layers from map');
+      throw ErrorHandler.getInstance().createAndHandleError('Failed to remove layers from map', ErrorType.LAYER_ERROR);
     }
   }
 
@@ -242,7 +242,7 @@ export default class MapTools {
    */
   setLayerVisible(layerName: string, visible: boolean): void {
     if (!this.map) {
-      throw new Error('Map instance is not available');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is not available', ErrorType.MAP_ERROR);
     }
     MapTools.setLayerVisible(this.map, layerName, visible);
   }
@@ -256,15 +256,15 @@ export default class MapTools {
    */
   static setLayerVisible = (map: Map, layerName: string, visible: boolean): void => {
     if (!map) {
-      throw new Error('Map instance is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is required', ErrorType.MAP_ERROR);
     }
 
     if (typeof layerName !== 'string') {
-      throw new Error('Layer name must be a string');
+      throw ErrorHandler.getInstance().createAndHandleError('Layer name must be a string', ErrorType.VALIDATION_ERROR);
     }
 
     if (typeof visible !== 'boolean') {
-      throw new Error('Visible parameter must be a boolean');
+      throw ErrorHandler.getInstance().createAndHandleError('Visible parameter must be a boolean', ErrorType.VALIDATION_ERROR);
     }
 
     try {
@@ -274,7 +274,7 @@ export default class MapTools {
       });
     } catch (error) {
       ErrorHandler.getInstance().error('Error setting layer visibility:', error);
-      throw new Error('Failed to set layer visibility');
+      throw ErrorHandler.getInstance().createAndHandleError('Failed to set layer visibility', ErrorType.LAYER_ERROR);
     }
   }
 
@@ -294,7 +294,7 @@ export default class MapTools {
     featureProjection?: string;
   }): boolean {
     if (!this.map) {
-      throw new Error('Map instance is not available');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is not available', ErrorType.MAP_ERROR);
     }
 
     const hasProjection = !!projection?.dataProjection || !!projection?.featureProjection;
@@ -377,7 +377,7 @@ export default class MapTools {
     }
   ): boolean {
     if (!map) {
-      throw new Error('Map instance is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is required', ErrorType.MAP_ERROR);
     }
 
     if (!jsonData) {
@@ -421,7 +421,7 @@ export default class MapTools {
     }
   ): boolean {
     if (!map) {
-      throw new Error('Map instance is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Map instance is required', ErrorType.MAP_ERROR);
     }
 
     const layers: (VectorLayer<VectorSource> | BaseLayer | ImageLayer<ImageSource>)[] =

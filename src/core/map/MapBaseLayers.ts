@@ -153,7 +153,7 @@ export default class MapBaseLayers {
    */
   private initTiandituLayers(): this {
     if (!this.options.token) {
-      throw new Error('Token is required for Tianditu layers');
+      throw ErrorHandler.getInstance().createAndHandleError('Token is required for Tianditu layers', ErrorType.MAP_ERROR);
     }
 
     const { token, zIndex = ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
@@ -179,7 +179,7 @@ export default class MapBaseLayers {
    */
   private initAnnotationLayer(): void {
     if (!this.options.token) {
-      throw new Error('请配置token后才能使用天地图注记');
+      throw ErrorHandler.getInstance().createAndHandleError('请配置token后才能使用天地图注记', ErrorType.MAP_ERROR);
     }
     const { token, zIndex = ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX } = this.options;
     this.loadDefaultAnnotationLayer(token, zIndex);
@@ -326,10 +326,10 @@ export default class MapBaseLayers {
   switchAnnotationLayer(annotationType: AnnotationType): this {
     try {
       if (!this.options.token) {
-        throw new Error('Token is required for annotation layer');
+        throw ErrorHandler.getInstance().createAndHandleError('Token is required for annotation layer', ErrorType.MAP_ERROR);
       }
       if (!this.options.annotation) {
-        throw new Error('Annotation is not enabled in options');
+        throw ErrorHandler.getInstance().createAndHandleError('Annotation is not enabled in options', ErrorType.MAP_ERROR);
       }
 
       const baseZIndex = this.options.zIndex ?? ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX;
@@ -438,7 +438,7 @@ export default class MapBaseLayers {
   addAnnotationLayer(options: Omit<AnnotationLayerOptions, 'token'>): TileLayer<XYZ> {
     try {
       if (!this.options.token) {
-        throw new Error('Token is required for annotation layer');
+        throw ErrorHandler.getInstance().createAndHandleError('Token is required for annotation layer', ErrorType.MAP_ERROR);
       }
 
       return MapBaseLayers.addAnnotationLayer(this.map, {
@@ -680,10 +680,10 @@ export default class MapBaseLayers {
   static getTiandiTuLayer(options: TiandituLayerOptions): TileLayer<XYZ> {
     try {
       if (!options.token) {
-        throw new Error('Token is required for Tianditu layer');
+        throw ErrorHandler.getInstance().createAndHandleError('Token is required for Tianditu layer', ErrorType.MAP_ERROR);
       }
       if (!options.type) {
-        throw new Error('Layer type is required for Tianditu layer');
+        throw ErrorHandler.getInstance().createAndHandleError('Layer type is required for Tianditu layer', ErrorType.VALIDATION_ERROR);
       }
 
       return new TileLayer({
@@ -711,10 +711,10 @@ export default class MapBaseLayers {
   static createAnnotationLayer(options: AnnotationLayerOptions): TileLayer<XYZ> {
     try {
       if (!options.token) {
-        throw new Error('Token is required for annotation layer');
+        throw ErrorHandler.getInstance().createAndHandleError('Token is required for annotation layer', ErrorType.MAP_ERROR);
       }
       if (!options.type) {
-        throw new Error('Annotation type is required for annotation layer');
+        throw ErrorHandler.getInstance().createAndHandleError('Annotation type is required for annotation layer', ErrorType.VALIDATION_ERROR);
       }
 
       return new TileLayer({
@@ -744,7 +744,7 @@ export default class MapBaseLayers {
       ErrorHandler.validateMap(map);
 
       if (!options.token) {
-        throw new Error('Token is required for annotation layer');
+        throw ErrorHandler.getInstance().createAndHandleError('Token is required for annotation layer', ErrorType.MAP_ERROR);
       }
 
       const layer = MapBaseLayers.createAnnotationLayer({
@@ -784,7 +784,7 @@ export default class MapBaseLayers {
 
       const projection: Projection = getProjection('EPSG:4326') as Projection;
       if (!projection) {
-        throw new Error('Failed to get EPSG:4326 projection');
+        throw ErrorHandler.getInstance().createAndHandleError('Failed to get EPSG:4326 projection', ErrorType.MAP_ERROR);
       }
 
       const projectionExtent = projection.getExtent();

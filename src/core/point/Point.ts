@@ -6,11 +6,13 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import BaseLayer from "ol/layer/Base";
 import Overlay from 'ol/Overlay';
-import { PointOptions, ClusterOptions, PointData, VueTemplatePointInstance, TwinkleItem, PulsePointOptions, PulsePointLayerHandle, LayerHandle, ControlHandle, type FeatureData } from '../../types'
+import { PointOptions, ClusterOptions, PointData, VueTemplatePointInstance, TwinkleItem, PulsePointOptions, PulsePointLayerHandle, LayerHandle, ControlHandle } from '../../types'
+import { normalizePointData, type PointJSONInput } from '../../utils/GeoJSONProcessor'
 import { VueTemplatePoint } from '../vue-template-point';
 import { Options as IconOptions } from "ol/style/Icon";
 import { Options as StyleOptions } from "ol/style/Style";
 import ValidationUtils from '../../utils/ValidationUtils';
+import { ErrorHandler, ErrorType } from '../../utils/ErrorHandler';
 import ProjectionUtils from '../../utils/ProjectionUtils';
 import { ConfigManager, MapTools } from "../map";
 import PointClusterLayer from './PointClusterLayer';
@@ -115,13 +117,13 @@ export default class Point {
   }
 
   /**
-   * 创建点样式
-   * @private
+   * 创建点样式。
+   * 供内部 createPointLayer 和 addGeoJSON 的 styleByProperties 回调使用。
    * @param options 选项
-   * @param item 数据项
+   * @param item 数据项（可选，用于 textKey 文本提取）
    * @returns 样式对象
    */
-  private createPointStyle(options: PointOptions | ClusterOptions, item?: PointData): Style {
+  createPointStyle(options: PointOptions | ClusterOptions, item?: PointData): Style {
     const style: StyleOptions = {};
 
     if (options.textKey && item) {
@@ -129,7 +131,14 @@ export default class Point {
     }
 
     if (options.img) {
+      // 图标样式优先
       style.image = this.createIconStyle(options);
+    } else if (options.circleColor || options.circleRadius) {
+      // 圆点样式：未设置 img 且提供了 circleColor 或 circleRadius 时生效
+      style.image = new CircleStyle({
+        radius: options.circleRadius ?? 6,
+        fill: new Fill({ color: options.circleColor ?? '#3399CC' }),
+      });
     }
 
     return new Style(style);
@@ -177,13 +186,14 @@ export default class Point {
    * }
    */
   /** *********************创建普通点图层*********************/
-  private createPointLayer(pointData: PointData[], options: PointOptions & { layerName: string }): VectorLayer<VectorSource> | null {
-    if (!ValidationUtils.validatePointData(pointData)) {
+  private createPointLayer(pointData: PointJSONInput, options: PointOptions & { layerName: string }): VectorLayer<VectorSource> | null {
+    const normalized = normalizePointData(pointData);
+    if (!ValidationUtils.validatePointData(normalized)) {
       return null;
     }
 
     const pointFeatureList: Feature[] = [];
-    pointData.forEach((item) => {
+    normalized.forEach((item) => {
       if (!ValidationUtils.validateCoordinates(item)) {
         return;
       }
@@ -225,12 +235,13 @@ export default class Point {
 
 
   /** *********************创建聚合点图层*********************/
-  private createClusterPointLayer(pointData: PointData[], options: ClusterOptions & { layerName: string }): VectorLayer<VectorSource> | null {
-    if (!ValidationUtils.validatePointData(pointData)) {
+  private createClusterPointLayer(pointData: PointJSONInput, options: ClusterOptions & { layerName: string }): VectorLayer<VectorSource> | null {
+    const normalized = normalizePointData(pointData);
+    if (!ValidationUtils.validatePointData(normalized)) {
       return null;
     }
 
-    const layer = PointClusterLayer.create(this.map, pointData, options, this.createClusterStyle.bind(this));
+    const layer = PointClusterLayer.create(this.map, normalized, options, this.createClusterStyle.bind(this));
     if (layer) {
       this.trackLayer(layer);
     }
@@ -238,14 +249,14 @@ export default class Point {
   }
 
   /** *********************添加普通点*********************/
-  addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
+  addPoint(pointData: PointJSONInput, options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
     const layer = this.createPointLayer(pointData, options);
     if (!layer) return null;
     return this.toLayerHandle(layer);
   }
 
   /** *********************添加聚合点*********************/
-  addClusterPoint(pointData: PointData[], options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
+  addClusterPoint(pointData: PointJSONInput, options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
     const layer = this.createClusterPointLayer(pointData, options);
     if (!layer) return null;
     return this.toLayerHandle(layer);
@@ -271,11 +282,12 @@ export default class Point {
    * 与 addDomPoint 不同，该方法使用 VectorLayer 批量渲染点位，并通过单个
    * requestAnimationFrame 驱动闪烁圈，适合村庄预警等大量点位场景。
    */
-  addPulsePointLayer(pointData: PointData[], options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null {
-    if (!ValidationUtils.validatePointData(pointData)) {
+  addPulsePointLayer(pointData: PointJSONInput, options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null {
+    const normalized = normalizePointData(pointData);
+    if (!ValidationUtils.validatePointData(normalized)) {
       return null;
     }
-    const handle = PointPulseLayer.create(this.map, pointData, options);
+    const handle = PointPulseLayer.create(this.map, normalized, options);
     this.trackDisposable(handle);
     return handle;
   }
@@ -293,15 +305,10 @@ export default class Point {
     ValidationUtils.validateNonEmptyString(url, 'Point url is required');
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Failed to fetch point data: ${response.status}`);
+      throw ErrorHandler.getInstance().createAndHandleError(`Failed to fetch point data: ${response.status}`, ErrorType.DATA_ERROR);
     }
     const json = await response.json();
-    const pointData: PointData[] = Array.isArray(json) ? json : (json?.features ?? []).map((f: FeatureData) => ({
-      ...f.properties,
-      lgtd: f.geometry?.coordinates?.[0],
-      lttd: f.geometry?.coordinates?.[1]
-    }));
-    return this.addPoint(pointData, options);
+    return this.addPoint(json, options);
   }
 
   /**
@@ -314,15 +321,10 @@ export default class Point {
     ValidationUtils.validateNonEmptyString(url, 'Pulse point url is required');
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Failed to fetch pulse point data: ${response.status}`);
+      throw ErrorHandler.getInstance().createAndHandleError(`Failed to fetch pulse point data: ${response.status}`, ErrorType.DATA_ERROR);
     }
     const json = await response.json();
-    const pointData: PointData[] = Array.isArray(json) ? json : (json?.features ?? []).map((f: FeatureData) => ({
-      ...f.properties,
-      lgtd: f.geometry?.coordinates?.[0],
-      lttd: f.geometry?.coordinates?.[1]
-    }));
-    return this.addPulsePointLayer(pointData, options);
+    return this.addPulsePointLayer(json, options);
   }
 
   /**
@@ -352,11 +354,11 @@ export default class Point {
     getPoints: () => VueTemplatePointInstance[]
   } {
     if (!pointDataList || !Array.isArray(pointDataList) || pointDataList.length === 0) {
-      throw new Error('Valid point info list is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Valid point info list is required', ErrorType.VALIDATION_ERROR);
     }
 
     if (!template) {
-      throw new Error('Vue template is required');
+      throw ErrorHandler.getInstance().createAndHandleError('Vue template is required', ErrorType.VALIDATION_ERROR);
     }
 
     try {
@@ -367,18 +369,19 @@ export default class Point {
       this.trackDisposable(handle);
       return handle;
     } catch (error) {
-      throw new Error(`Failed to create Vue template points: ${error}`);
+      throw ErrorHandler.getInstance().createAndHandleError(`Failed to create Vue template points: ${error}`, ErrorType.COMPONENT_ERROR);
     }
   }
 
     /**
-   * 地图定位
-   * @deprecated 请使用 MapTools.locationAction 方法代替
-   * @param lgtd 经度
-   * @param lttd 纬度
-   * @param zoom 缩放级别
-   * @param duration 动画时长
-   */
+     * 地图定位
+     * @deprecated 请使用 MapTools.locationAction 方法代替
+     * @param lgtd 经度
+     * @param lttd 纬度
+     * @param zoom 缩放级别
+     * @param duration 动画时长
+     * @param projection
+     */
   locationAction(lgtd: number, lttd: number, zoom = 20, duration = 3000, projection?: {
     dataProjection?: string;
     featureProjection?: string;

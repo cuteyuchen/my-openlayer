@@ -27,6 +27,8 @@ Inherits from `BaseOptions`, `StyleOptions`, `TextOptions`.
 | img | `string` | URL of the icon image |
 | scale | `number` | Icon scale factor |
 | iconColor | `string` | Icon color (for changing icon hue) |
+| circleColor | `string` | Circle fill color. Used when `img` is not set; pairs with `circleRadius` to draw a solid circle marker |
+| circleRadius | `number` | Circle radius in pixels, default 6. Only effective when `img` is not set |
 | layerName | `string` | Layer name (required, inherited from BaseOptions) |
 | zIndex | `number` | Layer Z-index |
 | visible | `boolean` | Whether the layer is visible |
@@ -77,6 +79,18 @@ Inherits from `PointOptions`, so it follows the same `img`, `scale`, `iconColor`
 | lttd | `number` | Latitude |
 | [key: string] | `any` | Other business data fields |
 
+### PointJSONInput
+
+Unified input type for all point APIs. Accepts any of:
+
+- `PointData[]` — traditional array
+- `MapJSONData` — GeoJSON FeatureCollection
+- `FeatureData` — single GeoJSON Feature
+- `{ type: 'Point'; coordinates: number[] }` — bare Point geometry
+- `{ type: 'MultiPoint'; coordinates: number[][] }` — bare MultiPoint geometry
+
+Only Point/MultiPoint geometries are processed; other geometry types are filtered out. MultiPoint is split into individual `PointData` entries. GeoJSON `properties` are preserved and merged with `lgtd`/`lttd`. Coordinates with `NaN`, `Infinity`, or missing values are filtered.
+
 ### VueTemplatePointOptions
 
 | Property | Type | Description |
@@ -96,25 +110,25 @@ Inherits from `PointOptions`, so it follows the same `img`, `scale`, `iconColor`
 
 ### addPoint
 
-Add an ordinary point layer, returning a unified `LayerHandle`.
+Add an ordinary point layer, returning a unified `LayerHandle`. Accepts `PointData[]` or standard GeoJSON (FeatureCollection, Feature, Point/MultiPoint geometry).
 
 ```typescript
-addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+addPoint(pointData: PointJSONInput, options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
-- **pointData**: Array of point data.
+- **pointData**: Point data — `PointData[]`, GeoJSON FeatureCollection, Feature, or bare Point/MultiPoint geometry.
 - **options**: Configuration options.
 - **Returns**: The created vector layer, or `null` if data is invalid.
 
 ### addClusterPoint
 
-Add a cluster point layer.
+Add a cluster point layer. Accepts `PointJSONInput` (same as `addPoint`).
 
 ```typescript
-addClusterPoint(pointData: PointData[], options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+addClusterPoint(pointData: PointJSONInput, options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
-- **pointData**: Array of point data.
+- **pointData**: Point data — `PointData[]` or standard GeoJSON.
 - **options**: Cluster configuration options.
 - **Returns**: The created cluster layer.
 
@@ -137,10 +151,10 @@ addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
 
 ### addPulsePointLayer
 
-Add a high-performance pulse point layer.
+Add a high-performance pulse point layer. Accepts `PointJSONInput` (same as `addPoint`).
 
 ```typescript
-addPulsePointLayer(pointData: PointData[], options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null
+addPulsePointLayer(pointData: PointJSONInput, options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null
 ```
 
 ### addPointByUrl (3.0 New)
@@ -272,4 +286,39 @@ const ctrl = point.addVueTemplatePoint(data, MyComponent, {
 
 // Hide all points
 ctrl.setVisible(false);
+```
+
+### Using GeoJSON Data Directly
+
+Since 3.0, point APIs accept standard GeoJSON without manual conversion:
+
+```typescript
+// GeoJSON FeatureCollection
+const fc = {
+  type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', properties: { name: 'Beijing' }, geometry: { type: 'Point', coordinates: [116.40, 39.90] } },
+    { type: 'Feature', properties: { name: 'Shanghai' }, geometry: { type: 'Point', coordinates: [121.47, 31.23] } }
+  ]
+};
+const handle = point.addPoint(fc, { layerName: 'cities', textKey: 'name' });
+
+// Single Feature
+point.addPoint(
+  { type: 'Feature', properties: { name: 'Hangzhou' }, geometry: { type: 'Point', coordinates: [120.15, 30.27] } },
+  { layerName: 'single-city' }
+);
+
+// MultiPoint geometry (auto-split into multiple points)
+point.addPoint(
+  { type: 'MultiPoint', coordinates: [[120, 30], [121, 31]] },
+  { layerName: 'multi' }
+);
+
+// Pulse points also accept GeoJSON
+const pulseHandle = point.addPulsePointLayer(fc, {
+  layerName: 'villages',
+  levelKey: 'lev',
+  pulse: { enabled: true, radius: [8, 28] }
+});
 ```

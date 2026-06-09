@@ -22,6 +22,8 @@ constructor(map: Map)
 | img | `string` | 图标图片的 URL |
 | scale | `number` | 图标缩放比例 |
 | iconColor | `string` | 图标颜色（用于改变图标色调） |
+| circleColor | `string` | 圆点填充颜色。未设置 img 时生效，与 circleRadius 搭配绘制纯色圆点 |
+| circleRadius | `number` | 圆点半径（像素），默认 6。仅在未设置 img 时生效 |
 | layerName | `string` | 图层名称（必填，继承自 BaseOptions） |
 | zIndex | `number` | 图层层级 |
 | visible | `boolean` | 是否可见 |
@@ -72,6 +74,28 @@ constructor(map: Map)
 | lttd | `number` | 纬度 |
 | [key: string] | `any` | 其他业务数据字段 |
 
+### PointJSONInput
+
+点 API 统一输入类型。`addPoint` / `addClusterPoint` / `addPulsePointLayer` 均接受以下任意形态：
+
+```typescript
+type PointJSONInput =
+  | PointData[]                                    // 传统数组
+  | MapJSONData                                    // GeoJSON FeatureCollection
+  | FeatureData                                    // 单个 GeoJSON Feature
+  | { type: 'Point'; coordinates: number[] }       // 裸 Point geometry
+  | { type: 'MultiPoint'; coordinates: number[][] } // 裸 MultiPoint geometry
+```
+
+标准化规则：
+- `FeatureCollection` 中只提取 `Point` / `MultiPoint` 类型的 Feature，其他 geometry 类型被跳过。
+- `MultiPoint` 会被拆分为多个独立的 `PointData`。
+- GeoJSON Feature 的 `properties` 会被保留，与 `lgtd` / `lttd` 合并。
+- 坐标含 `NaN`、`Infinity` 或缺失的点会被过滤。
+- 不支持 `lng/lat`、`longitude/latitude`、`x/y` 等字段别名。
+
+> 本优化借鉴 [mapshaper](https://github.com/mbloch/mapshaper) 对地理数据输入的统一处理思路，但仅提供轻量点数据标准化能力，不包含拓扑简化、dissolve、clip/erase 等 GIS 编辑功能。
+
 ### VueTemplatePointOptions
 
 | 属性名 | 类型 | 说明 |
@@ -91,25 +115,25 @@ constructor(map: Map)
 
 ### addPoint
 
-添加普通点图层。
+添加普通点图层。支持 `PointJSONInput` 任意形态（`PointData[]`、GeoJSON FeatureCollection、Feature、裸 geometry）。
 
 ```typescript
-addPoint(pointData: PointData[], options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+addPoint(pointData: PointJSONInput, options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
-- **pointData**: 点位数据数组。
+- **pointData**: 点位数据，支持 `PointData[]` 或标准 GeoJSON 点数据。
 - **options**: 配置选项。
 - **返回值**: `{ layer, remove(), setVisible() }` 形态的统一句柄；如果数据无效返回 `null`。
 
 ### addClusterPoint
 
-添加聚合点图层。
+添加聚合点图层。支持 `PointJSONInput` 任意形态。
 
 ```typescript
-addClusterPoint(pointData: PointData[], options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+addClusterPoint(pointData: PointJSONInput, options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
-- **pointData**: 点位数据数组。
+- **pointData**: 点位数据，支持 `PointData[]` 或标准 GeoJSON 点数据。
 - **options**: 聚合配置选项。
 - **返回值**: `{ layer, remove(), setVisible() }` 形态的统一句柄。
 
@@ -140,13 +164,13 @@ addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
 
 ### addPulsePointLayer
 
-添加高性能闪烁点图层。
+添加高性能闪烁点图层。支持 `PointJSONInput` 任意形态。
 
 ```typescript
-addPulsePointLayer(pointData: PointData[], options: PulsePointOptions): PulsePointLayerHandle | null
+addPulsePointLayer(pointData: PointJSONInput, options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null
 ```
 
-- **pointData**: 点位数据数组。
+- **pointData**: 点位数据，支持 `PointData[]` 或标准 GeoJSON 点数据。
 - **options**: 闪烁点配置选项，复用 `addPoint` 的图标、文本和图层参数习惯。
 - **返回值**: 控制对象，包含动画启停、显隐、数据更新和移除方法；如果数据无效返回 `null`。
 
@@ -248,4 +272,35 @@ const ctrl = point.addVueTemplatePoint(data, MyComponent, {
 
 // 隐藏所有点
 ctrl.setVisible(false);
+```
+
+### 使用 GeoJSON 数据添加点位
+
+从 3.0 起，点 API 直接接受标准 GeoJSON 点数据，无需手动转换：
+
+```typescript
+// 方式一：GeoJSON FeatureCollection
+const fc = {
+  type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', properties: { name: '北京' }, geometry: { type: 'Point', coordinates: [116.40, 39.90] } },
+    { type: 'Feature', properties: { name: '上海' }, geometry: { type: 'Point', coordinates: [121.47, 31.23] } }
+  ]
+};
+const handle = point.addPoint(fc, { layerName: 'cities', textKey: 'name' });
+
+// 方式二：单个 Feature
+const feature = { type: 'Feature', properties: { name: '杭州' }, geometry: { type: 'Point', coordinates: [120.15, 30.27] } };
+point.addPoint(feature, { layerName: 'single-city' });
+
+// 方式三：MultiPoint Feature（自动拆分为多个点）
+const multiPoint = { type: 'Feature', properties: { region: '华东' }, geometry: { type: 'MultiPoint', coordinates: [[120, 30], [121, 31]] } };
+point.addPoint(multiPoint, { layerName: 'region' });
+
+// 闪烁点同样支持 GeoJSON 输入
+const pulseHandle = point.addPulsePointLayer(fc, {
+  layerName: 'villages',
+  levelKey: 'lev',
+  pulse: { enabled: true, radius: [8, 28] }
+});
 ```

@@ -153,6 +153,81 @@ getSelectHandler(): SelectHandler
 
 **Returns**: `SelectHandler` instance, used to handle click and hover selection interactions on map features.
 
+### Mixed Geometry Rendering
+
+#### addGeoJSON
+
+Automatically detects point/line/polygon geometry types from mixed GeoJSON data, groups features, and creates corresponding layers. Returns a unified `GeoJSONRenderHandle` for managing all created layers.
+
+```typescript
+addGeoJSON(data: AddGeoJSONInput, options: AddGeoJSONOptions): GeoJSONRenderHandle
+```
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `data` | `AddGeoJSONInput` | Yes | GeoJSON data. Accepts `FeatureCollection`, `Feature`, bare `Geometry`, `Array`, or `Record<string, ...>` of any of these. |
+| `options` | `AddGeoJSONOptions` | Yes | Rendering options. |
+
+**AddGeoJSONOptions**
+
+| Property | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `layerName` | `string \| string[] \| Record<string, string> \| callback` | Yes | Base layer name. Array/Record forms map to dataset indices/keys. Callback receives `{ datasetKey, groupKey, geometryType, index }` for full control. |
+| `groupBy` | `string \| callback` | No | Group features by a property name or callback. Each group gets its own set of layers. |
+| `dataProjection` | `string` | No | Source data projection code (e.g. `'EPSG:4326'`). |
+| `featureProjection` | `string` | No | Target feature projection code. |
+| `fitView` | `boolean` | No | Auto-fit map view to rendered features. |
+| `point` | `AddGeoJSONPointOptions` | No | Point layer options (extends `PointOptions`). |
+| `line` | `LineOptions` | No | Line layer options. |
+| `polygon` | `PolygonOptions` | No | Polygon layer options. |
+
+**AddGeoJSONPointOptions** (extends `PointOptions`)
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `styleByProperties` | `(properties, context) => Partial<PointOptions> \| null` | Per-feature styling callback. `properties` is the original feature properties (without `lgtd`/`lttd`). `context` contains `{ datasetKey, groupKey, feature: FeatureData, index }` where `feature` is the real GeoJSON Feature and `index` is the position within the point group. Return value is merged with base `point` options (callback wins). |
+
+**Returns**: `GeoJSONRenderHandle`
+
+| Property / Method | Type | Description |
+| :--- | :--- | :--- |
+| `groups` | `Record<string, GeoJSONGroupHandle>` | Per-group handles, each containing `point`, `line`, `polygon` (nullable `LayerHandle`), and `handles` array. |
+| `handles` | `LayerHandle[]` | Flat list of all created layer handles. |
+| `point` | `Record<string, LayerHandle \| null>` | Per-group point layer handle index. Use `handle.point[groupKey]` to access. |
+| `line` | `Record<string, LayerHandle \| null>` | Per-group line layer handle index. Use `handle.line[groupKey]` to access. |
+| `polygon` | `Record<string, LayerHandle \| null>` | Per-group polygon layer handle index. Use `handle.polygon[groupKey]` to access. |
+| `setVisible(visible)` | `(boolean) => void` | Show/hide all layers. |
+| `setGroupVisible(groupKey, visible)` | `(string, boolean) => void` | Show/hide a specific group. |
+| `removeGroup(groupKey)` | `(string) => void` | Remove all layers in a group. Also deletes the corresponding `point[groupKey]`/`line[groupKey]`/`polygon[groupKey]` indexes. |
+| `remove()` | `() => void` | Remove all layers. Also clears all `point`/`line`/`polygon` indexes. |
+
+**Example**
+
+```typescript
+const handle = map.addGeoJSON(mixedGeoJSON, {
+  layerName: 'risk',
+  groupBy: 'level',
+  point: { textKey: 'name', textVisible: true },
+  line:  { strokeColor: '#3b82f6', strokeWidth: 3 },
+  polygon: { fillColor: 'rgba(239,68,68,0.15)' }
+});
+
+handle.setVisible(false);
+handle.setGroupVisible('high', false);
+handle.removeGroup('low');
+handle.remove();
+
+// Per-feature styling
+map.addGeoJSON(points, {
+  layerName: 'styled',
+  point: {
+    styleByProperties: (props) => ({
+      circleColor: props.risk === 'high' ? '#ef4444' : '#22c55e'
+    })
+  }
+});
+```
+
 ### Map Operations
 
 #### locationAction

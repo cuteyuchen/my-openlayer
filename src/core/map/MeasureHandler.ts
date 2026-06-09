@@ -9,7 +9,7 @@ import { unByKey } from 'ol/Observable.js';
 import Map from "ol/Map";
 import { MeasureHandlerType } from "../../types";
 import ValidationUtils from '../../utils/ValidationUtils';
-import { ErrorHandler } from '../../utils/ErrorHandler';
+import { ErrorHandler, ErrorType } from '../../utils/ErrorHandler';
 
 import { Feature } from 'ol';
 
@@ -207,7 +207,7 @@ export default class MeasureHandler {
       }
     } catch (error) {
       ErrorHandler.getInstance().error('Error starting measurement:', error);
-      throw new Error('Failed to start measurement');
+      throw ErrorHandler.getInstance().createAndHandleError('Failed to start measurement', ErrorType.MAP_ERROR);
     }
     this._draw = new Draw({
       source: this.source,

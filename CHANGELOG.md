@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.1.0] - 2026-06-09
+
+### Features
+
+- **GeoJSON:** 新增 `MyOl.addGeoJSON(data, options)` 综合渲染入口，自动识别点、线、面几何类型并返回统一 `GeoJSONRenderHandle`。
+- **GeoJSON:** 支持单个 GeoJSON、数组、Record 多数据集输入，并支持 `layerName` 使用字符串、数组、Record 或回调自定义。
+- **GeoJSON:** 支持 `groupBy` 分组渲染，以及点要素 `styleByProperties` 按 `properties` 返回逐要素样式。
+- **Point:** `addPoint`、`addClusterPoint`、`addPulsePointLayer` 支持直接传入 GeoJSON 点数据。
+
+### Bug Fixes
+
+- **ErrorHandler:** 修复 `MyOpenLayersError` 被外层 `catch` 二次包装的问题，避免错误类型被覆盖和错误回调重复触发。
+
+### Documentation
+
+- 更新 README、VitePress 文档和 `skills/my-openlayer-helper`，同步 GeoJSON 综合渲染、点 API GeoJSON 输入和统一错误类型说明。
+
+### Tests
+
+- 新增 GeoJSON 渲染、点 GeoJSON 输入、GeoJSON 处理器和错误处理回归测试。
+
 ## [3.0.0] - 2026-05-22
 
 ### 🚀 BREAKING CHANGE: 总览

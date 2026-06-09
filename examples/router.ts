@@ -40,6 +40,12 @@ const routes: ExampleRoute[] = [
     meta: { label: 'Polygon', group: 'core', blurb: 'polygon / mask / heatmap / image' }
   },
   {
+    path: '/geojson',
+    name: 'geojson',
+    component: () => import('./pages/GeoJSONPage.vue'),
+    meta: { label: 'addGeoJSON', group: 'core', blurb: '混合几何 / 分组 / styleByProperties' }
+  },
+  {
     path: '/base-layers',
     name: 'base-layers',
     component: () => import('./pages/MapBaseLayersPage.vue'),

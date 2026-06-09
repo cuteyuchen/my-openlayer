@@ -2,12 +2,17 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import type { BaseOptions, StyleOptions, TextOptions } from "./base";
 import type { AnimatedLayerHandle } from "./handle";
+import type { FeatureData, MapJSONData } from "./common";
 
 export interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
   textKey?: string;
   img?: string;
   scale?: number;
   iconColor?: string;
+  /** 圆点填充颜色。未设置 img 时生效，与 circleRadius 搭配绘制纯色圆点。 */
+  circleColor?: string;
+  /** 圆点半径（像素），默认 6。仅在未设置 img 时生效。 */
+  circleRadius?: number;
 }
 
 export interface PointData {
@@ -15,6 +20,14 @@ export interface PointData {
   lttd: number;
   [key: string]: unknown;
 }
+
+/** *********************点 JSON 统一输入类型*********************/
+export type PointJSONInput =
+  | PointData[]
+  | MapJSONData
+  | FeatureData
+  | { type: 'Point'; coordinates: number[] }
+  | { type: 'MultiPoint'; coordinates: number[][] };
 
 export interface ClusterOptions extends PointOptions {
   distance?: number;

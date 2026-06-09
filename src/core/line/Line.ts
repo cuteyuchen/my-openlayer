@@ -3,7 +3,7 @@ import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import type { FlowLineLayerHandle, FlowLineOptions, LineOptions, MapJSONData, LayerHandle } from "../../types";
-import { ErrorHandler } from "../../utils/ErrorHandler";
+import { ErrorHandler, ErrorType } from "../../utils/ErrorHandler";
 import ProjectionUtils from "../../utils/ProjectionUtils";
 import ValidationUtils from "../../utils/ValidationUtils";
 import { ConfigManager, MapTools } from "../map";
@@ -113,7 +113,7 @@ export default class Line {
     ValidationUtils.validateNonEmptyString(url, 'Line url is required');
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Failed to fetch line GeoJSON: ${response.status}`);
+      throw ErrorHandler.getInstance().createAndHandleError(`Failed to fetch line GeoJSON: ${response.status}`, ErrorType.DATA_ERROR);
     }
     const json = await response.json();
     return this.addLine(json as MapJSONData, options);
@@ -155,12 +155,12 @@ export default class Line {
       ValidationUtils.validateNonEmptyString(url, 'Flow line url is required');
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Failed to fetch flow line data: ${response.status}`);
+        throw ErrorHandler.getInstance().createAndHandleError(`Failed to fetch flow line data: ${response.status}`, ErrorType.DATA_ERROR);
       }
 
       const jsonData = await response.json();
       if (!jsonData || typeof jsonData !== 'object') {
-        throw new Error('Flow line JSON data is invalid');
+        throw ErrorHandler.getInstance().createAndHandleError('Flow line JSON data is invalid', ErrorType.DATA_ERROR);
       }
 
       return this.addFlowLine(jsonData as MapJSONData, mergedOptions);
