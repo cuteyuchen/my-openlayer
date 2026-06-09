@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.1.1] - 2026-06-09
+
+### Bug Fixes
+
+- **GeoJSON:** 修复 `addGeoJSON` 传入字符串 `layerName` 时被追加 `groupKey` 和 `geometryType` 的问题；字符串现在作为最终图层名原样使用。
+- **GeoJSON:** 调整混合点线面渲染顺序，避免字符串 `layerName` 同名时面图层清理逻辑误删本次创建的点/线图层。
+
+### Tests
+
+- 更新 `addGeoJSON` 图层命名回归测试，覆盖字符串 `layerName` 原样使用且混合图层完整保留。
+
 ## [3.1.0] - 2026-06-09
 
 ### Features

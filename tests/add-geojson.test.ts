@@ -139,15 +139,12 @@ describe('MyOl.addGeoJSON', () => {
   /** *********************图层命名*********************/
 
   describe('图层命名', () => {
-    it('字符串 layerName 自动拼接几何类型', () => {
+    it('字符串 layerName 作为最终图层名，不自动拼接分组或几何类型', () => {
       const myol = createMyOl();
       const handle = myol.addGeoJSON(mixedFC, { layerName: 'risk' });
-      // 检查图层名包含 risk__point、risk__line、risk__polygon
-      const layers = myol.map.getLayers().getArray() as BaseLayer[];
-      const names = layers.map((l: any) => l.get?.('name') ?? l.get?.('layerName')).filter(Boolean);
-      expect(names.some((n: string) => n.includes('risk__point'))).toBe(true);
-      expect(names.some((n: string) => n.includes('risk__line'))).toBe(true);
-      expect(names.some((n: string) => n.includes('risk__polygon'))).toBe(true);
+      expect(handle.handles.length).toBe(3);
+      const names = handle.handles.map((h: any) => h.layer?.get?.('name') ?? h.layer?.get?.('layerName'));
+      expect(names).toEqual(['risk', 'risk', 'risk']);
       handle.remove();
       myol.destroy();
     });

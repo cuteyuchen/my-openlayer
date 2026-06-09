@@ -58,11 +58,13 @@ function resolveGeoJSONLayerName(
   if (typeof layerName === 'function') {
     return layerName({ datasetKey, groupKey, geometryType, index });
   }
+  if (typeof layerName === 'string') {
+    return layerName;
+  }
+
   // 确定 base 名称
   let base: string;
-  if (typeof layerName === 'string') {
-    base = layerName;
-  } else if (Array.isArray(layerName)) {
+  if (Array.isArray(layerName)) {
     base = layerName[Number(datasetKey)] ?? `${layerName[0] ?? 'geojson'}_${datasetKey}`;
   } else {
     base = layerName[datasetKey] ?? datasetKey;
@@ -289,15 +291,15 @@ export function renderGeoJSON(
     const lineDatasetKey = lineFeatures[0]?._datasetKey ?? 'default';
     const polygonDatasetKey = polygonFeatures[0]?._datasetKey ?? 'default';
 
-    // 点图层
-    if (pointFeatures.length > 0) {
-      const result = createPointLayerHandle(
-        pointFeatures, options, groupKey, pointDatasetKey, singleGroup, deps.getPoint()
+    // 面图层会清理同名旧图层；当 layerName 是字符串时点线面同名，
+    // 因此先创建面图层，避免它误删本次刚创建的点/线图层。
+    if (polygonFeatures.length > 0) {
+      polygonHandle = createPolygonHandle(
+        polygonFeatures, options, groupKey, polygonDatasetKey, singleGroup, deps.getPolygon()
       );
-      pointHandle = result.handle;
-      if (pointHandle) {
-        groupAllHandles.push(pointHandle);
-        allHandles.push(pointHandle);
+      if (polygonHandle) {
+        groupAllHandles.push(polygonHandle);
+        allHandles.push(polygonHandle);
       }
     }
 
@@ -312,14 +314,15 @@ export function renderGeoJSON(
       }
     }
 
-    // 面图层
-    if (polygonFeatures.length > 0) {
-      polygonHandle = createPolygonHandle(
-        polygonFeatures, options, groupKey, polygonDatasetKey, singleGroup, deps.getPolygon()
+    // 点图层
+    if (pointFeatures.length > 0) {
+      const result = createPointLayerHandle(
+        pointFeatures, options, groupKey, pointDatasetKey, singleGroup, deps.getPoint()
       );
-      if (polygonHandle) {
-        groupAllHandles.push(polygonHandle);
-        allHandles.push(polygonHandle);
+      pointHandle = result.handle;
+      if (pointHandle) {
+        groupAllHandles.push(pointHandle);
+        allHandles.push(pointHandle);
       }
     }
 

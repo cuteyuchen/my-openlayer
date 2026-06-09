@@ -172,7 +172,7 @@ addGeoJSON(data: AddGeoJSONInput, options: AddGeoJSONOptions): GeoJSONRenderHand
 
 | Property | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `layerName` | `string \| string[] \| Record<string, string> \| callback` | Yes | Base layer name. Array/Record forms map to dataset indices/keys. Callback receives `{ datasetKey, groupKey, geometryType, index }` for full control. |
+| `layerName` | `string \| string[] \| Record<string, string> \| callback` | Yes | Layer name rule. A string is used as the final layer name without appending `groupKey` or `geometryType`. Array/Record forms map to dataset indices/keys and derive grouped/type-specific names. Callback receives `{ datasetKey, groupKey, geometryType, index }` for full control. |
 | `groupBy` | `string \| callback` | No | Group features by a property name or callback. Each group gets its own set of layers. |
 | `dataProjection` | `string` | No | Source data projection code (e.g. `'EPSG:4326'`). |
 | `featureProjection` | `string` | No | Target feature projection code. |
