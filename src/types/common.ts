@@ -54,6 +54,7 @@ export type OptionsType = {
   textStrokeColor?: string;
   textStrokeWidth?: number;
   textOffsetY?: number;
+  textOverflow?: boolean;
   textKey?: string;
   img?: string;
   scale?: number;

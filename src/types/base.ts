@@ -47,4 +47,9 @@ export interface TextOptions {
   textStrokeColor?: string;
   textStrokeWidth?: number;
   textOffsetY?: number;
+  /**
+   * 多边形或沿线文本是否允许溢出要素范围。
+   * 设置为 true 时，OpenLayers 不会因为当前缩放下文字放不进面/线而隐藏文本。
+   */
+  textOverflow?: boolean;
 }

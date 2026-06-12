@@ -42,6 +42,8 @@ Polygon layer configuration options, inherits from `BaseOptions`, `StyleOptions`
 | `textFont` | `string` | Font style |
 | `textFillColor` | `string` | Text color |
 | `textStrokeColor` | `string` | Text stroke color |
+| `textStrokeWidth` | `number` | Text stroke width |
+| `textOverflow` | `boolean` | Whether polygon text can overflow the polygon area. Set `true` to avoid OpenLayers hiding text when the label does not fit at the current zoom |
 | **Others** | | |
 | `mask` | `boolean` | Whether to use as a mask (used with `setOutLayer`) |
 
@@ -123,6 +125,8 @@ updateFeatureColor(
 | `layerName` | `string` | Target layer name |
 | `colorObj` | `Object` | Color mapping object `{ 'AreaName': 'ColorValue' }` |
 | `options` | `FeatureColorUpdateOptions` | Includes textKey etc. to match features |
+
+Styles not specified in `options` inherit from the feature's current style, including `strokeColor`, `strokeWidth`, `textFont`, `textFillColor`, `textStrokeColor`, `textStrokeWidth`, and `textOverflow`. Passing only the color map does not reset existing text styles.
 
 ### addImageLayer
 
@@ -216,6 +220,7 @@ polygonModule.addPolygon(polygonData, {
   textFillColor: '#fff',
   textStrokeColor: 'blue',
   textStrokeWidth: 2,
+  textOverflow: true, // Keep polygon text visible even when it exceeds the polygon at the current zoom
   fitView: true
 });
 ```

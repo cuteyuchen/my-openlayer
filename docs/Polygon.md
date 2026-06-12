@@ -37,6 +37,8 @@ const polygon = new Polygon(map: Map);
 | `textFont` | `string` | 字体样式 |
 | `textFillColor` | `string` | 文本颜色 |
 | `textStrokeColor` | `string` | 文本描边颜色 |
+| `textStrokeWidth` | `number` | 文本描边宽度 |
+| `textOverflow` | `boolean` | 是否允许文字溢出面范围。设为 `true` 时，文字不会因为当前缩放下放不进面内而被 OpenLayers 隐藏 |
 | **其他** | | |
 | `mask` | `boolean` | 是否作为蒙版（配合 `setOutLayer` 使用） |
 
@@ -112,6 +114,8 @@ updateFeatureColor(
 | `colorObj` | `Object` | 颜色映射对象 `{ '区域名': '颜色值' }` |
 | `options` | `FeatureColorUpdateOptions` | 包含 textKey 等配置以匹配要素 |
 
+未在 `options` 中指定的样式会沿用要素当前样式，例如 `strokeColor`、`strokeWidth`、`textFont`、`textFillColor`、`textStrokeColor`、`textStrokeWidth`、`textOverflow` 等。只传颜色映射时不会重置原有文字样式。
+
 ### addImageLayer
 
 添加静态图片图层（如叠加平面图、卫星图）。
@@ -183,6 +187,7 @@ polygonModule.addPolygon(polygonData, {
   textFillColor: '#fff',
   textStrokeColor: 'blue',
   textStrokeWidth: 2,
+  textOverflow: true, // 允许文字溢出面范围，避免随缩放尺寸不足被隐藏
   fitView: true
 });
 ```

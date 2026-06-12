@@ -244,21 +244,17 @@ export default class Polygon {
       throw ErrorHandler.getInstance().createAndHandleError(`Layer '${layerName}' is not a vector layer`, ErrorType.LAYER_ERROR);
     }
 
-    const mergedOptions: FeatureColorUpdateOptions = {
-      textFont: '14px Calibri,sans-serif',
-      textFillColor: '#FFF',
-      textStrokeWidth: 2,
-      ...options
-    };
-
     const features = layer.getSource()?.getFeatures();
     if (!features) {
       ErrorHandler.getInstance().warn(`No features found in layer '${layerName}'`);
       return;
     }
 
+    const resolution = this.map.getView().getResolution() ?? 1;
     features.forEach((feature: Feature) => {
-      PolygonStyleFactory.updateSingleFeatureColor(feature, colorObj, mergedOptions);
+      const currentStyle = feature.getStyle() ?? layer.getStyle();
+      const previousStyles = PolygonStyleFactory.resolveFeatureStyles(currentStyle, feature, resolution);
+      PolygonStyleFactory.updateSingleFeatureColor(feature, colorObj, options, previousStyles);
     });
   }
 
