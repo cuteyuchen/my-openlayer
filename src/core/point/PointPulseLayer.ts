@@ -4,10 +4,11 @@ import { Point as OlPoint } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Circle as CircleStyle, Fill, Icon, Stroke, Style, Text } from "ol/style";
-import type { PointData, PulsePointLayerHandle, PulsePointOptions } from "../../types";
+import type { PointData, PulsePointLayerHandle, PulsePointLayerOptions, PulsePointOptions } from "../../types";
 import ProjectionUtils from "../../utils/ProjectionUtils";
 import ValidationUtils from "../../utils/ValidationUtils";
 import { ConfigManager } from "../map";
+import { createPointFeatureProperties } from "./PointFeatureProperties";
 
 /**
  * 高性能闪烁点图层构建器。
@@ -49,7 +50,7 @@ export default class PointPulseLayer {
     return color;
   }
 
-  static createFeatures(pointData: PointData[], options: PulsePointOptions): Feature[] {
+  static createFeatures(pointData: PointData[], options: PulsePointLayerOptions): Feature[] {
     const pointFeatureList: Feature[] = [];
     pointData.forEach(item => {
       if (!ValidationUtils.validateCoordinates(item)) {
@@ -57,16 +58,14 @@ export default class PointPulseLayer {
       }
 
       pointFeatureList.push(new Feature({
-        rawData: item,
-        type: options.layerName,
-        layerName: options.layerName,
+        ...createPointFeatureProperties(item, options.layerName),
         geometry: new OlPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options))
       }));
     });
     return pointFeatureList;
   }
 
-  static create(map: Map, pointData: PointData[], options: PulsePointOptions): PulsePointLayerHandle {
+  static create(map: Map, pointData: PointData[], options: PulsePointLayerOptions): PulsePointLayerHandle {
     const pulseOptions = {
       enabled: options.pulse?.enabled ?? true,
       duration: options.pulse?.duration ?? 2400,
@@ -169,7 +168,10 @@ export default class PointPulseLayer {
     };
 
     const layer = new VectorLayer({
-      layerName: options.layerName,
+      properties: {
+        name: options.layerName,
+        layerName: options.layerName
+      },
       source,
       style: createStyles as any,
       zIndex: options.zIndex || ConfigManager.DEFAULT_POINT_OPTIONS.zIndex,

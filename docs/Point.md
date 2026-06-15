@@ -24,7 +24,7 @@ constructor(map: Map)
 | iconColor | `string` | 图标颜色（用于改变图标色调） |
 | circleColor | `string` | 圆点填充颜色。未设置 img 时生效，与 circleRadius 搭配绘制纯色圆点 |
 | circleRadius | `number` | 圆点半径（像素），默认 6。仅在未设置 img 时生效 |
-| layerName | `string` | 图层名称（必填，继承自 BaseOptions） |
+| layerName | `string` | 图层名称（基础配置中可选；公开 add 图层入口使用 `*LayerOptions` 要求必填） |
 | zIndex | `number` | 图层层级 |
 | visible | `boolean` | 是否可见 |
 | style | `Style \| Style[] \| ((feature: FeatureLike) => Style \| Style[])` | 自定义样式函数 |
@@ -37,6 +37,24 @@ constructor(map: Map)
 | :--- | :--- | :--- |
 | distance | `number` | 聚合距离（像素），默认为 20 |
 | minDistance | `number` | 最小聚合距离 |
+
+### PointLayerOptions / ClusterPointLayerOptions / PulsePointLayerOptions
+
+公开点图层入口使用的配置类型，分别继承自 `PointOptions`、`ClusterOptions`、`PulsePointOptions`，并把 `layerName` 收紧为必填。
+
+```typescript
+interface PointLayerOptions extends PointOptions {
+  layerName: string
+}
+
+interface ClusterPointLayerOptions extends ClusterOptions {
+  layerName: string
+}
+
+interface PulsePointLayerOptions extends PulsePointOptions {
+  layerName: string
+}
+```
 
 ### PulsePointOptions
 
@@ -91,6 +109,7 @@ type PointJSONInput =
 - `FeatureCollection` 中只提取 `Point` / `MultiPoint` 类型的 Feature，其他 geometry 类型被跳过。
 - `MultiPoint` 会被拆分为多个独立的 `PointData`。
 - GeoJSON Feature 的 `properties` 会被保留，与 `lgtd` / `lttd` 合并。
+- 创建 OpenLayers Feature 时，业务字段会平铺到 Feature 顶层，可通过 `feature.get('name')` 或 `feature.getProperties().name` 读取；`rawData` 仅保留兼容旧代码，不推荐新代码继续依赖。
 - 坐标含 `NaN`、`Infinity` 或缺失的点会被过滤。
 - 不支持 `lng/lat`、`longitude/latitude`、`x/y` 等字段别名。
 
@@ -118,7 +137,7 @@ type PointJSONInput =
 添加普通点图层。支持 `PointJSONInput` 任意形态（`PointData[]`、GeoJSON FeatureCollection、Feature、裸 geometry）。
 
 ```typescript
-addPoint(pointData: PointJSONInput, options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+addPoint(pointData: PointJSONInput, options: PointLayerOptions): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
 - **pointData**: 点位数据，支持 `PointData[]` 或标准 GeoJSON 点数据。
@@ -130,7 +149,7 @@ addPoint(pointData: PointJSONInput, options: PointOptions & { layerName: string 
 添加聚合点图层。支持 `PointJSONInput` 任意形态。
 
 ```typescript
-addClusterPoint(pointData: PointJSONInput, options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+addClusterPoint(pointData: PointJSONInput, options: ClusterPointLayerOptions): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
 - **pointData**: 点位数据，支持 `PointData[]` 或标准 GeoJSON 点数据。
@@ -142,7 +161,7 @@ addClusterPoint(pointData: PointJSONInput, options: ClusterOptions & { layerName
 从 URL 加载点位数据，支持 `PointData[]` 数组或 GeoJSON FeatureCollection。
 
 ```typescript
-addPointByUrl(url: string, options: PointOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>> | null>
+addPointByUrl(url: string, options: PointLayerOptions): Promise<LayerHandle<VectorLayer<VectorSource>> | null>
 ```
 
 ### addDomPoint
@@ -167,7 +186,7 @@ addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
 添加高性能闪烁点图层。支持 `PointJSONInput` 任意形态。
 
 ```typescript
-addPulsePointLayer(pointData: PointJSONInput, options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null
+addPulsePointLayer(pointData: PointJSONInput, options: PulsePointLayerOptions): PulsePointLayerHandle | null
 ```
 
 - **pointData**: 点位数据，支持 `PointData[]` 或标准 GeoJSON 点数据。
@@ -179,7 +198,7 @@ addPulsePointLayer(pointData: PointJSONInput, options: PulsePointOptions & { lay
 从 URL 加载点位数据并添加高性能闪烁点图层。
 
 ```typescript
-addPulsePointLayerByUrl(url: string, options: PulsePointOptions & { layerName: string }): Promise<PulsePointLayerHandle | null>
+addPulsePointLayerByUrl(url: string, options: PulsePointLayerOptions): Promise<PulsePointLayerHandle | null>
 ```
 
 ### addVueTemplatePoint
@@ -288,6 +307,9 @@ const fc = {
   ]
 };
 const handle = point.addPoint(fc, { layerName: 'cities', textKey: 'name' });
+const firstFeature = handle?.layer.getSource()?.getFeatures()[0];
+firstFeature?.get('name'); // '北京'
+// firstFeature.get('rawData') 仅保留兼容旧代码，新代码优先读取顶层业务字段。
 
 // 方式二：单个 Feature
 const feature = { type: 'Feature', properties: { name: '杭州' }, geometry: { type: 'Point', coordinates: [120.15, 30.27] } };

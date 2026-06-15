@@ -69,6 +69,7 @@ addLine(data: MapJSONData, options: LineOptions & { layerName: string }): LayerH
 ```
 
 添加静态线图层，返回统一 `LayerHandle`。
+`handle.remove()` 会同步退出 `Line` 内部托管集合，后续再调用 `destroyAll()` 不会重复持有已移除图层。
 
 ### addLineByUrl
 
@@ -85,6 +86,7 @@ removeLineLayer(layerName: string): void
 ```
 
 移除静态线图层。
+该方法会同步清理 `Line` 内部托管记录，避免后续 `destroyAll()` 重复处理同名图层。
 
 ## 流动线 / 动态图标线
 
@@ -112,6 +114,22 @@ removeFlowLineLayer(layerName: string): void
 ```
 
 按图层名移除流动线的基础图层与动画图层。
+
+### destroyAll
+
+```typescript
+destroyAll(): void
+```
+
+销毁当前 `Line` 实例创建的所有线图层。包括 `addLine` / `addLineByUrl` 创建的静态线，以及 `addFlowLine` / `addFlowLineByUrl` 创建的流动线基础图层、动画图层和 rAF 动画。`MyOl.destroy()` 会自动调用该方法。
+
+### destroyAllFlowLines
+
+```typescript
+destroyAllFlowLines(): void
+```
+
+仅销毁当前 `Line` 实例创建的流动线动画和对应图层。该方法保留用于兼容旧代码；新代码需要完整清理 Line 模块时优先使用 `destroyAll()`。
 
 ## 使用示例
 

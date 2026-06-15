@@ -1,4 +1,11 @@
-import type { MyOl, PointData, PulsePointLayerHandle, PulsePointOptions } from '../src';
+import type {
+  ClusterPointLayerOptions,
+  MyOl,
+  PointData,
+  PointLayerOptions,
+  PulsePointLayerHandle,
+  PulsePointLayerOptions
+} from '../src';
 
 declare const map: MyOl;
 
@@ -7,7 +14,19 @@ const warningPoints: PointData[] = [
   { lgtd: 120.18, lttd: 30.31, name: 'Normal Village', lev: 3 }
 ];
 
-const pulseOptions: PulsePointOptions = {
+const pointOptions: PointLayerOptions = {
+  layerName: 'warning-village',
+  img: '/icons/village.svg',
+  textKey: 'name'
+};
+
+const clusterOptions: ClusterPointLayerOptions = {
+  layerName: 'warning-village-cluster',
+  distance: 40,
+  textKey: 'name'
+};
+
+const pulseOptions: PulsePointLayerOptions = {
   layerName: 'warning-village-pulse',
   levelKey: 'lev',
   img: '/icons/village.svg',
@@ -27,6 +46,8 @@ const pulseOptions: PulsePointOptions = {
   }
 };
 
+map.getPoint().addPoint(warningPoints, pointOptions);
+map.getPoint().addClusterPoint(warningPoints, clusterOptions);
 const handle: PulsePointLayerHandle | null = map.getPoint().addPulsePointLayer(warningPoints, pulseOptions);
 
 handle?.stop();
@@ -34,3 +55,6 @@ handle?.start();
 handle?.setVisible(true);
 handle?.updateData(warningPoints);
 handle?.remove();
+
+// @ts-expect-error 公开点图层入口仍要求 layerName 必填
+const missingLayerName: PointLayerOptions = { textKey: 'name' };

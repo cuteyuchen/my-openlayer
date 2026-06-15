@@ -27,6 +27,7 @@ line.addLine(data, { layerName: 'my-line', strokeColor: 'red' })
 > **为什么**：依赖默认 `layerName` 的两次调用会互相覆盖，是 2.x 最常见的"图层莫名消失"陷阱。
 
 `PointOptions / LineOptions / PolygonOptions` interface **本身**没改（`layerName?: string` 仍然可选），所以已有的工厂函数、配置对象不受影响 —— 只是公开方法签名收紧了。
+点图层入口同时导出 `PointLayerOptions`、`ClusterPointLayerOptions`、`PulsePointLayerOptions`，新代码如果要单独声明配置变量，优先使用这些命名类型，避免手写 `PointOptions & { layerName: string }`。
 
 ### 1.2 `add*` 返回值改为 Handle
 

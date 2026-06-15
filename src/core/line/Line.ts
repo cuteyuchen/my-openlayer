@@ -1,5 +1,6 @@
 import Map from "ol/Map";
 import GeoJSON from "ol/format/GeoJSON";
+import BaseLayer from "ol/layer/Base";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import type { FlowLineLayerHandle, FlowLineOptions, LineOptions, MapJSONData, LayerHandle } from "../../types";
@@ -17,11 +18,22 @@ import LineStyleFactory from "./LineStyleFactory";
 export default class Line {
   private readonly map: Map;
   private readonly flowLineRegistry = new globalThis.Map<string, FlowLineLayerHandle>();
+  /** 由本实例创建的静态线图层。destroyAll 时统一移除，避免 MyOl.destroy 后残留。 */
+  private readonly managedLayers = new Set<BaseLayer>();
   private readonly styleFactory = new LineStyleFactory();
 
   constructor(map: Map) {
     ValidationUtils.validateMapInstance(map);
     this.map = map;
+  }
+
+  /**
+   * 跟踪一个本实例创建的静态线图层，便于销毁阶段统一清理。
+   * @internal
+   */
+  private trackLayer<T extends BaseLayer>(layer: T): T {
+    this.managedLayers.add(layer);
+    return layer;
   }
 
   /**
@@ -68,16 +80,20 @@ export default class Line {
 
     layer.setVisible(options.visible ?? true);
     this.map.addLayer(layer);
-    return layer;
+    return this.trackLayer(layer);
   }
 
   /** *********************统一句柄：静态线图层*********************/
   private toLayerHandle<L extends VectorLayer<VectorSource>>(layer: L): LayerHandle<L> {
     const map = this.map;
+    const managedLayers = this.managedLayers;
     return {
       layer,
       setVisible(visible: boolean) { layer.setVisible(visible); },
-      remove() { map.removeLayer(layer); }
+      remove() {
+        managedLayers.delete(layer);
+        map.removeLayer(layer);
+      }
     };
   }
 
@@ -122,6 +138,12 @@ export default class Line {
   removeLineLayer(layerName: string): void {
     ValidationUtils.validateLayerName(layerName);
     MapTools.removeLayer(this.map, layerName);
+    // 同步清理托管记录，避免后续 destroyAll 重复持有已移除图层。
+    this.managedLayers.forEach(layer => {
+      if (layer.get('layerName') === layerName || layer.get('name') === layerName) {
+        this.managedLayers.delete(layer);
+      }
+    });
   }
 
   addFlowLine(data: MapJSONData, options: FlowLineOptions & { layerName: string }): FlowLineLayerHandle | null {
@@ -189,6 +211,19 @@ export default class Line {
       try { handle.remove(); } catch { /* ignore */ }
     });
     this.flowLineRegistry.clear();
+  }
+
+  /**
+   * 销毁本实例创建的所有线图层。静态线由 Line 自身托管，
+   * 流动线继续复用 destroyAllFlowLines，保证动画监听与 rAF 一并释放。
+   */
+  destroyAll(): void {
+    this.destroyAllFlowLines();
+
+    this.managedLayers.forEach(layer => {
+      try { this.map.removeLayer(layer); } catch { /* ignore */ }
+    });
+    this.managedLayers.clear();
   }
 
 }

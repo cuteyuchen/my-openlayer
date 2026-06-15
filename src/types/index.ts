@@ -14,11 +14,14 @@ export type {
 } from './map';
 export type {
   PointOptions,
+  PointLayerOptions,
   PointData,
   PointJSONInput,
   ClusterOptions,
+  ClusterPointLayerOptions,
   PulsePointIconOptions,
   PulsePointOptions,
+  PulsePointLayerOptions,
   PulsePointLayerHandle,
   TwinkleItem
 } from './point';

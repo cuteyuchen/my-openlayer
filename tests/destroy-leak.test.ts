@@ -7,7 +7,7 @@
  * VueTemplatePoint 的 Vue 应用、SelectHandler 的 Select 交互全部泄漏。
  *
  * 这组测试用 OL Map 桩，验证：
- * 1. Line 暴露 destroyAllFlowLines，会清空 flowLineRegistry 并触发各 handle.remove()
+ * 1. Line 暴露 destroyAll，会清理静态线与流动线；destroyAllFlowLines 只保留为流动线兼容入口
  * 2. Point.destroyAll 触发所有 addPulsePointLayer/addPoint 句柄的 remove
  * 3. Polygon.destroyAll 移除所有由 add 系列 / setOutLayer 注册的图层
  */
@@ -16,7 +16,7 @@ import BaseLayer from 'ol/layer/Base';
 import { Line } from '../src/core/line';
 import { Polygon } from '../src/core/polygon';
 import { Point } from '../src/core/point';
-import type { MapJSONData, PointData, PulsePointOptions } from '../src/types';
+import type { MapJSONData, PointData, PulsePointLayerOptions } from '../src/types';
 
 const flowLineData: MapJSONData = {
   type: 'FeatureCollection',
@@ -94,7 +94,7 @@ describe('destroy 级联清理', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Line.destroyAllFlowLines', () => {
+  describe('Line.destroyAll / destroyAllFlowLines', () => {
     it('会调用每个 flow line handle 的 remove 并清空 registry', () => {
       const map = createMapStub();
       const line = new Line(map);
@@ -111,6 +111,65 @@ describe('destroy 级联清理', () => {
 
       // 幂等：再次调用不抛错
       expect(() => line.destroyAllFlowLines()).not.toThrow();
+    });
+
+    it('destroyAll 会移除 addLine 创建的静态线图层', () => {
+      const map = createMapStub();
+      const line = new Line(map);
+
+      line.addLine(flowLineData, { layerName: 'static-line-a' });
+      line.addLine(flowLineData, { layerName: 'static-line-b' });
+
+      expect(map.layers.length).toBe(2);
+
+      line.destroyAll();
+      expect(map.layers.length).toBe(0);
+
+      // 幂等：再次调用不抛错
+      expect(() => line.destroyAll()).not.toThrow();
+    });
+
+    it('destroyAll 会同时移除静态线和流动线图层，并停止动画', () => {
+      const map = createMapStub();
+      const line = new Line(map);
+
+      line.addLine(flowLineData, { layerName: 'static-line' });
+      line.addFlowLine(flowLineData, { layerName: 'flow-line' });
+
+      // 静态线 1 层，流动线 2 层：base + animation
+      expect(map.layers.length).toBe(3);
+
+      line.destroyAll();
+      expect(map.layers.length).toBe(0);
+      expect(cafSpy).toHaveBeenCalled();
+    });
+
+    it('addLine 返回的 handle.remove 后再 destroyAll 不会残留或抛错', () => {
+      const map = createMapStub();
+      const line = new Line(map);
+
+      const handle = line.addLine(flowLineData, { layerName: 'line-handle-remove' });
+      expect(map.layers.length).toBe(1);
+
+      handle.remove();
+      expect(map.layers.length).toBe(0);
+
+      expect(() => line.destroyAll()).not.toThrow();
+      expect(map.layers.length).toBe(0);
+    });
+
+    it('removeLineLayer 后再 destroyAll 不会残留或抛错', () => {
+      const map = createMapStub();
+      const line = new Line(map);
+
+      line.addLine(flowLineData, { layerName: 'line-remove-by-name' });
+      expect(map.layers.length).toBe(1);
+
+      line.removeLineLayer('line-remove-by-name');
+      expect(map.layers.length).toBe(0);
+
+      expect(() => line.destroyAll()).not.toThrow();
+      expect(map.layers.length).toBe(0);
     });
   });
 
@@ -145,7 +204,7 @@ describe('destroy 级联清理', () => {
       const point = new Point(map);
 
       point.addPoint(pointData, { layerName: 'static-points' });
-      const pulseOpts: PulsePointOptions = {
+      const pulseOpts: PulsePointLayerOptions = {
         layerName: 'pulse-points',
         pulse: { enabled: true, frameCount: 4, duration: 1000, radius: [4, 12] }
       };

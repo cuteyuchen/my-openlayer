@@ -110,6 +110,7 @@ interface FeatureData {
 ### addLine
 
 Add a line feature layer, returning a unified `LayerHandle`.
+`handle.remove()` also unregisters the layer from the `Line` instance lifecycle registry, so a later `destroyAll()` call remains idempotent.
 
 ```typescript
 addLine(data: MapJSONData, options: LineOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>>
@@ -120,7 +121,7 @@ addLine(data: MapJSONData, options: LineOptions & { layerName: string }): LayerH
 | `data` | `MapJSONData` | Line data in GeoJSON format |
 | `options` | `LineOptions` | Layer configuration options |
 
-**Returns**: The created `VectorLayer` instance.
+**Returns**: The created `LayerHandle`.
 
 ### addLineByUrl
 
@@ -140,6 +141,7 @@ addLineByUrl(url: string, options: LineOptions & { layerName: string }): Promise
 ### removeLineLayer
 
 Remove a line layer by its name.
+This also unregisters the matching static line layer from the `Line` instance lifecycle registry.
 
 ```typescript
 removeLineLayer(layerName: string): void
@@ -172,9 +174,17 @@ Load animated flow line data from a URL.
 addFlowLineByUrl(url: string, options?: FlowLineOptions): Promise<FlowLineLayerHandle | null>
 ```
 
-### destroyAllFlowLines (3.0)
+### destroyAll (3.0)
 
-Destroy all flow line animations created by this `Line` instance. Called automatically by `MyOl.destroy()`.
+Destroy all line layers created by this `Line` instance, including static layers from `addLine` / `addLineByUrl` and flow line layers / animations from `addFlowLine` / `addFlowLineByUrl`. Called automatically by `MyOl.destroy()`.
+
+```typescript
+destroyAll(): void
+```
+
+### destroyAllFlowLines (3.0 compatibility)
+
+Destroy only flow line animations created by this `Line` instance. This is kept for backward compatibility; prefer `destroyAll()` when cleaning up the whole Line module.
 
 ```typescript
 destroyAllFlowLines(): void
@@ -245,7 +255,7 @@ lineModule.addLine(lineData, {
   layerName: 'custom-style-line',
   // Set color dynamically based on property
   style: (feature) => {
-    const status = feature.get('properties').status;
+    const status = feature.get('status');
     const color = status === 'active' ? 'green' : 'gray';
     
     return new Style({

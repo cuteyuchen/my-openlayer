@@ -495,7 +495,7 @@ export default class MyOl {
         try { this._selectHandler.destroy(); } catch (e) { this.errorHandler.warn('SelectHandler.destroy 失败:', e); }
       }
       if (this._line) {
-        try { this._line.destroyAllFlowLines(); } catch (e) { this.errorHandler.warn('Line.destroyAllFlowLines 失败:', e); }
+        try { this._line.destroyAll(); } catch (e) { this.errorHandler.warn('Line.destroyAll 失败:', e); }
       }
       if (this._point) {
         try { this._point.destroyAll(); } catch (e) { this.errorHandler.warn('Point.destroyAll 失败:', e); }

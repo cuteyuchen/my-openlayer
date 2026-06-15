@@ -6,7 +6,20 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import BaseLayer from "ol/layer/Base";
 import Overlay from 'ol/Overlay';
-import { PointOptions, ClusterOptions, PointData, VueTemplatePointInstance, TwinkleItem, PulsePointOptions, PulsePointLayerHandle, LayerHandle, ControlHandle } from '../../types'
+import {
+  PointOptions,
+  PointLayerOptions,
+  ClusterOptions,
+  ClusterPointLayerOptions,
+  PointData,
+  VueTemplatePointInstance,
+  TwinkleItem,
+  PulsePointOptions,
+  PulsePointLayerOptions,
+  PulsePointLayerHandle,
+  LayerHandle,
+  ControlHandle
+} from '../../types'
 import { normalizePointData, type PointJSONInput } from '../../utils/GeoJSONProcessor'
 import { VueTemplatePoint } from '../vue-template-point';
 import { Options as IconOptions } from "ol/style/Icon";
@@ -18,6 +31,7 @@ import { ConfigManager, MapTools } from "../map";
 import PointClusterLayer from './PointClusterLayer';
 import PointOverlay from './PointOverlay';
 import PointPulseLayer from './PointPulseLayer';
+import { createPointFeatureProperties } from './PointFeatureProperties';
 
 
 /**
@@ -186,7 +200,7 @@ export default class Point {
    * }
    */
   /** *********************创建普通点图层*********************/
-  private createPointLayer(pointData: PointJSONInput, options: PointOptions & { layerName: string }): VectorLayer<VectorSource> | null {
+  private createPointLayer(pointData: PointJSONInput, options: PointLayerOptions): VectorLayer<VectorSource> | null {
     const normalized = normalizePointData(pointData);
     if (!ValidationUtils.validatePointData(normalized)) {
       return null;
@@ -199,9 +213,7 @@ export default class Point {
       }
 
       const pointFeature = new Feature({
-        rawData: item,
-        type: options.layerName,
-        layerName: options.layerName,
+        ...createPointFeatureProperties(item, options.layerName),
         geometry: new olPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options))
       });
 
@@ -235,7 +247,7 @@ export default class Point {
 
 
   /** *********************创建聚合点图层*********************/
-  private createClusterPointLayer(pointData: PointJSONInput, options: ClusterOptions & { layerName: string }): VectorLayer<VectorSource> | null {
+  private createClusterPointLayer(pointData: PointJSONInput, options: ClusterPointLayerOptions): VectorLayer<VectorSource> | null {
     const normalized = normalizePointData(pointData);
     if (!ValidationUtils.validatePointData(normalized)) {
       return null;
@@ -249,14 +261,14 @@ export default class Point {
   }
 
   /** *********************添加普通点*********************/
-  addPoint(pointData: PointJSONInput, options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
+  addPoint(pointData: PointJSONInput, options: PointLayerOptions): LayerHandle<VectorLayer<VectorSource>> | null {
     const layer = this.createPointLayer(pointData, options);
     if (!layer) return null;
     return this.toLayerHandle(layer);
   }
 
   /** *********************添加聚合点*********************/
-  addClusterPoint(pointData: PointJSONInput, options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null {
+  addClusterPoint(pointData: PointJSONInput, options: ClusterPointLayerOptions): LayerHandle<VectorLayer<VectorSource>> | null {
     const layer = this.createClusterPointLayer(pointData, options);
     if (!layer) return null;
     return this.toLayerHandle(layer);
@@ -282,7 +294,7 @@ export default class Point {
    * 与 addDomPoint 不同，该方法使用 VectorLayer 批量渲染点位，并通过单个
    * requestAnimationFrame 驱动闪烁圈，适合村庄预警等大量点位场景。
    */
-  addPulsePointLayer(pointData: PointJSONInput, options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null {
+  addPulsePointLayer(pointData: PointJSONInput, options: PulsePointLayerOptions): PulsePointLayerHandle | null {
     const normalized = normalizePointData(pointData);
     if (!ValidationUtils.validatePointData(normalized)) {
       return null;
@@ -300,7 +312,7 @@ export default class Point {
    */
   async addPointByUrl(
     url: string,
-    options: PointOptions & { layerName: string }
+    options: PointLayerOptions
   ): Promise<LayerHandle<VectorLayer<VectorSource>> | null> {
     ValidationUtils.validateNonEmptyString(url, 'Point url is required');
     const response = await fetch(url);
@@ -316,7 +328,7 @@ export default class Point {
    */
   async addPulsePointLayerByUrl(
     url: string,
-    options: PulsePointOptions & { layerName: string }
+    options: PulsePointLayerOptions
   ): Promise<PulsePointLayerHandle | null> {
     ValidationUtils.validateNonEmptyString(url, 'Pulse point url is required');
     const response = await fetch(url);

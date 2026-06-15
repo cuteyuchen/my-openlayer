@@ -207,7 +207,7 @@ getMapOptions(): Readonly<MapInitType>
 
 #### destroy
 
-销毁地图实例，清理所有事件监听和资源。
+销毁地图实例，并级联清理子模块资源：`SelectHandler.destroy()`、`Line.destroyAll()`、`Point.destroyAll()`、`Polygon.destroyAll()`、`EventManager.clear()`。其中 `Line.destroyAll()` 会同时移除静态线和流动线图层。
 
 ```typescript
 destroy(): void

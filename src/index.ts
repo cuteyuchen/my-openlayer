@@ -27,7 +27,17 @@ export type { PointJSONInput } from './types'
 export type { BaseOptions, StyleOptions, TextOptions, LayerHandle, AnimatedLayerHandle } from './types'
 
 // 类型定义 - 专用选项接口
-export type { PointOptions, LineOptions, FlowLineOptions, FlowLineLayerHandle, PolygonOptions, PulsePointOptions, PulsePointLayerHandle } from './types'
+export type {
+  PointOptions,
+  PointLayerOptions,
+  LineOptions,
+  FlowLineOptions,
+  FlowLineLayerHandle,
+  PolygonOptions,
+  PulsePointOptions,
+  PulsePointLayerOptions,
+  PulsePointLayerHandle
+} from './types'
 
 // 类型定义 - 兼容性类型
 export type { OptionsType } from './types'
@@ -44,6 +54,7 @@ export type {
   PulsePointIconOptions,
   LineData,
   ClusterOptions,
+  ClusterPointLayerOptions,
   MeasureHandlerType,
   VueTemplatePointOptions,
   VueTemplatePointInstance,

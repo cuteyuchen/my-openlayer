@@ -16,7 +16,7 @@ import VectorLayer from 'ol/layer/Vector';
 import { Line } from '../src/core/line';
 import { Polygon } from '../src/core/polygon';
 import { Point } from '../src/core/point';
-import type { AnimatedLayerHandle, ControlHandle, LayerHandle, MapJSONData, PointData, PulsePointOptions } from '../src/types';
+import type { AnimatedLayerHandle, ControlHandle, LayerHandle, MapJSONData, PointData, PulsePointLayerOptions } from '../src/types';
 
 function createMapStub() {
   const layers: BaseLayer[] = [];
@@ -225,7 +225,7 @@ describe('P1-1 add* 统一 LayerHandle / ControlHandle', () => {
   it('Point.addPulsePointLayer 返回 AnimatedLayerHandle', () => {
     const map = createMapStub();
     const point = new Point(map);
-    const opts: PulsePointOptions & { layerName: string } = {
+    const opts: PulsePointLayerOptions = {
       layerName: 'pulse-add',
       pulse: { enabled: true, frameCount: 4, duration: 1000, radius: [4, 12] }
     };
