@@ -103,7 +103,7 @@ handle.remove();
 - **Many animated markers**: Prefer `addPulsePointLayer` over `addDomPoint` when rendering large warning/village pulse point lists.
 - **Heatmap not rendering**: If `addHeatmap` produces an invisible layer, check that the data has a numeric field matching `valueKey` (default `'value'`). 3.0 auto-falls back to equal weight when the field is missing, but you should specify `valueKey` explicitly for meaningful gradients.
 - **Mask layer not visible**: 3.0 fixes the default `zIndex` for `addMaskLayer` to 12 (above Tianditu base at 9). If upgrading from 2.x and the mask was previously invisible, no code change needed.
-- **destroy() cascade**: In 3.0, `MyOl.destroy()` automatically calls `SelectHandler.destroy()`, `Line.destroyAllFlowLines()`, `Point.destroyAll()`, and `Polygon.destroyAll()`. You do not need to manually clean up sub-module handles before calling `destroy()`.
+- **destroy() cascade**: In 3.0, `MyOl.destroy()` automatically calls `SelectHandler.destroy()`, `Line.destroyAll()`, `Point.destroyAll()`, and `Polygon.destroyAll()`. You do not need to manually clean up sub-module handles before calling `destroy()`.
 - **updateProps on VueTemplatePoint**: 3.0 fixes `updateProps` to correctly pass prop values (previously they were placed in the prop declaration position). Call `instance.updateProps({ label: 'new value' })` and the Vue component will re-render with the new value.
 - **Unified error types**: All thrown errors use `MyOpenLayersError` with an `ErrorType` tag (`VALIDATION_ERROR`, `MAP_ERROR`, `LAYER_ERROR`, `COORDINATE_ERROR`, `DATA_ERROR`, `COMPONENT_ERROR`). Catch and `instanceof` check to distinguish error categories. Subclasses `LayerNotFoundError`, `InvalidGeoJSONError`, `ProjectionError` are available for finer-grained handling.
 
@@ -111,7 +111,7 @@ handle.remove();
 
 - [MyOl](references/core-my-ol.md) — Map initialization, configuration, module access, and `destroy()` cascade.
 - [Point](references/core-point.md) — Point features, clustering, high-performance pulse markers, Vue template points, unified `add*` handles, and `destroyAll`.
-- [Line](references/core-line.md) — Polyline features, animated flow lines, async `addLineByUrl`, and `destroyAllFlowLines`.
+- [Line](references/core-line.md) — Polyline features, animated flow lines, async `addLineByUrl`, and `destroyAll`.
 - [Polygon](references/core-polygon.md) — Polygon features, heatmaps, image layers, mask layers, async `addPolygonByUrl`, and `destroyAll`.
 - [VueTemplatePoint](references/core-vue-template-point.md) — Vue components rendered as map overlays, with fixed `updateProps` in 3.0.
 

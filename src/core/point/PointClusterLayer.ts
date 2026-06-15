@@ -4,7 +4,7 @@ import { Point as OlPoint } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Cluster } from "ol/source";
-import type { ClusterOptions, PointData } from "../../types";
+import type { ClusterOptions, ClusterPointLayerOptions, PointData } from "../../types";
 import ProjectionUtils from "../../utils/ProjectionUtils";
 import ValidationUtils from "../../utils/ValidationUtils";
 import { ConfigManager } from "../map";
@@ -17,7 +17,7 @@ export default class PointClusterLayer {
   static create(
     map: Map,
     pointData: PointData[],
-    options: ClusterOptions,
+    options: ClusterPointLayerOptions,
     createClusterStyle: (options: ClusterOptions, name: string) => any
   ): VectorLayer<VectorSource> {
     const pointFeatureList: Feature[] = [];

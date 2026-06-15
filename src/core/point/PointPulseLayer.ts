@@ -4,7 +4,7 @@ import { Point as OlPoint } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Circle as CircleStyle, Fill, Icon, Stroke, Style, Text } from "ol/style";
-import type { PointData, PulsePointLayerHandle, PulsePointOptions } from "../../types";
+import type { PointData, PulsePointLayerHandle, PulsePointLayerOptions, PulsePointOptions } from "../../types";
 import ProjectionUtils from "../../utils/ProjectionUtils";
 import ValidationUtils from "../../utils/ValidationUtils";
 import { ConfigManager } from "../map";
@@ -50,7 +50,7 @@ export default class PointPulseLayer {
     return color;
   }
 
-  static createFeatures(pointData: PointData[], options: PulsePointOptions): Feature[] {
+  static createFeatures(pointData: PointData[], options: PulsePointLayerOptions): Feature[] {
     const pointFeatureList: Feature[] = [];
     pointData.forEach(item => {
       if (!ValidationUtils.validateCoordinates(item)) {
@@ -65,7 +65,7 @@ export default class PointPulseLayer {
     return pointFeatureList;
   }
 
-  static create(map: Map, pointData: PointData[], options: PulsePointOptions): PulsePointLayerHandle {
+  static create(map: Map, pointData: PointData[], options: PulsePointLayerOptions): PulsePointLayerHandle {
     const pulseOptions = {
       enabled: options.pulse?.enabled ?? true,
       duration: options.pulse?.duration ?? 2400,

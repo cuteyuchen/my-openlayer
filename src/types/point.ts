@@ -15,6 +15,11 @@ export interface PointOptions extends BaseOptions, StyleOptions, TextOptions {
   circleRadius?: number;
 }
 
+/** addPoint / addPointByUrl 的公开入口配置，要求 layerName 必填。 */
+export interface PointLayerOptions extends PointOptions {
+  layerName: string;
+}
+
 export interface PointData {
   lgtd: number;
   lttd: number;
@@ -32,6 +37,11 @@ export type PointJSONInput =
 export interface ClusterOptions extends PointOptions {
   distance?: number;
   minDistance?: number;
+}
+
+/** addClusterPoint 的公开入口配置，要求 layerName 必填。 */
+export interface ClusterPointLayerOptions extends ClusterOptions {
+  layerName: string;
 }
 
 export interface PulsePointIconOptions {
@@ -63,6 +73,11 @@ export interface PulsePointOptions extends PointOptions {
     strokeWidth?: number;
     frameCount?: number;
   };
+}
+
+/** addPulsePointLayer / addPulsePointLayerByUrl 的公开入口配置，要求 layerName 必填。 */
+export interface PulsePointLayerOptions extends PulsePointOptions {
+  layerName: string;
 }
 
 export interface PulsePointLayerHandle extends AnimatedLayerHandle<VectorLayer<VectorSource>> {

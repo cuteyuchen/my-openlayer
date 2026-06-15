@@ -29,7 +29,7 @@ Inherits from `BaseOptions`, `StyleOptions`, `TextOptions`.
 | iconColor | `string` | Icon color (for changing icon hue) |
 | circleColor | `string` | Circle fill color. Used when `img` is not set; pairs with `circleRadius` to draw a solid circle marker |
 | circleRadius | `number` | Circle radius in pixels, default 6. Only effective when `img` is not set |
-| layerName | `string` | Layer name (required, inherited from BaseOptions) |
+| layerName | `string` | Layer name (optional on reusable base options; public add layer APIs use `*LayerOptions` where it is required) |
 | zIndex | `number` | Layer Z-index |
 | visible | `boolean` | Whether the layer is visible |
 | style | `Style \| Style[] \| ((feature: FeatureLike) => Style \| Style[])` | Custom style function |
@@ -42,6 +42,24 @@ Inherits from `PointOptions`.
 | :--- | :--- | :--- |
 | distance | `number` | Clustering distance (pixels), default is 20 |
 | minDistance | `number` | Minimum clustering distance |
+
+### PointLayerOptions / ClusterPointLayerOptions / PulsePointLayerOptions
+
+Public point-layer entry option types. They extend `PointOptions`, `ClusterOptions`, and `PulsePointOptions` respectively, and make `layerName` required.
+
+```typescript
+interface PointLayerOptions extends PointOptions {
+  layerName: string
+}
+
+interface ClusterPointLayerOptions extends ClusterOptions {
+  layerName: string
+}
+
+interface PulsePointLayerOptions extends PulsePointOptions {
+  layerName: string
+}
+```
 
 ### PulsePointOptions
 
@@ -113,7 +131,7 @@ Only Point/MultiPoint geometries are processed; other geometry types are filtere
 Add an ordinary point layer, returning a unified `LayerHandle`. Accepts `PointData[]` or standard GeoJSON (FeatureCollection, Feature, Point/MultiPoint geometry).
 
 ```typescript
-addPoint(pointData: PointJSONInput, options: PointOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+addPoint(pointData: PointJSONInput, options: PointLayerOptions): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
 - **pointData**: Point data — `PointData[]`, GeoJSON FeatureCollection, Feature, or bare Point/MultiPoint geometry.
@@ -125,7 +143,7 @@ addPoint(pointData: PointJSONInput, options: PointOptions & { layerName: string 
 Add a cluster point layer. Accepts `PointJSONInput` (same as `addPoint`).
 
 ```typescript
-addClusterPoint(pointData: PointJSONInput, options: ClusterOptions & { layerName: string }): LayerHandle<VectorLayer<VectorSource>> | null
+addClusterPoint(pointData: PointJSONInput, options: ClusterPointLayerOptions): LayerHandle<VectorLayer<VectorSource>> | null
 ```
 
 - **pointData**: Point data — `PointData[]` or standard GeoJSON.
@@ -154,7 +172,7 @@ addDomPoint(twinkleList: TwinkleItem[], callback?: Function): {
 Add a high-performance pulse point layer. Accepts `PointJSONInput` (same as `addPoint`).
 
 ```typescript
-addPulsePointLayer(pointData: PointJSONInput, options: PulsePointOptions & { layerName: string }): PulsePointLayerHandle | null
+addPulsePointLayer(pointData: PointJSONInput, options: PulsePointLayerOptions): PulsePointLayerHandle | null
 ```
 
 ### addPointByUrl (3.0 New)
@@ -162,7 +180,7 @@ addPulsePointLayer(pointData: PointJSONInput, options: PulsePointOptions & { lay
 Load point data from a URL and add as a point layer. Returns `Promise`.
 
 ```typescript
-addPointByUrl(url: string, options: PointOptions & { layerName: string }): Promise<LayerHandle<VectorLayer<VectorSource>> | null>
+addPointByUrl(url: string, options: PointLayerOptions): Promise<LayerHandle<VectorLayer<VectorSource>> | null>
 ```
 
 ### addPulsePointLayerByUrl (3.0 New)
@@ -170,7 +188,7 @@ addPointByUrl(url: string, options: PointOptions & { layerName: string }): Promi
 Load point data from a URL and add as a pulse point layer. Returns `Promise`.
 
 ```typescript
-addPulsePointLayerByUrl(url: string, options: PulsePointOptions & { layerName: string }): Promise<PulsePointLayerHandle | null>
+addPulsePointLayerByUrl(url: string, options: PulsePointLayerOptions): Promise<PulsePointLayerHandle | null>
 ```
 
 - **pointData**: Array of point data.

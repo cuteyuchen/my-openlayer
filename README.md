@@ -19,7 +19,7 @@ my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地�
 - **点 API GeoJSON 直接输入** — `addPoint` / `addClusterPoint` / `addPulsePointLayer` 直接接受 `PointData[]`、GeoJSON FeatureCollection、Feature、MultiPoint geometry，内部统一标准化，创建后的 Feature 可直接通过 `feature.get('name')` / `feature.getProperties()` 读取业务字段
 - **addGeoJSON 综合渲染** — `MyOl.addGeoJSON(data, options)` 自动识别点/线/面几何类型，按分组创建图层，返回统一 `GeoJSONRenderHandle`，支持 `groupBy` 分组、`styleByProperties` 逐要素样式、数组/Record 多数据集输入
 - ***ByUrl 异步化** — `addPointByUrl` / `addLineByUrl` / `addPolygonByUrl` 统一先获取 JSON，再返回完整 Handle
-- **destroy 级联清理** — `MyOl.destroy()` 现在依次调用 `SelectHandler.destroy` / `Line.destroyAllFlowLines` / `Point.destroyAll` / `Polygon.destroyAll`，确保 rAF / Overlay / Vue 实例 / Select interaction 全部释放
+- **destroy 级联清理** — `MyOl.destroy()` 现在依次调用 `SelectHandler.destroy` / `Line.destroyAll` / `Point.destroyAll` / `Polygon.destroyAll`，确保静态线、流动线 rAF / Overlay / Vue 实例 / Select interaction 全部释放
 - **ProjectionManager** — 投影逻辑从 MyOl 内部抽取为独立类，支持 `ProjectionManager.register({ code, def })` 在 MyOl 实例之外注册任意 EPSG
 - **ConfigManager.setDefaults** — 运行时修改全局默认配置，所有未提供该字段的后续调用都生效
 - **统一错误类型** — 全部 `throw` 使用 `MyOpenLayersError` 并携带 `ErrorType`（`VALIDATION_ERROR` / `MAP_ERROR` / `LAYER_ERROR` / `COORDINATE_ERROR` / `DATA_ERROR` / `COMPONENT_ERROR`），另有 `LayerNotFoundError` / `InvalidGeoJSONError` / `ProjectionError` 子类，方便 `instanceof` 判别
