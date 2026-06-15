@@ -8,6 +8,7 @@ import type { PointData, PulsePointLayerHandle, PulsePointOptions } from "../../
 import ProjectionUtils from "../../utils/ProjectionUtils";
 import ValidationUtils from "../../utils/ValidationUtils";
 import { ConfigManager } from "../map";
+import { createPointFeatureProperties } from "./PointFeatureProperties";
 
 /**
  * 高性能闪烁点图层构建器。
@@ -57,9 +58,7 @@ export default class PointPulseLayer {
       }
 
       pointFeatureList.push(new Feature({
-        rawData: item,
-        type: options.layerName,
-        layerName: options.layerName,
+        ...createPointFeatureProperties(item, options.layerName),
         geometry: new OlPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options))
       }));
     });
@@ -169,7 +168,10 @@ export default class PointPulseLayer {
     };
 
     const layer = new VectorLayer({
-      layerName: options.layerName,
+      properties: {
+        name: options.layerName,
+        layerName: options.layerName
+      },
       source,
       style: createStyles as any,
       zIndex: options.zIndex || ConfigManager.DEFAULT_POINT_OPTIONS.zIndex,

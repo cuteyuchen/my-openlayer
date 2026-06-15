@@ -91,6 +91,7 @@ type PointJSONInput =
 - `FeatureCollection` 中只提取 `Point` / `MultiPoint` 类型的 Feature，其他 geometry 类型被跳过。
 - `MultiPoint` 会被拆分为多个独立的 `PointData`。
 - GeoJSON Feature 的 `properties` 会被保留，与 `lgtd` / `lttd` 合并。
+- 创建 OpenLayers Feature 时，业务字段会平铺到 Feature 顶层，可通过 `feature.get('name')` 或 `feature.getProperties().name` 读取；`rawData` 仅保留兼容旧代码，不推荐新代码继续依赖。
 - 坐标含 `NaN`、`Infinity` 或缺失的点会被过滤。
 - 不支持 `lng/lat`、`longitude/latitude`、`x/y` 等字段别名。
 
@@ -288,6 +289,9 @@ const fc = {
   ]
 };
 const handle = point.addPoint(fc, { layerName: 'cities', textKey: 'name' });
+const firstFeature = handle?.layer.getSource()?.getFeatures()[0];
+firstFeature?.get('name'); // '北京'
+// firstFeature.get('rawData') 仅保留兼容旧代码，新代码优先读取顶层业务字段。
 
 // 方式二：单个 Feature
 const feature = { type: 'Feature', properties: { name: '杭州' }, geometry: { type: 'Point', coordinates: [120.15, 30.27] } };

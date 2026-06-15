@@ -23,6 +23,14 @@ function createMapStub() {
   } as any;
 }
 
+function expectPointFeatureProperties(feature: any, expectedName: string) {
+  expect(feature.get('name')).toBe(expectedName);
+  expect(feature.getProperties().name).toBe(expectedName);
+  expect(feature.get('lgtd')).toBeUndefined();
+  expect(feature.get('lttd')).toBeUndefined();
+  expect(feature.get('rawData').name).toBe(expectedName);
+}
+
 /** *********************测试数据*********************/
 
 const pointDataArray = [
@@ -101,6 +109,26 @@ describe('点 JSON 输入标准化', () => {
       point.destroyAll();
     });
 
+    it('FeatureCollection 创建的点 feature 顶层可读取 properties，rawData 仍兼容', () => {
+      const map = createMapStub();
+      const point = new Point(map);
+      const handle = point.addPoint(featureCollection, { layerName: 'fc-props' });
+      expect(handle).not.toBeNull();
+      const feature = handle!.layer.getSource()!.getFeatures()[0];
+      expectPointFeatureProperties(feature, 'A');
+      point.destroyAll();
+    });
+
+    it('PointData[] 创建的点 feature 顶层可读取业务字段，rawData 仍兼容', () => {
+      const map = createMapStub();
+      const point = new Point(map);
+      const handle = point.addPoint(pointDataArray, { layerName: 'array-props' });
+      expect(handle).not.toBeNull();
+      const feature = handle!.layer.getSource()!.getFeatures()[0];
+      expectPointFeatureProperties(feature, 'A');
+      point.destroyAll();
+    });
+
     it('单个 Feature 创建单点图层', () => {
       const map = createMapStub();
       const point = new Point(map);
@@ -169,6 +197,27 @@ describe('点 JSON 输入标准化', () => {
       point.destroyAll();
     });
 
+    it('聚合点图层暴露统一的 name/layerName 属性', () => {
+      const map = createMapStub();
+      const point = new Point(map);
+      const handle = point.addClusterPoint(featureCollection, { layerName: 'cluster-layer-props' });
+      expect(handle).not.toBeNull();
+      expect(handle!.layer.get('name')).toBe('cluster-layer-props');
+      expect(handle!.layer.get('layerName')).toBe('cluster-layer-props');
+      point.destroyAll();
+    });
+
+    it('聚合点内部原始 feature 顶层可读取 properties，rawData 仍兼容', () => {
+      const map = createMapStub();
+      const point = new Point(map);
+      const handle = point.addClusterPoint(featureCollection, { layerName: 'cluster-props' });
+      expect(handle).not.toBeNull();
+      const clusterSource = handle!.layer.getSource() as any;
+      const rawFeature = clusterSource.getSource().getFeatures()[0];
+      expectPointFeatureProperties(rawFeature, 'A');
+      point.destroyAll();
+    });
+
     it('PointData[] 仍正常工作', () => {
       const map = createMapStub();
       const point = new Point(map);
@@ -190,6 +239,26 @@ describe('点 JSON 输入标准化', () => {
       expect(typeof handle!.start).toBe('function');
       expect(typeof handle!.stop).toBe('function');
       expect(typeof handle!.updateData).toBe('function');
+      point.destroyAll();
+    });
+
+    it('闪烁点图层暴露统一的 name/layerName 属性', () => {
+      const map = createMapStub();
+      const point = new Point(map);
+      const handle = point.addPulsePointLayer(featureCollection, { layerName: 'pulse-layer-props' });
+      expect(handle).not.toBeNull();
+      expect(handle!.layer.get('name')).toBe('pulse-layer-props');
+      expect(handle!.layer.get('layerName')).toBe('pulse-layer-props');
+      point.destroyAll();
+    });
+
+    it('闪烁点 feature 顶层可读取 properties，rawData 仍兼容', () => {
+      const map = createMapStub();
+      const point = new Point(map);
+      const handle = point.addPulsePointLayer(featureCollection, { layerName: 'pulse-props' });
+      expect(handle).not.toBeNull();
+      const feature = handle!.source.getFeatures()[0];
+      expectPointFeatureProperties(feature, 'A');
       point.destroyAll();
     });
 

@@ -89,7 +89,7 @@ Unified input type for all point APIs. Accepts any of:
 - `{ type: 'Point'; coordinates: number[] }` — bare Point geometry
 - `{ type: 'MultiPoint'; coordinates: number[][] }` — bare MultiPoint geometry
 
-Only Point/MultiPoint geometries are processed; other geometry types are filtered out. MultiPoint is split into individual `PointData` entries. GeoJSON `properties` are preserved and merged with `lgtd`/`lttd`. Coordinates with `NaN`, `Infinity`, or missing values are filtered.
+Only Point/MultiPoint geometries are processed; other geometry types are filtered out. MultiPoint is split into individual `PointData` entries. GeoJSON `properties` are preserved and merged with `lgtd`/`lttd`. Created OpenLayers features expose business fields at the top level (`feature.get('name')`, `feature.getProperties().name`). `feature.get('rawData')` is kept only for backward compatibility and is deprecated for new code. Coordinates with `NaN`, `Infinity`, or missing values are filtered.
 
 ### VueTemplatePointOptions
 
@@ -302,6 +302,9 @@ const fc = {
   ]
 };
 const handle = point.addPoint(fc, { layerName: 'cities', textKey: 'name' });
+const firstFeature = handle?.layer.getSource()?.getFeatures()[0];
+firstFeature?.get('name'); // 'Beijing'
+// feature.get('rawData') is kept for compatibility only; prefer top-level business fields.
 
 // Single Feature
 point.addPoint(

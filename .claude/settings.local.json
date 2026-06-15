@@ -9,7 +9,8 @@
       "Bash(echo \"TEST_EXIT=$?\")",
       "Bash(echo \"BUILD_EXIT=$?\")",
       "Bash(npm i *)",
-      "Bash(git tag *)"
+      "Bash(git tag *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.get\\('scripts',{}\\).items\\(\\) if any\\(kk in k for kk in ['test','typecheck','build','lint']\\)}, indent=2, ensure_ascii=False\\)\\)\")"
     ]
   }
 }

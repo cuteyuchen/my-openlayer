@@ -7,7 +7,7 @@ description: "Initialize my-openlayer maps, add points/lines/polygons, configure
 
 1. **Initialize** the map via `MyOl` constructor with a container ID and options.
 2. **Access modules** through lazy-loaded getters (`getPoint()`, `getLine()`, `getPolygon()`, `getTools()`).
-3. **Add features** using `add*` methods. In 3.0 real layer methods return unified `LayerHandle`; Overlay/Vue point methods return `ControlHandle`. Point APIs (`addPoint`, `addClusterPoint`, `addPulsePointLayer`) accept both `PointData[]` and standard GeoJSON (FeatureCollection, Feature, MultiPoint geometry). Use `MyOl.addGeoJSON(data, options)` to render mixed geometry types (point/line/polygon) in one call, with automatic grouping and per-feature styling.
+3. **Add features** using `add*` methods. In 3.0 real layer methods return unified `LayerHandle`; Overlay/Vue point methods return `ControlHandle`. Point APIs (`addPoint`, `addClusterPoint`, `addPulsePointLayer`) accept both `PointData[]` and standard GeoJSON (FeatureCollection, Feature, MultiPoint geometry); created point Features expose business fields at the top level (`feature.get('name')`), while `rawData` is kept only for backward compatibility. Use `MyOl.addGeoJSON(data, options)` to render mixed geometry types (point/line/polygon) in one call, with automatic grouping and per-feature styling.
 4. **Clean up** by calling `destroy()` — 3.0 `destroy()` cascades to all sub-modules automatically.
 
 ### Quick Start

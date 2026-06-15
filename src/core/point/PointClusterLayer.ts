@@ -8,6 +8,7 @@ import type { ClusterOptions, PointData } from "../../types";
 import ProjectionUtils from "../../utils/ProjectionUtils";
 import ValidationUtils from "../../utils/ValidationUtils";
 import { ConfigManager } from "../map";
+import { createPointFeatureProperties } from "./PointFeatureProperties";
 
 /**
  * 点聚合图层构建器。
@@ -26,11 +27,8 @@ export default class PointClusterLayer {
       }
 
       pointFeatureList.push(new Feature({
-        type: options.layerName,
-        layerName: options.layerName,
+        ...createPointFeatureProperties(item, options.layerName),
         geometry: new OlPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options)),
-        name: options.textKey ? item[options.textKey] : '',
-        rawData: item,
       }));
     });
 
@@ -42,7 +40,10 @@ export default class PointClusterLayer {
     });
 
     const clusterLayer = new VectorLayer({
-      layerName: options.layerName,
+      properties: {
+        name: options.layerName,
+        layerName: options.layerName
+      },
       source: clusterSource,
       style: (feature: Feature) => {
         if (options.style) {
@@ -51,7 +52,9 @@ export default class PointClusterLayer {
           }
           return options.style;
         }
-        const name = feature.get('features')[0].get('name');
+        const rawFeature = feature.get('features')[0];
+        const rawData = rawFeature.get('rawData') as PointData | undefined;
+        const name = options.textKey ? String(rawData?.[options.textKey] ?? '') : '';
         return createClusterStyle(options, name);
       },
       zIndex: options.zIndex || ConfigManager.DEFAULT_CLUSTER_OPTIONS.zIndex,

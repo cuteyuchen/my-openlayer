@@ -18,6 +18,7 @@ import { ConfigManager, MapTools } from "../map";
 import PointClusterLayer from './PointClusterLayer';
 import PointOverlay from './PointOverlay';
 import PointPulseLayer from './PointPulseLayer';
+import { createPointFeatureProperties } from './PointFeatureProperties';
 
 
 /**
@@ -199,9 +200,7 @@ export default class Point {
       }
 
       const pointFeature = new Feature({
-        rawData: item,
-        type: options.layerName,
-        layerName: options.layerName,
+        ...createPointFeatureProperties(item, options.layerName),
         geometry: new olPoint(ProjectionUtils.transformCoordinate([item.lgtd, item.lttd], options))
       });
 
