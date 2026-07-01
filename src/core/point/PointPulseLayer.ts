@@ -91,8 +91,17 @@ export default class PointPulseLayer {
     const source = new VectorSource({
       features: PointPulseLayer.createFeatures(pointData, options)
     });
+    const baseZIndex = options.zIndex || ConfigManager.DEFAULT_POINT_OPTIONS.zIndex;
+    const iconImg = options.icon?.img ?? options.icon?.src;
 
-    const createStyles = (feature: Feature): Style[] => {
+    /**
+     * 仅负责绘制脉冲动画，避免动画覆盖图标。
+     */
+    const createPulseStyle = (feature: Feature): Style | undefined => {
+      if (!pulseOptions.enabled) {
+        return undefined;
+      }
+
       const rawData = feature.get('rawData') as PointData | undefined;
       const level = String(rawData?.[levelKey] ?? 'default');
       const progress = frameIndex / Math.max(1, pulseOptions.frameCount - 1);
@@ -101,30 +110,29 @@ export default class PointPulseLayer {
       const opacity = 1 - progress;
       const fillColor = pulseOptions.colorMap[level] ?? pulseOptions.colorMap.default ?? 'rgba(6, 183, 253, 0.32)';
       const strokeColor = pulseOptions.strokeColorMap?.[level] ?? pulseOptions.strokeColorMap?.default;
-      const styles: Style[] = [];
-
-      if (pulseOptions.enabled) {
-        const pulseCacheKey = `${level}_${frameIndex}`;
-        let pulseStyle = pulseStyleCache.get(pulseCacheKey);
-        if (!pulseStyle) {
-          pulseStyle = new Style({
-            zIndex: 0,
-            image: new CircleStyle({
-              radius,
-              fill: new Fill({ color: PointPulseLayer.withOpacity(fillColor, opacity) }),
-              stroke: strokeColor && pulseOptions.strokeWidth > 0
-                ? new Stroke({ color: PointPulseLayer.withOpacity(strokeColor, opacity), width: pulseOptions.strokeWidth })
-                : undefined
-            })
-          });
-          pulseStyleCache.set(pulseCacheKey, pulseStyle);
-        }
-        styles.push(pulseStyle);
+      const pulseCacheKey = `${level}_${frameIndex}`;
+      let pulseStyle = pulseStyleCache.get(pulseCacheKey);
+      if (!pulseStyle) {
+        pulseStyle = new Style({
+          image: new CircleStyle({
+            radius,
+            fill: new Fill({ color: PointPulseLayer.withOpacity(fillColor, opacity) }),
+            stroke: strokeColor && pulseOptions.strokeWidth > 0
+              ? new Stroke({ color: PointPulseLayer.withOpacity(strokeColor, opacity), width: pulseOptions.strokeWidth })
+              : undefined
+          })
+        });
+        pulseStyleCache.set(pulseCacheKey, pulseStyle);
       }
+      return pulseStyle;
+    };
 
+    /**
+     * 仅负责绘制图标与文本，固定放在脉冲层之上。
+     */
+    const createStaticStyle = (feature: Feature): Style | undefined => {
+      const rawData = feature.get('rawData') as PointData | undefined;
       const text = options.textVisible && options.textKey && rawData ? String(rawData[options.textKey] ?? '') : '';
-      // P1-4: icon.img 是新名，icon.src 保留兼容（@deprecated）
-      const iconImg = options.icon?.img ?? options.icon?.src;
       const staticCacheKey = [
         options.img ?? iconImg ?? '',
         options.scale ?? options.icon?.scale ?? ConfigManager.DEFAULT_POINT_ICON_SCALE,
@@ -133,8 +141,7 @@ export default class PointPulseLayer {
       ].join('|');
       let pointStyle = staticStyleCache.get(staticCacheKey);
       if (pointStyle) {
-        styles.push(pointStyle);
-        return styles;
+        return pointStyle;
       }
 
       const pointStyleOptions: { image?: Icon | CircleStyle; text?: Text } = {};
@@ -160,24 +167,35 @@ export default class PointPulseLayer {
       }
       if (pointStyleOptions.image || pointStyleOptions.text) {
         pointStyle = new Style(pointStyleOptions);
-        pointStyle.setZIndex(1);
         staticStyleCache.set(staticCacheKey, pointStyle);
-        styles.push(pointStyle);
+        return pointStyle;
       }
-      return styles;
+      return undefined;
     };
 
-    const layer = new VectorLayer({
+    const pulseLayer = new VectorLayer({
       properties: {
         name: options.layerName,
         layerName: options.layerName
       },
       source,
-      style: createStyles as any,
-      zIndex: options.zIndex || ConfigManager.DEFAULT_POINT_OPTIONS.zIndex,
+      style: createPulseStyle as any,
+      zIndex: baseZIndex,
     } as any);
-    layer.setVisible(options.visible === undefined ? true : options.visible);
-    map.addLayer(layer);
+    const visible = options.visible === undefined ? true : options.visible;
+    pulseLayer.setVisible(visible);
+    map.addLayer(pulseLayer);
+    const staticLayer = new VectorLayer({
+      properties: {
+        name: options.layerName,
+        layerName: options.layerName
+      },
+      source,
+      style: createStaticStyle as any,
+      zIndex: baseZIndex + 1,
+    } as any);
+    staticLayer.setVisible(visible);
+    map.addLayer(staticLayer);
 
     const tick = () => {
       if (!running) return;
@@ -187,7 +205,7 @@ export default class PointPulseLayer {
       if (nextFrameIndex !== renderedFrameIndex) {
         frameIndex = nextFrameIndex;
         renderedFrameIndex = nextFrameIndex;
-        layer.changed();
+        pulseLayer.changed();
       }
       rafId = requestAnimationFrame(tick);
     };
@@ -209,11 +227,14 @@ export default class PointPulseLayer {
     start();
 
     return {
-      layer,
+      layer: pulseLayer,
       source,
       start,
       stop,
-      setVisible: (visible: boolean) => layer.setVisible(visible),
+      setVisible: (visible: boolean) => {
+        pulseLayer.setVisible(visible);
+        staticLayer.setVisible(visible);
+      },
       updateData: (nextData: PointData[]) => {
         source.clear();
         source.addFeatures(PointPulseLayer.createFeatures(nextData, options));
@@ -221,7 +242,8 @@ export default class PointPulseLayer {
       remove: () => {
         stop();
         source.clear();
-        map.removeLayer(layer);
+        map.removeLayer(pulseLayer);
+        map.removeLayer(staticLayer);
       }
     };
   }

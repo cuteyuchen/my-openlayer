@@ -210,7 +210,7 @@ describe('destroy 级联清理', () => {
       };
       point.addPulsePointLayer(pointData, pulseOpts);
 
-      expect(map.layers.length).toBe(2);
+      expect(map.layers.length).toBe(3);
 
       point.destroyAll();
       expect(map.layers.length).toBe(0);

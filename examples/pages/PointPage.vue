@@ -26,18 +26,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, ref, shallowRef } from 'vue'
+import { computed, h, onBeforeUnmount, shallowRef, useTemplateRef } from 'vue'
 import DemoLayout from '../shared/DemoLayout.vue'
 import { useDemoMap } from '../shared/useDemoMap'
 import { demoLog } from '../shared/useDemoLog'
 import { sampleLevelPoints, sampleClusterPoints, sampleTwinkleItems } from '../data/points'
 import type { PulsePointLayerHandle } from '../../src'
 
+/***********************地图初始化*********************/
 const PAGE = 'Point'
-const layoutRef = ref<InstanceType<typeof DemoLayout> | null>(null)
+const layoutRef = useTemplateRef<InstanceType<typeof DemoLayout>>('layoutRef')
 const containerRef = computed(() => layoutRef.value?.mapContainer ?? null)
 const { myOl } = useDemoMap({ containerRef: containerRef as any, pageName: PAGE })
 
+/***********************图层句柄状态*********************/
 const staticLayer = shallowRef<any>(null)
 const clusterLayer = shallowRef<any>(null)
 const pulseHandle = shallowRef<PulsePointLayerHandle | null>(null)
@@ -48,6 +50,7 @@ const hasAny = computed(() =>
   !!(staticLayer.value || clusterLayer.value || pulseHandle.value || domHandle.value || vueHandle.value)
 )
 
+/***********************普通点与聚合点示例*********************/
 function doAddPoint() {
   if (!myOl.value) return
   staticLayer.value = myOl.value.getPoint().addPoint(sampleLevelPoints, {
@@ -69,15 +72,18 @@ function doAddCluster() {
   demoLog.info(PAGE, 'addClusterPoint(60 points, { distance: 40 })')
 }
 
+/***********************脉冲点示例*********************/
 function doAddPulse() {
   if (!myOl.value) return
   pulseHandle.value = myOl.value.getPoint().addPulsePointLayer(sampleLevelPoints, {
     layerName: 'demo-pulse',
+    img: '/village-pulse.svg',
+    scale: 0.9,
     textKey: 'name',
     textVisible: true,
     pulse: { enabled: true, duration: 2200, radius: [8, 24] }
   })
-  demoLog.info(PAGE, 'addPulsePointLayer(data, { pulse: { duration: 2200 } })')
+  demoLog.info(PAGE, 'addPulsePointLayer(data, { img: "/village-pulse.svg", pulse: { duration: 2200 } })')
 }
 
 let pulseRunning = true
@@ -88,6 +94,7 @@ function togglePulse() {
   demoLog.info(PAGE, `pulseHandle.${pulseRunning ? 'start' : 'stop'}()`)
 }
 
+/***********************DOM 与 Vue 点位示例*********************/
 function doAddDom() {
   if (!myOl.value) return
   domHandle.value = myOl.value.getPoint().addDomPoint(sampleTwinkleItems, item => {
@@ -111,6 +118,7 @@ function doAddVue() {
   demoLog.info(PAGE, 'addVueTemplatePoint(data, inlineTemplate)')
 }
 
+/***********************清理逻辑*********************/
 function removeAllManual() {
   // 演示统一形态：各 handle 都有 remove()
   if (staticLayer.value) {
@@ -133,6 +141,7 @@ onBeforeUnmount(() => {
   vueHandle.value = null
 })
 
+/***********************外挂点位样式*********************/
 const twinkleCss = `
 .twinkle-red, .twinkle-orange, .twinkle-blue {
   position: relative;

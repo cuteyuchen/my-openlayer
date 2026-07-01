@@ -222,18 +222,37 @@ describe('P1-1 add* 统一 LayerHandle / ControlHandle', () => {
     expectLayerHandle(handle, map);
   });
 
-  it('Point.addPulsePointLayer 返回 AnimatedLayerHandle', () => {
+  it('Point.addPulsePointLayer 返回 AnimatedLayerHandle，图标层在脉冲层上方', () => {
     const map = createMapStub();
     const point = new Point(map);
     const opts: PulsePointLayerOptions = {
       layerName: 'pulse-add',
+      img: '/icons/pulse-marker.svg',
+      textKey: 'name',
+      textVisible: true,
       pulse: { enabled: true, frameCount: 4, duration: 1000, radius: [4, 12] }
     };
     const handle: AnimatedLayerHandle<VectorLayer<any>> | null = point.addPulsePointLayer(pointData, opts);
     expect(handle).not.toBeNull();
     expect(typeof handle!.start).toBe('function');
     expect(typeof handle!.stop).toBe('function');
-    expectLayerHandle(handle!, map);
+    expect(map.layers.length).toBe(2);
+    expect(handle!.layer.get('name')).toBe('pulse-add');
+    expect(handle!.layer.get('layerName')).toBe('pulse-add');
+
+    const staticLayer = map.layers.find(layer => layer !== handle!.layer) as VectorLayer<any> | undefined;
+    expect(staticLayer).toBeDefined();
+    expect(staticLayer!.get('name')).toBe('pulse-add');
+    expect(staticLayer!.get('layerName')).toBe('pulse-add');
+    expect(staticLayer!.getZIndex()).toBeGreaterThan(handle!.layer.getZIndex() ?? 0);
+
+    handle!.setVisible(false);
+    expect(handle!.layer.getVisible()).toBe(false);
+    expect(staticLayer!.getVisible()).toBe(false);
+
+    handle!.remove();
+    expect(map.layers.length).toBe(0);
+    expect(() => handle!.remove()).not.toThrow();
   });
 
   it('Point.addPulsePointLayerByUrl await 后返回 AnimatedLayerHandle', async () => {

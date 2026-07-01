@@ -121,9 +121,18 @@ export default class PolygonStyleFactory {
     const strokeWidth = withDefaultStroke ? options?.strokeWidth ?? previousStroke?.getWidth() : undefined;
     const lineDash = withDefaultStroke ? options?.lineDash ?? previousStroke?.getLineDash() ?? undefined : undefined;
     const lineDashOffset = withDefaultStroke ? options?.lineDashOffset ?? previousStroke?.getLineDashOffset() : undefined;
-    const newColor = hasMappedColor
-      ? colorObj![name]
-      : options?.fillColor ?? (withDefaultFill ? previousFill?.getColor() : undefined);
+    /** *********************颜色回退策略*********************/
+    // 1) colorObj 命中映射：使用映射颜色
+    // 2) 未命中但 options.fillColor 传入：使用传入的 fillColor
+    // 3) 都未提供：使用透明填充，避免沿用上一次更新的颜色
+    let newColor: string | number[] | undefined;
+    if (hasMappedColor) {
+      newColor = colorObj![name];
+    } else if (options?.fillColor !== undefined) {
+      newColor = options.fillColor;
+    } else {
+      newColor = withDefaultFill ? 'rgba(0, 0, 0, 0)' : undefined;
+    }
 
     const featureStyle = new Style({
       stroke: strokeColor !== undefined || strokeWidth !== undefined || lineDash !== undefined || lineDashOffset !== undefined
