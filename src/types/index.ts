@@ -8,6 +8,7 @@ export type {
   AnnotationType,
   TiandituType,
   AnnotationLayerOptions,
+  GeoServerLayerOptions,
   HeatMapOptions,
   ImageLayerData,
   MaskLayerOptions

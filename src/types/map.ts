@@ -2,6 +2,7 @@ import BaseLayer from "ol/layer/Base";
 import TileLayer from "ol/layer/Tile";
 import { WMTS } from "ol/source";
 import View from "ol/View";
+import type { ProjectionLike } from "ol/proj";
 import { Units } from "ol/proj/Units";
 import type { MapJSONData } from "./common";
 
@@ -55,6 +56,20 @@ export interface AnnotationLayerOptions {
   visible?: boolean;
 }
 
+/** GeoServer WMS 图层配置。 */
+export interface GeoServerLayerOptions {
+  zIndex?: number;
+  visible?: boolean;
+  version?: '1.1.1' | '1.3.0';
+  serverType?: string;
+  crossOrigin?: string;
+  params?: Record<string, any>;
+  /** WMS 数据投影；未传时沿用 OpenLayers 默认行为。 */
+  projection?: ProjectionLike;
+  /** 重采样时是否插值；未传时沿用 OpenLayers 默认行为。 */
+  interpolate?: boolean;
+}
+
 export interface HeatMapOptions {
   layerName?: string;
   radius?: number;
@@ -69,6 +84,10 @@ export interface HeatMapOptions {
 export interface ImageLayerData {
   img?: string;
   extent?: number[];
+  /** 静态图片的数据投影；未传时沿用 OpenLayers 默认行为。 */
+  projection?: ProjectionLike;
+  /** 重采样时是否插值；false 表示使用最近邻插值。 */
+  interpolate?: boolean;
 }
 
 export interface MaskLayerOptions {

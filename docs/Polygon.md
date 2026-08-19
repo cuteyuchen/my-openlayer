@@ -63,6 +63,8 @@ const polygon = new Polygon(map: Map);
 | :--- | :--- | :--- |
 | `img` | `string` | 图片 URL |
 | `extent` | `number[]` | 图片覆盖范围 `[minX, minY, maxX, maxY]` |
+| `projection` | `ProjectionLike` | 图片数据投影；未传时沿用 OpenLayers 默认行为 |
+| `interpolate` | `boolean` | 重采样时是否插值；设为 `false` 时使用最近邻插值 |
 
 ## 方法
 
@@ -232,15 +234,20 @@ polygonModule.addHeatmap(heatPoints, {
 ### 图片图层
 
 ```typescript
-// 将图片叠加到指定经纬度范围
+// 将 EPSG:4326 图片叠加到地图，OpenLayers 会根据 source projection 执行栅格重投影
 polygonModule.addImageLayer({
-  img: 'https://example.com/plan.png',
-  extent: [120.0, 30.0, 120.1, 30.1] // [minX, minY, maxX, maxY]
+  img: 'https://example.com/inundation.png',
+  extent: [117.560633, 28.028820, 120.738828, 30.591628],
+  projection: 'EPSG:4326',
+  interpolate: false
 }, {
-  layerName: 'image-overlay',
-  opacity: 0.8
+  layerName: 'inundationLayer',
+  opacity: 0.6,
+  visible: true
 });
 ```
+
+`extent` 始终保持图片数据投影下的原始范围。不要先用 `transformExtent()` 将外框转换到地图投影后再线性铺图；只需传入 `projection`，OpenLayers 会创建重投影图片并完成真正的栅格重采样。同名 `layerName` 更新 source 时也会应用新的 `projection` 和 `interpolate`，未传时保持 OpenLayers 默认行为。
 
 ### 遮罩层（反向裁剪）
 

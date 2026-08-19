@@ -27,7 +27,9 @@ export default class PolygonImageLayer {
           const url = imageData.img || (existingLayer.getSource() as ImageStatic)?.getUrl() || '';
           existingLayer.setSource(new ImageStatic({
             url,
-            imageExtent: imageData.extent
+            imageExtent: imageData.extent,
+            projection: imageData.projection,
+            interpolate: imageData.interpolate
           }));
         }
         if (mergedOptions.opacity !== undefined) existingLayer.setOpacity(mergedOptions.opacity);
@@ -40,7 +42,9 @@ export default class PolygonImageLayer {
     const source = imageData.extent
       ? new ImageStatic({
           url: imageData.img || '',
-          imageExtent: imageData.extent
+          imageExtent: imageData.extent,
+          projection: imageData.projection,
+          interpolate: imageData.interpolate
         })
       : undefined;
 

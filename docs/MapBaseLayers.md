@@ -50,6 +50,8 @@ GeoServer WMS 图层配置。
 | `serverType` | `string` | 服务器类型，如 `'geoserver'` |
 | `crossOrigin` | `string` | 跨域设置，默认 `'anonymous'` |
 | `params` | `Object` | 额外的 WMS 参数 |
+| `projection` | `ProjectionLike` | WMS 数据投影；未传时沿用 OpenLayers 默认行为 |
+| `interpolate` | `boolean` | 重采样时是否插值；设为 `false` 时使用最近邻插值 |
 
 ## 方法
 
@@ -182,6 +184,9 @@ const wmsLayer = baseLayers.addGeoServerLayer(
   {
     visible: true,
     zIndex: 10,
+    projection: 'EPSG:4326',
+    interpolate: false,
+    serverType: 'geoserver',
     params: {
       'CQL_FILTER': "status = 'active'" // 可选：传递自定义参数
     }

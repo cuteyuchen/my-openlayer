@@ -73,6 +73,7 @@ export type {
   TiandituType,
   MapLayers,
   AnnotationLayerOptions,
+  GeoServerLayerOptions,
   SelectOptions,
   SelectMode,
   SelectCallbackEvent,

@@ -9,35 +9,18 @@ import { Tile as TileLayer } from "ol/layer";
 import { get as getProjection, Projection } from "ol/proj";
 import { getTopLeft, getWidth } from "ol/extent";
 import { TileWMS } from "ol/source";
+import type { ServerType } from "ol/source/wms";
 import WMTSTileGrid from "ol/tilegrid/WMTS";
 import XYZ from "ol/source/XYZ";
 import BaseLayer from "ol/layer/Base";
 import MapTools from "./MapTools";
 import { ErrorHandler, ErrorType } from "../../utils/ErrorHandler";
-import { MapLayersOptions, TiandituType, AnnotationLayerOptions, MapLayers, AnnotationType } from "../../types";
+import { MapLayersOptions, TiandituType, AnnotationLayerOptions, GeoServerLayerOptions, MapLayers, AnnotationType } from "../../types";
 import ValidationUtils from "../../utils/ValidationUtils";
 import ConfigManager from "./ConfigManager";
 
 const TIANDITU_TYPES = ['vec_c', 'img_c', 'ter_c'];
 const CUSTOM_LAYER_KEY = '__custom__';
-
-/**
- * GeoServer图层选项接口
- */
-interface GeoServerLayerOptions {
-  /** 图层层级 */
-  zIndex?: number;
-  /** 图层可见性 */
-  visible?: boolean;
-  /** WMS版本 */
-  version?: '1.1.1' | '1.3.0';
-  /** 服务器类型 */
-  serverType?: string;
-  /** 跨域设置 */
-  crossOrigin?: string;
-  /** WMS参数 */
-  params?: Record<string, any>;
-}
 
 /**
  * 天地图图层选项接口
@@ -474,8 +457,10 @@ export default class MapBaseLayers {
             'VERSION': options.version || '1.1.1',
             ...options.params
           },
-          serverType: 'geoserver',
+          serverType: (options.serverType || 'geoserver') as ServerType,
           crossOrigin: options.crossOrigin || 'anonymous',
+          projection: options.projection,
+          interpolate: options.interpolate,
         }),
         zIndex: options.zIndex ?? ConfigManager.TIANDITU_CONFIG.DEFAULT_ZINDEX,
         visible: options.visible ?? true,

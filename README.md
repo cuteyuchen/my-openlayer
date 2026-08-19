@@ -267,6 +267,30 @@ map.addGeoJSON(points, {
 });
 ```
 
+### 9. 添加带数据投影的静态图片
+
+静态栅格图片的 `extent` 保持其数据投影下的原始坐标，传入 `projection` 后由 OpenLayers 完成真正的栅格重投影：
+
+```typescript
+const imageHandle = map.getPolygon().addImageLayer(
+  {
+    img: '/images/inundation.png',
+    extent: [117.560633, 28.028820, 120.738828, 30.591628],
+    projection: 'EPSG:4326',
+    interpolate: false
+  },
+  {
+    layerName: 'inundationLayer',
+    opacity: 0.6,
+    visible: true
+  }
+);
+
+imageHandle.setVisible(false);
+```
+
+不要先用 `transformExtent()` 转换图片外框；该方式只转换边界，不能替代栅格重投影。`projection` 和 `interpolate` 不传时继续使用 OpenLayers 默认行为。
+
 ## 文档索引
 
 详细文档请访问 **[在线文档](https://cuteyuchen.github.io/my-openlayer/)**，交互式 Demo 请访问 **[Demo 站点](https://cuteyuchen.github.io/my-openlayer/demo/)**。

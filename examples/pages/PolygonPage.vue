@@ -19,18 +19,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 import DemoLayout from '../shared/DemoLayout.vue'
 import { useDemoMap } from '../shared/useDemoMap'
 import { demoLog } from '../shared/useDemoLog'
 import { sampleRectPolygon, sampleTwoPolygons } from '../data/polygons'
 import { sampleClusterPoints } from '../data/points'
 
+/***********************页面与地图实例*********************/
 const PAGE = 'Polygon'
-const layoutRef = ref<InstanceType<typeof DemoLayout> | null>(null)
+const layoutRef = useTemplateRef<InstanceType<typeof DemoLayout>>('layoutRef')
 const containerRef = computed(() => layoutRef.value?.mapContainer ?? null)
 const { myOl } = useDemoMap({ containerRef: containerRef as any, pageName: PAGE })
 
+/***********************Polygon 图层操作*********************/
 function doAdd() {
   myOl.value!.getPolygon().addPolygon(sampleTwoPolygons, {
     layerName: 'demo-poly',
@@ -73,12 +75,17 @@ function doHeatmap() {
 }
 
 function doImage() {
-  // ImageLayerData 字段叫 img（不是 url）
+  // 保留 EPSG:4326 原始范围，由 ImageStatic 根据 source projection 完成栅格重投影。
   myOl.value!.getPolygon().addImageLayer(
-    { img: '/examples/assets/demo.png', extent: [119.7, 29.82, 120.1, 30.12] },
-    { layerName: 'demo-image', opacity: 0.7, zIndex: 25 }
+    {
+      img: '/examples/assets/demo.png',
+      extent: [117.560633, 28.02882, 120.738828, 30.591628],
+      projection: 'EPSG:4326',
+      interpolate: false
+    },
+    { layerName: 'demo-image', opacity: 0.6, visible: true, zIndex: 25 }
   )
-  demoLog.info(PAGE, 'addImageLayer({ img: "demo.png", extent }, { opacity: 0.7 })')
+  demoLog.info(PAGE, 'addImageLayer({ img, extent, projection: "EPSG:4326", interpolate: false })')
 }
 
 function doOutLayer() {

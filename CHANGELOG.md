@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.1.5] - 2026-08-19
+
+### Bug Fixes
+
+- **ImageStatic:** `Polygon.addImageLayer()` 首次创建和同名 `layerName` 更新 source 时完整透传图片数据投影与插值配置，使不同地图投影下的静态栅格可以触发 OpenLayers 重投影。
+- **TileWMS:** `MapBaseLayers.addGeoServerLayer()` 透传 `projection`、`interpolate` 和既有 `serverType` 配置。
+
+### Types and Documentation
+
+- `ImageLayerData` 新增可选的 `projection`、`interpolate`；公开导出 `GeoServerLayerOptions` 并补充相同配置。
+- 更新 README、Polygon/MapBaseLayers 文档和 Polygon Demo，明确保留原始 `imageExtent`，不使用 `transformExtent()` 代替栅格重投影。
+
+### Tests
+
+- 新增 source 配置回归测试，覆盖默认行为、同名更新、URL 复用、图层属性和统一 `LayerHandle`。
+
 ## [3.1.1] - 2026-06-09
 
 ### Bug Fixes
