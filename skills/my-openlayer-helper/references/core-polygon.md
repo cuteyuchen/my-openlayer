@@ -68,6 +68,8 @@ Image layer data.
 | :--- | :--- | :--- |
 | `img` | `string` | Image URL |
 | `extent` | `number[]` | Image extent `[minX, minY, maxX, maxY]` |
+| `projection` | `ProjectionLike` | Image data projection; omit to keep OpenLayers default behavior |
+| `interpolate` | `boolean` | Whether to interpolate while resampling; `false` uses nearest-neighbor resampling |
 
 ## Methods
 
@@ -265,15 +267,20 @@ polygonModule.addHeatmap(heatPoints, {
 ### Image Layer
 
 ```typescript
-// Overlay image on specific lat/lon extent
+// Overlay an EPSG:4326 raster on the map; OpenLayers performs true raster reprojection
 polygonModule.addImageLayer({
-  img: 'https://example.com/plan.png',
-  extent: [120.0, 30.0, 120.1, 30.1] // [minX, minY, maxX, maxY]
+  img: 'https://example.com/inundation.png',
+  extent: [117.560633, 28.028820, 120.738828, 30.591628],
+  projection: 'EPSG:4326',
+  interpolate: false
 }, {
-  layerName: 'image-overlay',
-  opacity: 0.8
+  layerName: 'inundationLayer',
+  opacity: 0.6,
+  visible: true
 });
 ```
+
+Keep `extent` in the source image projection. Do not call `transformExtent()` to convert only the boundary corners and then linearly place the image; pass `projection` so OpenLayers can create a reprojection image and resample the raster correctly. When updating an existing `layerName`, the new `projection` and `interpolate` values are applied to the replacement source, while an omitted `img` reuses the previous URL.
 
 ### Mask Layer (Reverse Clip)
 

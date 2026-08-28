@@ -55,6 +55,8 @@ GeoServer WMS layer configuration.
 | `serverType` | `string` | Server type, e.g., `'geoserver'` |
 | `crossOrigin` | `string` | Cross-origin setting, default `'anonymous'` |
 | `params` | `Object` | Extra WMS parameters |
+| `projection` | `ProjectionLike` | WMS data projection; omit to keep OpenLayers default behavior |
+| `interpolate` | `boolean` | Whether to interpolate while resampling; `false` uses nearest-neighbor resampling |
 
 ## Methods
 
@@ -272,6 +274,9 @@ const wmsLayer = baseLayers.addGeoServerLayer(
   {
     visible: true,
     zIndex: 10,
+    serverType: 'geoserver',
+    projection: 'EPSG:4326',
+    interpolate: false,
     params: {
       'CQL_FILTER': "status = 'active'" // Optional: Pass custom parameters
     }
