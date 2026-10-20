@@ -9,6 +9,7 @@ My OpenLayers 是一个基于 OpenLayers 的轻量级地图封装库，旨在简
 - **TypeScript**: 完全使用 TypeScript 编写，提供完整的类型定义。
 - **工具丰富**: 内置测量、选择、裁剪、遮罩等实用工具。
 - **高性能闪烁点**: 基于 `VectorLayer` 和单个 `requestAnimationFrame` 渲染大量预警点位，避免 DOM 动画卡顿。
+- **逐要素面样式**: 从 `3.2.0` 起公开 `createPolygonStyle(options, feature)`，支持业务侧计算动态填色、描边和独立的 `styleZIndex`，统一创建面与文字样式。
 - **坐标系稳定注册**: 内置 `EPSG:4326`、`EPSG:4490`、`EPSG:4549`，生产构建下无需业务侧手动注册 WGS84。
 - **扩展性强**: 提供基础类和接口，方便二次封装和扩展。
 
@@ -53,7 +54,7 @@ point.addPoint([{
 - **[MyOl](./MyOl.md)**: 核心入口类，负责地图初始化和模块管理。
 - **[Point](./Point.md)**: 点位管理，支持图标、文本、聚合、高性能闪烁点等。
 - **[Line](./Line.md)**: 线条绘制，支持不同样式和动画。
-- **[Polygon](./Polygon.md)**: 多边形绘制，支持遮罩、热力图等。
+- **[Polygon](./Polygon.md)**: 多边形绘制，支持公开样式工厂、逐要素样式层级、遮罩、热力图等。
 - **[VueTemplatePoint](./VueTemplatePoint.md)**: 使用 Vue 组件作为地图点位覆盖物。
 
 ## 工具模块

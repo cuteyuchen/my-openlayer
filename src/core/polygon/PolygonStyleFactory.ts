@@ -1,6 +1,7 @@
 import Feature, { type FeatureLike } from "ol/Feature";
 import { Fill, Stroke, Style, Text } from "ol/style";
 import type { FeatureColorUpdateOptions, PolygonOptions } from "../../types";
+import ConfigManager from "../map/ConfigManager";
 
 /**
  * 面图层样式工厂。
@@ -62,7 +63,7 @@ export default class PolygonStyleFactory {
     if (!options.fillColorCallBack) {
       const fill = staticFillColor ? new Fill({ color: staticFillColor }) : undefined;
       if (stroke || fill) {
-        baseStyle = new Style({ stroke, fill });
+        baseStyle = new Style({ stroke, fill, zIndex: options.styleZIndex });
       }
     }
 
@@ -78,7 +79,7 @@ export default class PolygonStyleFactory {
         const fillColor = options.fillColorCallBack ? options.fillColorCallBack(feature) : staticFillColor;
         const fill = fillColor ? new Fill({ color: fillColor }) : undefined;
         if (stroke || fill) {
-          styles.push(new Style({ stroke, fill }));
+          styles.push(new Style({ stroke, fill, zIndex: options.styleZIndex }));
         }
       }
 
@@ -86,6 +87,7 @@ export default class PolygonStyleFactory {
         const text = PolygonStyleFactory.getFeatureText(feature, options);
         if (text) {
           styles.push(new Style({
+            zIndex: options.styleZIndex,
             text: new Text({
               text,
               font: options.textFont!,
@@ -115,6 +117,9 @@ export default class PolygonStyleFactory {
     const previousStroke = PolygonStyleFactory.getPreviousStroke(previousStyles);
     const previousFill = PolygonStyleFactory.getPreviousFill(previousStyles);
     const previousText = PolygonStyleFactory.getPreviousText(previousStyles);
+    // 填色更新只继承样式层级，不能把图层 zIndex 当作回退值。
+    const styleZIndex = options?.styleZIndex
+      ?? previousStyles.find(style => style.getZIndex() !== undefined)?.getZIndex();
     const withDefaultStroke = options?.withDefaultStroke !== false;
     const withDefaultFill = options?.withDefaultFill !== false;
     const strokeColor = withDefaultStroke ? options?.strokeColor ?? previousStroke?.getColor() : undefined;
@@ -138,7 +143,8 @@ export default class PolygonStyleFactory {
       stroke: strokeColor !== undefined || strokeWidth !== undefined || lineDash !== undefined || lineDashOffset !== undefined
         ? new Stroke({ color: strokeColor, width: strokeWidth, lineDash, lineDashOffset })
         : undefined,
-      fill: newColor ? new Fill({ color: newColor }) : undefined
+      fill: newColor ? new Fill({ color: newColor }) : undefined,
+      zIndex: styleZIndex
     });
 
     const textVisible = options?.textVisible ?? !!previousText;
@@ -163,4 +169,16 @@ export default class PolygonStyleFactory {
 
     feature.setStyle(featureStyle);
   }
+}
+
+/**
+ * 根据单个要素创建面样式，复用内置工厂及运行时默认配置。
+ * 返回已解析的 Style 或 Style[]，可直接用于图层的 style 回调。
+ */
+export function createPolygonStyle(options: PolygonOptions, feature: FeatureLike): Style | Style[] {
+  const style = PolygonStyleFactory.createStyle({
+    ...ConfigManager.DEFAULT_POLYGON_OPTIONS,
+    ...options
+  });
+  return typeof style === 'function' ? style(feature) : style;
 }

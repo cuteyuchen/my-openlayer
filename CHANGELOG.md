@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.2.0] - 2026-10-20
+
+### Features
+
+- **Polygon:** 从包入口公开 `createPolygonStyle(options, feature)`，复用内置面样式工厂和运行时默认配置，返回当前要素的 `Style` 或 `Style[]`。
+- **Polygon:** 新增独立的 `styleZIndex`，同时控制同一图层内面与文字的绘制顺序，保留原有 `zIndex` 的图层语义。
+
+### Bug Fixes
+
+- **Polygon:** `updateFeatureColor()` 沿用要素当前样式层级，并支持通过 `styleZIndex` 显式覆盖，包括 `0` 和负数。
+
+### Documentation
+
+- 更新 README、Polygon API 文档和文档首页，补充按要素计算风险色、动态描边、选中层级和样式刷新示例。
+- 同步更新 `my-openlayer-helper` 技能及面要素参考，明确公共工厂的版本、返回类型和自定义 `style` 优先级。
+
+### Tests
+
+- 新增 13 个回归用例，覆盖公共入口、默认配置、逐要素样式、面与文字层级、样式优先级和填色更新；全量 167 个测试通过。
+
 ## [3.1.5] - 2026-08-19
 
 ### Bug Fixes

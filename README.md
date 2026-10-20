@@ -47,7 +47,7 @@ my-openlayer 是一个基于 [OpenLayers](https://openlayers.org/) 的现代地�
 - **📍 要素操作**
   - **点位管理 (Point)**：点位标注（自定义图标、聚合、DOM 闪烁、高性能矢量闪烁）
   - **线要素绘制 (Line)**：支持静态线、流光线、流动线图标动画，详见 [Line 动画文档](docs/Line.md#流动线--动态图标线)
-  - **面要素 (Polygon)**：面要素绘制、分区高亮、遮罩层
+  - **面要素 (Polygon)**：面要素绘制、分区高亮、遮罩层，以及公开的 `createPolygonStyle` 样式工厂和独立的 `styleZIndex`
   - **Vue组件支持 (VueTemplatePoint)**：支持将 Vue 组件作为地图点位渲染
 
 - **🛠️ 地图工具**
@@ -291,6 +291,30 @@ imageHandle.setVisible(false);
 
 不要先用 `transformExtent()` 转换图片外框；该方式只转换边界，不能替代栅格重投影。`projection` 和 `interpolate` 不传时继续使用 OpenLayers 默认行为。
 
+### 10. 按要素创建面样式（3.2.0 新增）
+
+业务层计算风险色和选中状态，样式对象交给公开工厂创建：
+
+```typescript
+import { createPolygonStyle } from 'my-openlayer';
+
+const boundary = map.getPolygon().addPolygon(polygonData, {
+  layerName: 'region-boundaries',
+  zIndex: 20, // 整个图层的叠放顺序
+  style: feature => createPolygonStyle({
+    fillColor: feature.get('riskColor') ?? 'rgba(0, 0, 0, 0)',
+    strokeColor: feature.get('selected') ? '#ff0000' : '#666666',
+    strokeWidth: feature.get('selected') ? 3 : 1,
+    styleZIndex: feature.get('selected') ? 1 : 0, // 图层内选中区域后绘制
+    textVisible: true,
+    textKey: 'name',
+    textOverflow: true
+  }, feature)
+});
+```
+
+`createPolygonStyle(options, feature)` 返回 `Style | Style[]`，合并面默认配置，并为面与文字同步应用 `styleZIndex`。同样适用于 `addGeoJSON` 的 `polygon.style`；如果风险色或选中状态来自外部数据，变化后调用 `boundary.layer.changed()` 刷新即可。更多配置见 [Polygon 文档](docs/Polygon.md#createpolygonstyle)。
+
 ## 文档索引
 
 详细文档请访问 **[在线文档](https://cuteyuchen.github.io/my-openlayer/)**，交互式 Demo 请访问 **[Demo 站点](https://cuteyuchen.github.io/my-openlayer/demo/)**。
@@ -306,7 +330,7 @@ imageHandle.setVisible(false);
 ### 要素操作
 - **[Point](docs/Point.md)**: 点要素（含聚合、DOM 点位、高性能闪烁点、统一 Handle）。
 - **[Line](docs/Line.md)**: 线要素（含静态线、流动线、URL 异步加载）。
-- **[Polygon](docs/Polygon.md)**: 面要素（含热力图、图片层、遮罩层、统一 Handle）。
+- **[Polygon](docs/Polygon.md)**: 面要素（含公开样式工厂、逐要素样式层级、热力图、图片层、遮罩层、统一 Handle）。
 - **[VueTemplatePoint](docs/VueTemplatePoint.md)**: Vue 组件点位。
 
 ### 交互与工具

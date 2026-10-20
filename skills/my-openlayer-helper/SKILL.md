@@ -1,13 +1,13 @@
 ---
 name: my-openlayer-helper
-description: "Initialize my-openlayer maps, add points/lines/polygons, configure Vue overlays, switch base layers, handle measurement tools, register custom projections, and manage runtime config. Use when the user asks about my-openlayer setup, OpenLayers map initialization, adding map markers, pulse points, static or animated flow lines, polygon drawing, map overlay components, layer switching, feature selection, measurement, custom projections, projection registration, EPSG transform errors, map clipping, or runtime default configuration."
+description: "Initialize my-openlayer maps, add points/lines/polygons, configure Vue overlays, switch base layers, handle measurement tools, register custom projections, and manage runtime config. Use when the user asks about my-openlayer setup, OpenLayers map initialization, adding map markers, pulse points, static or animated flow lines, polygon drawing, per-feature polygon styles or styleZIndex, map overlay components, layer switching, feature selection, measurement, custom projections, projection registration, EPSG transform errors, map clipping, or runtime default configuration."
 ---
 
 ## Workflow
 
 1. **Initialize** the map via `MyOl` constructor with a container ID and options.
 2. **Access modules** through lazy-loaded getters (`getPoint()`, `getLine()`, `getPolygon()`, `getTools()`).
-3. **Add features** using `add*` methods. In 3.0 real layer methods return unified `LayerHandle`; Overlay/Vue point methods return `ControlHandle`. Point APIs (`addPoint`, `addClusterPoint`, `addPulsePointLayer`) accept both `PointData[]` and standard GeoJSON (FeatureCollection, Feature, MultiPoint geometry); created point Features expose business fields at the top level (`feature.get('name')`), while `rawData` is kept only for backward compatibility. Use `MyOl.addGeoJSON(data, options)` to render mixed geometry types (point/line/polygon) in one call, with automatic grouping and per-feature styling. For static raster overlays, read [core-polygon.md](references/core-polygon.md); for GeoServer WMS source options, read [tool-map-base-layers.md](references/tool-map-base-layers.md).
+3. **Add features** using `add*` methods. In 3.0 real layer methods return unified `LayerHandle`; Overlay/Vue point methods return `ControlHandle`. Point APIs (`addPoint`, `addClusterPoint`, `addPulsePointLayer`) accept both `PointData[]` and standard GeoJSON (FeatureCollection, Feature, MultiPoint geometry); created point Features expose business fields at the top level (`feature.get('name')`), while `rawData` is kept only for backward compatibility. Use `MyOl.addGeoJSON(data, options)` to render mixed geometry types (point/line/polygon) in one call, with automatic grouping and per-feature styling. For per-feature polygon styles or static raster overlays, read [core-polygon.md](references/core-polygon.md); for GeoServer WMS source options, read [tool-map-base-layers.md](references/tool-map-base-layers.md).
 4. **Clean up** by calling `destroy()` — 3.0 `destroy()` cascades to all sub-modules automatically.
 
 ### Quick Start
@@ -91,6 +91,10 @@ handle.setGroupVisible('high', false);
 handle.removeGroup('low');
 handle.remove();
 ```
+
+### Polygon Styling (3.2.0+)
+
+Import `createPolygonStyle` from `my-openlayer` and call it inside `PolygonOptions.style` for per-feature fills, strokes, labels, and drawing order. Keep risk/selection rules in the business callback; the helper returns `Style | Style[]`, not a style function. Use `styleZIndex` for feature order and `zIndex` for layer order. Read [core-polygon.md](references/core-polygon.md) for defaults, custom-style precedence, and refreshing external state; `styleByProperties` remains a point-only option.
 
 ### Error Recovery
 

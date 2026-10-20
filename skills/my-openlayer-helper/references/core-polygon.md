@@ -35,6 +35,7 @@ Polygon layer configuration options, inherits from `BaseOptions`, `StyleOptions`
 | `strokeColor` | `string` | Border color |
 | `strokeWidth` | `number` | Border width |
 | `lineDash` | `number[]` | Border dash style |
+| `styleZIndex` | `number` | Since 3.2.0: style order within one layer, applied to both polygon and text. Larger values draw later; independent of layer `zIndex` |
 | **Text Label** | | |
 | `textVisible` | `boolean` | Whether to display text |
 | `textKey` | `string` | Attribute field name for text |
@@ -72,6 +73,20 @@ Image layer data.
 | `interpolate` | `boolean` | Whether to interpolate while resampling; `false` uses nearest-neighbor resampling |
 
 ## Methods
+
+### createPolygonStyle (3.2.0+)
+
+Public utility exported from the package root, not a `Polygon` instance method. It does not require a map instance.
+
+```typescript
+import { createPolygonStyle } from 'my-openlayer';
+
+createPolygonStyle(options: PolygonOptions, feature: FeatureLike): Style | Style[]
+```
+
+The helper merges `ConfigManager.DEFAULT_POLYGON_OPTIONS` with caller options, then resolves fill/text callbacks for the supplied feature. It returns concrete styles, never a style function. When polygon and text use separate styles, both receive the same `styleZIndex`. Keep business rules for risk colors and selection in the caller's `style` callback; do not deep-import the internal factory.
+
+Explicit `options.style` keeps highest priority: the helper returns that style or its callback result without applying other style fields or mutating the supplied styles. Layer `zIndex` is not converted into style order.
 
 ### addPolygon
 
@@ -128,7 +143,7 @@ updateFeatureColor(
 | `colorObj` | `Object` | Color mapping object `{ 'AreaName': 'ColorValue' }` |
 | `options` | `FeatureColorUpdateOptions` | Includes textKey etc. to match features |
 
-Styles not specified in `options` inherit from the feature's current style, including `strokeColor`, `strokeWidth`, `textFont`, `textFillColor`, `textStrokeColor`, `textStrokeWidth`, and `textOverflow`. Passing only the color map does not reset existing text styles.
+Styles not specified in `options` inherit from the feature's current style, including `strokeColor`, `strokeWidth`, `textFont`, `textFillColor`, `textStrokeColor`, `textStrokeWidth`, `textOverflow`, and `styleZIndex`. Passing only the color map does not reset existing text styles or style order. Pass `options.styleZIndex` to override the order explicitly; `0` and negative values are supported.
 
 ### addImageLayer
 
@@ -226,6 +241,28 @@ polygonModule.addPolygon(polygonData, {
   fitView: true
 });
 ```
+
+### Per-feature Risk and Selection Styles (3.2.0+)
+
+```typescript
+import { createPolygonStyle } from 'my-openlayer';
+
+const boundary = polygonModule.addPolygon(polygonData, {
+  layerName: 'region-boundaries',
+  zIndex: 20, // Order of the entire layer
+  style: feature => createPolygonStyle({
+    fillColor: feature.get('riskColor') ?? 'rgba(0, 0, 0, 0)',
+    strokeColor: feature.get('selected') ? '#ff0000' : '#666666',
+    strokeWidth: feature.get('selected') ? 3 : 1,
+    styleZIndex: feature.get('selected') ? 1 : 0, // Draw selected boundaries later
+    textVisible: true,
+    textKey: 'name',
+    textOverflow: true
+  }, feature)
+});
+```
+
+The same callback works in `MyOl.addGeoJSON(data, { layerName: 'regions', polygon: { style: ... } })`. `styleByProperties` is only available for points, not polygons. If risk/selection state comes from outside feature properties, call `boundary.layer.changed()` after that state changes; for `GeoJSONRenderHandle`, refresh the relevant polygon handles' layers. No layer reconstruction is needed.
 
 ### Data Visualization (Dynamic Coloring)
 

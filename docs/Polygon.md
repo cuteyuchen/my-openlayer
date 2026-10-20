@@ -30,6 +30,7 @@ const polygon = new Polygon(map: Map);
 | `strokeColor` | `string` | 边框颜色 |
 | `strokeWidth` | `number` | 边框宽度 |
 | `lineDash` | `number[]` | 边框虚线样式 |
+| `styleZIndex` | `number` | 同一图层内面与文字的样式层级，较大的值后绘制；不影响图层 `zIndex` |
 | **文本标注** | | |
 | `textVisible` | `boolean` | 是否显示文本 |
 | `textKey` | `string` | 文本对应的属性字段名 |
@@ -67,6 +68,25 @@ const polygon = new Polygon(map: Map);
 | `interpolate` | `boolean` | 重采样时是否插值；设为 `false` 时使用最近邻插值 |
 
 ## 方法
+
+### createPolygonStyle
+
+从 `3.2.0` 起由包入口导出的样式工具函数，无需创建地图实例，也不是 `Polygon` 的实例方法。`styleZIndex` 同版本新增，原有 `zIndex` 仍只控制图层。
+
+```typescript
+import { createPolygonStyle } from 'my-openlayer';
+
+createPolygonStyle(options: PolygonOptions, feature: FeatureLike): Style | Style[]
+```
+
+| 参数 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `options` | `PolygonOptions` | 面、描边和文字样式配置，与内置面样式保持一致 |
+| `feature` | `FeatureLike` | 当前 OpenLayers 要素，用于解析动态填色和文字回调 |
+
+配置会与 `ConfigManager.DEFAULT_POLYGON_OPTIONS` 合并，调用方配置优先。函数直接返回当前要素的 `Style` 或 `Style[]`，不会返回样式回调；面和文字分开创建时，两者都会应用同一个 `styleZIndex`。
+
+`options.style` 保持最高优先级：传入自定义样式时，返回该样式或其回调结果，不再应用其他样式配置，也不会修改自定义样式对象。`zIndex` 只属于图层配置，单独创建样式时不会将它转换成样式层级。
 
 ### addPolygon
 
@@ -116,7 +136,7 @@ updateFeatureColor(
 | `colorObj` | `Object` | 颜色映射对象 `{ '区域名': '颜色值' }` |
 | `options` | `FeatureColorUpdateOptions` | 包含 textKey 等配置以匹配要素 |
 
-未在 `options` 中指定的样式会沿用要素当前样式，例如 `strokeColor`、`strokeWidth`、`textFont`、`textFillColor`、`textStrokeColor`、`textStrokeWidth`、`textOverflow` 等。只传颜色映射时不会重置原有文字样式。
+未在 `options` 中指定的样式会沿用要素当前样式，例如 `strokeColor`、`strokeWidth`、`textFont`、`textFillColor`、`textStrokeColor`、`textStrokeWidth`、`textOverflow`、`styleZIndex` 等。只传颜色映射时不会重置原有文字样式和样式层级；也可以通过 `options.styleZIndex` 显式覆盖层级，包括 `0` 和负数。
 
 ### addImageLayer
 
@@ -193,6 +213,33 @@ polygonModule.addPolygon(polygonData, {
   fitView: true
 });
 ```
+
+### 按要素计算风险色与选中边框
+
+业务层只计算颜色和选中状态，填充、描边及文字对象由框架创建：
+
+```typescript
+import { createPolygonStyle } from 'my-openlayer';
+
+const boundary = map.getPolygon().addPolygon(polygonData, {
+  layerName: 'region-boundaries',
+  zIndex: 20, // 控制整个图层的叠放顺序
+  style: feature => {
+    const active = feature.get('selected') === true;
+    return createPolygonStyle({
+      fillColor: feature.get('riskColor') ?? 'rgba(0, 0, 0, 0)',
+      strokeColor: active ? '#ff0000' : '#666666',
+      strokeWidth: active ? 3 : 1,
+      styleZIndex: active ? 1 : 0, // 激活区域后绘制，避免边框被邻区覆盖
+      textVisible: true,
+      textKey: 'name',
+      textOverflow: true
+    }, feature);
+  }
+});
+```
+
+同样适用于 `map.addGeoJSON(data, { layerName: 'regions', polygon: { style: ... } })`。如果风险色或选中状态来自要素之外的数据，数据变化后调用 `boundary.layer.changed()` 重新计算样式即可，不需要重建图层。
 
 ### 数据可视化（动态填色）
 
